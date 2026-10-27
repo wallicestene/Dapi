@@ -46,7 +46,7 @@ async function main() {
   await browser.close();
 
   printJsonDetails();
-  printSummary(mainResponse?.status());
+  await printSummary(mainResponse?.status());
 }
 
 async function logRequest(request) {
@@ -196,12 +196,71 @@ function findTotal(value, depth = 0) {
   return null;
 }
 
+// Headers fetch sets itself, or that would break a replay.
+const SKIP_ON_REPLAY = new Set(['host', 'content-length', 'connection', 'accept-encoding']);
+// Headers that carry a session: cookies, auth and CSRF tokens.
+const SESSION_HEADER = /^(cookie|authorization)$|token|csrf|xsrf|api-?key/i;
+
+// Calls a data endpoint again without the browser, starting with the least we
+// can send. The first attempt that gets the same records back decides the method.
+async function replay(r) {
+  const browserHeaders = {};
+  const sessionHeaders = {};
+  for (const [key, value] of Object.entries(r.headers)) {
+    if (key.startsWith(':') || SKIP_ON_REPLAY.has(key)) continue;
+    if (SESSION_HEADER.test(key)) sessionHeaders[key] = value;
+    else browserHeaders[key] = value;
+  }
+
+  const attempts = [{ label: 'plain request', method: r.method, headers: {} }];
+  // A POST with no body may also work as a GET (World Bank's did).
+  if (r.method === 'POST' && !r.postData) {
+    attempts.push({ label: 'plain GET', method: 'GET', headers: {} });
+  }
+  attempts.push({ label: 'with browser headers', method: r.method, headers: browserHeaders });
+  if (Object.keys(sessionHeaders).length > 0) {
+    attempts.push({
+      label: `with session (${Object.keys(sessionHeaders).join(', ')})`,
+      method: r.method,
+      headers: { ...browserHeaders, ...sessionHeaders },
+      needsSession: true,
+    });
+  }
+
+  const failures = [];
+  for (const attempt of attempts) {
+    const result = await tryRequest(r, attempt);
+    if (result === 'ok') return { attempt, failures };
+    failures.push(`${attempt.label}: ${result}`);
+  }
+  return { attempt: null, failures };
+}
+
+// A replay only counts if it returns the same records, not just a 200:
+// a WAF block page or an empty result can come back as 200 too.
+async function tryRequest(r, attempt) {
+  try {
+    const res = await fetch(r.url, {
+      method: attempt.method,
+      headers: attempt.headers,
+      body: attempt.method === 'GET' ? undefined : (r.postData ?? undefined),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const json = parseJson(Buffer.from(await res.arrayBuffer()));
+    if (!res.ok) return `HTTP ${res.status}`;
+    if (findRecords(json)?.path !== r.records.path) return `HTTP ${res.status} but different content`;
+    return 'ok';
+  } catch (err) {
+    return err.name;
+  }
+}
+
 function shortUrl(requestUrl) {
   const { host, pathname } = new URL(requestUrl);
   return host + pathname;
 }
 
-function printSummary(mainStatus) {
+async function printSummary(mainStatus) {
   const data = [];
   const tracking = [];
   const other = [];
@@ -233,15 +292,24 @@ function printSummary(mainStatus) {
       `  DATA   ${r.method} ${shortUrl(r.url)}  ${r.size}B, ` +
         `${r.records.count} records at ${r.records.path}${total}`
     );
+
+    r.replay = await replay(r);
+    const steps = [...r.replay.failures];
+    if (r.replay.attempt) steps.push(`${r.replay.attempt.label}: works`);
+    console.log(`         replay: ${steps.join(' | ')}`);
   }
   for (const r of other) {
     console.log(`  OTHER  ${r.method} ${shortUrl(r.url)}  ${r.size}B`);
   }
 
+  // The verdicts map onto the method table in AGENTS.md.
+  const replayed = data.filter((r) => r.replay.attempt);
   let verdict;
   if (mainStatus >= 400) verdict = `BLOCKED: page returned ${mainStatus}`;
-  else if (data.length > 0) verdict = 'JSON ENDPOINT FOUND';
-  else verdict = 'NO JSON DATA: needs the HTML route';
+  else if (data.length === 0) verdict = 'HTML ROUTE: no JSON data found';
+  else if (replayed.some((r) => !r.replay.attempt.needsSession)) verdict = 'API ROUTE: endpoint callable directly';
+  else if (replayed.length > 0) verdict = 'HYBRID ROUTE: endpoint needs the browser session';
+  else verdict = 'BROWSER ROUTE: endpoint found but not callable outside the browser';
   console.log(`Verdict:   ${verdict}`);
 }
 
