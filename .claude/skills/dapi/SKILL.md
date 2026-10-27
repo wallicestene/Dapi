@@ -169,6 +169,36 @@ control, then draws the boxes on the screenshot so they can be checked by eye.
   starts with, which control is "next") and let the DOM give the exact *where* (the
   element holding that text). Not built or tested yet.
 
+### A real client spec: Better Work compliance (2026-10-27)
+
+The owner gets data-extraction specs like this as paid work. The spec asks for one
+row per compliance issue from portal.betterwork.org/transparency/compliance, with three
+columns that only appear after clicking "View" on each factory.
+
+- **List:** `POST /Transparency/GetSuppliersComplianceData`, form body with empty
+  filters (`countryId=&clusterId=&issueId=&factoryName=&...`). 184 factories, `Total`
+  184. Plain request works. Keys: `Name`, `FactoryType`, `Country`, `AssessmentDate`
+  (`/Date(ms)/`), `Modality`, `CycleNumber`, `NumberOfNonCompliances`,
+  `NumberOfResponse`, `LastAssessmentId`.
+- **Detail ("View"):** `POST /Issues/FactoryDetail4TransparencyCompliance` with
+  `assessmentId=<LastAssessmentId>&issueId=&clusterId=`. Returns an array, one item per
+  issue: `IssueName`, `ClusterName`, `CompliancePointName`, `LegalReference`,
+  `AssessmentDateStr` ("25 Aug 2025"). Plain request works.
+- **Spec mapping:** Publicly Reported Issue = `IssueName`; Issue Theme =
+  `ClusterName + ": " + CompliancePointName`; one output row per issue.
+- The spec's samples 2a–2c match the detail response word for word. **Sample 1 (GP
+  Solutions Vietnam) is not in the source today**, not even through the portal's name
+  search: the portal is a current snapshot (Vietnam 65, Haiti 44, Indonesia 75;
+  assessments 2017-01-23 → 2026-09-15).
+- Completeness target: 133 factories claim 376 issues in total; 51 have none.
+- The probe found the list endpoint by itself, and field matching mapped 8 of 11
+  columns and correctly said the 3 issue-level columns weren't in the list.
+- **Lesson:** real specs need a detail call per record, one output row per child item,
+  combined fields, format conversions and sample rows to check against. "URL + field
+  names" can't express that; the spec document itself is the real input.
+- Don't show the client's spec document in the public demo or repo (hard rule 5).
+  Write our own spec in the same style for the same public portal.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
@@ -221,3 +251,5 @@ have run them, not before.
 - Why do GLEIF and FDIC stall in headless Chromium? A hung request is invisible to the
   probe because it only logs finished and failed requests.
 - How much does interacting with the page (search, next page) raise the 3-in-20 rate?
+- Better Work: should a factory with 0 issues get one row with blank issue columns, or
+  no row? The spec doesn't say. Dapi should ask the user when a spec is ambiguous.
