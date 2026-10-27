@@ -7,21 +7,28 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const targetsFile = process.argv[2] ?? path.join(__dirname, 'targets.txt');
-const resultsDir = path.join(__dirname, 'results');
+// One folder per run, so results from different runs never mix.
+const runId = new Date().toISOString().slice(0, 16).replace(/:/g, '-');
+const resultsDir = path.join(__dirname, 'results', runId);
 
+// Each line: <url> | field, field, ...
 const targets = fs
   .readFileSync(targetsFile, 'utf8')
   .split('\n')
   .map((line) => line.trim())
-  .filter((line) => line && !line.startsWith('#'));
+  .filter((line) => line && !line.startsWith('#'))
+  .map((line) => {
+    const [url, fieldList = ''] = line.split('|').map((part) => part.trim());
+    return { url, fields: fieldList.split(',').map((f) => f.trim()).filter(Boolean) };
+  });
 
 // A fresh process per URL: the probe keeps its state in module-level
 // variables, so separate processes keep one run from leaking into the next.
-function probe(url) {
+function probe(url, fields) {
   return new Promise((resolve) => {
     execFile(
       process.execPath,
-      [path.join(__dirname, 'network-probe.js'), url],
+      [path.join(__dirname, 'network-probe.js'), url, ...fields],
       { timeout: 180_000, maxBuffer: 50 * 1024 * 1024 },
       (err, stdout, stderr) => {
         const note = err?.killed ? '\n(probe timed out after 180s)' : '';
@@ -35,8 +42,8 @@ async function main() {
   fs.mkdirSync(resultsDir, { recursive: true });
   const tally = {};
 
-  for (const [i, url] of targets.entries()) {
-    const output = await probe(url);
+  for (const [i, { url, fields }] of targets.entries()) {
+    const output = await probe(url, fields);
     const verdict = output.match(/^Verdict:\s+(.*)$/m)?.[1] ?? 'NO VERDICT: probe crashed or timed out';
     const route = verdict.split(':')[0];
     tally[route] = (tally[route] ?? 0) + 1;
@@ -45,7 +52,7 @@ async function main() {
     fs.writeFileSync(path.join(resultsDir, name), output);
 
     // Show the top data endpoint too, so a wrong verdict is easy to spot by eye.
-    const topData = output.match(/^\s+DATA\s+(.*)$/m)?.[1];
+    const topData = output.match(/^\s+(?:MATCH|DATA)\s+(.*)$/m)?.[1];
     console.log(`[${i + 1}/${targets.length}] ${route.padEnd(14)} ${url}`);
     if (topData) console.log(`        ${topData.slice(0, 150)}`);
   }

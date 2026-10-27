@@ -1,12 +1,22 @@
 // Throwaway spike: how often does a page's data come from a JSON endpoint
 // we could call directly? See "Spikes in flight" in AGENTS.md.
-// Usage: node network-probe.js <url>
+// Usage: node network-probe.js <url> [field ...]
+//   e.g. node network-probe.js https://example.gov/companies "company name" "status"
 
 const { chromium } = require('playwright');
 
+// MODEL_API_KEY lives in dapi/.env, which is gitignored. Never hard-code it.
+try {
+  process.loadEnvFile(`${__dirname}/../.env`);
+} catch {
+  // No .env file: use whatever the shell environment has.
+}
+
 const url = process.argv[2];
+// The fields the user wants. Optional, but without them the probe can only guess by size.
+const fields = process.argv.slice(3);
 if (!url) {
-  console.error('Usage: node network-probe.js <url>');
+  console.error('Usage: node network-probe.js <url> [field ...]');
   process.exit(1);
 }
 
@@ -170,7 +180,14 @@ function findRecords(value, path = '$', depth = 0) {
     const similar = objects.every(
       (o) => firstKeys.filter((k) => k in o).length >= firstKeys.length / 2
     );
-    if (similar) best = { path, count: objects.length, bytes: JSON.stringify(value).length };
+    if (similar) {
+      best = {
+        path,
+        count: objects.length,
+        bytes: JSON.stringify(value).length,
+        sample: objects.slice(0, 2),
+      };
+    }
   }
 
   // Compare by bytes, not count: 100 tiny filter entries shouldn't beat 20 full records.
@@ -262,6 +279,123 @@ async function tryRequest(r, attempt) {
   }
 }
 
+const MODEL_API = 'https://api.meta.ai/v1/chat/completions';
+const MODEL = 'muse-spark-1.3';
+
+// Kept first and unchanged so the API can cache it.
+const MATCH_PROMPT = `You help a data extraction tool pick which JSON endpoint holds the records a user wants.
+You get the page URL, the fields the user asked for, and the JSON endpoints the page called, each with sample records.
+Pick the endpoint whose records are the items the user wants: one record per company, tender, project and so on.
+Lookup lists, filter options, settings, feature flags and translations are not the user's records.
+For each requested field, give the key inside a record that holds it, using dots for nesting (e.g. "address.city"), or null if no key holds it.
+Set best to null if no endpoint holds the user's records.`;
+
+const MATCH_SCHEMA = {
+  type: 'object',
+  properties: {
+    best: { type: ['integer', 'null'] },
+    fields: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          field: { type: 'string' },
+          key: { type: ['string', 'null'] },
+        },
+        required: ['field', 'key'],
+        additionalProperties: false,
+      },
+    },
+    reason: { type: 'string' },
+  },
+  required: ['best', 'fields', 'reason'],
+  additionalProperties: false,
+};
+
+// Trims long strings, arrays and deep nesting so sample records fit in a small prompt.
+function shrink(value, depth = 0) {
+  if (typeof value === 'string') return value.length > 80 ? value.slice(0, 80) + '…' : value;
+  if (Array.isArray(value)) return value.slice(0, 3).map((v) => shrink(v, depth + 1));
+  if (value && typeof value === 'object') {
+    if (depth > 2) return '{…}';
+    return Object.fromEntries(
+      Object.entries(value).slice(0, 40).map(([k, v]) => [k, shrink(v, depth + 1)])
+    );
+  }
+  return value;
+}
+
+// Matching "registration number" to a key like reg_no is a question of meaning,
+// not spelling, which is why this is a model call and not a string comparison.
+async function matchFields(candidates) {
+  const payload = {
+    pageUrl: url,
+    fields,
+    endpoints: candidates.map((r, i) => ({
+      id: i,
+      endpoint: `${r.method} ${shortUrl(r.url)}`,
+      recordPath: r.records.path,
+      recordCount: r.records.count,
+      sampleRecords: r.records.sample.map((s) => shrink(s)),
+    })),
+  };
+
+  const res = await fetch(MODEL_API, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${process.env.MODEL_API_KEY}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      // Picking from a handful of samples doesn't need deep thinking. On chat
+      // completions the parameter is reasoning_effort, not reasoning.effort.
+      reasoning_effort: 'low',
+      messages: [
+        { role: 'system', content: MATCH_PROMPT },
+        { role: 'user', content: JSON.stringify(payload) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: 'field_match', schema: MATCH_SCHEMA, strict: true },
+      },
+    }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+
+  const body = await res.json();
+  return { ...JSON.parse(body.choices[0].message.content), usage: body.usage };
+}
+
+// Returns null when matching can't run or goes wrong, so the summary falls back to size.
+async function tryMatchFields(data) {
+  if (fields.length === 0 || data.length === 0) return null;
+  if (!process.env.MODEL_API_KEY) {
+    console.log('(MODEL_API_KEY not set: skipping field matching)');
+    return null;
+  }
+  try {
+    const match = await matchFields(data);
+    if (match.best != null && !data[match.best]) {
+      console.log(`(field matching returned unknown endpoint id ${match.best}, ignoring it)`);
+      return null;
+    }
+    return match;
+  } catch (err) {
+    console.log(`(field matching failed: ${err.message})`);
+    return null;
+  }
+}
+
+// The routes map onto the method table in AGENTS.md.
+function routeFor(candidates) {
+  const replayed = candidates.filter((r) => r.replay.attempt);
+  if (replayed.some((r) => !r.replay.attempt.needsSession)) return 'API ROUTE: endpoint callable directly';
+  if (replayed.length > 0) return 'HYBRID ROUTE: endpoint needs the browser session';
+  return 'BROWSER ROUTE: endpoint found but not callable outside the browser';
+}
+
 function shortUrl(requestUrl) {
   const { host, pathname } = new URL(requestUrl);
   return host + pathname;
@@ -282,8 +416,12 @@ async function printSummary(mainStatus) {
     else other.push(r);
   }
 
-  // Biggest first: the page's main data is usually its largest response.
+  // Biggest first: without the user's fields, size is the only hint we have.
   data.sort((a, b) => b.size - a.size);
+
+  // With the user's fields, Muse Spark picks the endpoint that actually holds them.
+  const match = await tryMatchFields(data);
+  if (match?.best != null) data.unshift(...data.splice(match.best, 1));
 
   console.log('\n=== Summary ===');
   console.log(`Page:      ${url} (status ${mainStatus ?? '?'})`);
@@ -293,10 +431,18 @@ async function printSummary(mainStatus) {
       `${tracking.length} tracking, ${other.length} other`
   );
 
-  for (const r of data) {
+  if (match) {
+    const { prompt_tokens: tokensIn = '?', completion_tokens: tokensOut = '?' } = match.usage ?? {};
+    console.log(`Fields:    matched by ${MODEL} (${tokensIn} tokens in, ${tokensOut} out)`);
+    for (const f of match.fields) console.log(`  "${f.field}" -> ${f.key ?? 'not found'}`);
+    console.log(`  why: ${match.reason}`);
+  }
+
+  for (const [i, r] of data.entries()) {
+    const label = i === 0 && match?.best != null ? 'MATCH' : 'DATA ';
     const total = r.total ? `, source says ${r.total.value} total ("${r.total.key}")` : '';
     console.log(
-      `  DATA   ${r.method} ${shortUrl(r.url)}  ${r.size}B, ` +
+      `  ${label}  ${r.method} ${shortUrl(r.url)}  ${r.size}B, ` +
         `${r.records.count} records at ${r.records.path}${total}`
     );
 
@@ -309,16 +455,14 @@ async function printSummary(mainStatus) {
     console.log(`  OTHER  ${r.method} ${shortUrl(r.url)}  ${r.size}B`);
   }
 
-  // The verdicts map onto the method table in AGENTS.md.
-  const replayed = data.filter((r) => r.replay.attempt);
   let verdict;
   if ([401, 403, 429].includes(mainStatus)) verdict = `BLOCKED: page returned ${mainStatus}`;
   else if (mainStatus >= 400) verdict = `ERROR: page returned ${mainStatus}`;
   else if (data.length === 0 && mainStatus === undefined) verdict = 'NOT LOADED: page never finished loading';
   else if (data.length === 0) verdict = 'HTML ROUTE: no JSON data found';
-  else if (replayed.some((r) => !r.replay.attempt.needsSession)) verdict = 'API ROUTE: endpoint callable directly';
-  else if (replayed.length > 0) verdict = 'HYBRID ROUTE: endpoint needs the browser session';
-  else verdict = 'BROWSER ROUTE: endpoint found but not callable outside the browser';
+  else if (match && match.best == null) verdict = 'HTML ROUTE: no JSON endpoint holds the requested fields';
+  // With a match, only the matched endpoint counts; without one, any data endpoint does.
+  else verdict = routeFor(match ? [data[0]] : data);
   console.log(`Verdict:   ${verdict}`);
 }
 

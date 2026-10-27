@@ -1,28 +1,29 @@
 # Public sources Dapi's users would actually point it at. No logins, no personal data.
-# One URL per line. Lines starting with # are ignored.
+# One target per line: <url> | field, field, ...
+# The fields are what a real user would ask that source for. Lines starting with # are ignored.
 
 # Company and financial registries
-https://find-and-update.company-information.service.gov.uk/search/companies?q=safaricom
-https://search.gleif.org/#/search/simpleSearch=safaricom
-https://virksomhet.brreg.no/nb/sok?sokeord=equinor
-https://abr.business.gov.au/Search/ResultsActive?SearchText=telstra
-https://register.fca.org.uk/s/search?q=barclays&type=Companies
-https://ised-isde.canada.ca/cc/lgcy/fdrlCrpSrch.html
-https://banks.data.fdic.gov/bankfind-suite/bankfind
+https://find-and-update.company-information.service.gov.uk/search/companies?q=safaricom | company name, company number, status, registered address
+https://search.gleif.org/#/search/simpleSearch=safaricom | legal name, LEI, registration status, country
+https://virksomhet.brreg.no/nb/sok?sokeord=equinor | company name, organisation number, address, industry
+https://abr.business.gov.au/Search/ResultsActive?SearchText=telstra | business name, ABN, status, state
+https://register.fca.org.uk/s/search?q=barclays&type=Companies | firm name, firm reference number, status
+https://ised-isde.canada.ca/cc/lgcy/fdrlCrpSrch.html | corporation name, corporation number, status
+https://banks.data.fdic.gov/bankfind-suite/bankfind | bank name, FDIC certificate number, city, state
 
 # Procurement and public spending
-https://tenders.go.ke/
-https://projects.worldbank.org/en/projects-operations/projects-list
-https://www.usaspending.gov/agency
-https://www.contractsfinder.service.gov.uk/Search
-https://www.find-tender.service.gov.uk/Search
-https://sam.gov/search/?index=opp
-https://www.ungm.org/Public/Notice
-https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals
+https://tenders.go.ke/ | tender title, procuring entity, tender number, closing date
+https://projects.worldbank.org/en/projects-operations/projects-list | project name, country, commitment amount, approval date
+https://www.usaspending.gov/agency | agency name, budget authority, percentage of total budget
+https://www.contractsfinder.service.gov.uk/Search | notice title, buyer, contract value, closing date
+https://www.find-tender.service.gov.uk/Search | notice title, buyer, contract value, closing date
+https://sam.gov/search/?index=opp | opportunity title, agency, notice ID, response deadline
+https://www.ungm.org/Public/Notice | notice title, UN organization, reference, deadline
+https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals | call title, call identifier, programme, deadline
 
 # Public statistics and open data
-https://www.centralbank.go.ke/rates/forex-exchange-rates/
-https://www.opendata.go.ke/
-https://data.worldbank.org/indicator/NY.GDP.MKTP.CD?locations=KE
-https://catalog.data.gov/dataset?q=procurement
-https://mapafrica.afdb.org/en
+https://www.centralbank.go.ke/rates/forex-exchange-rates/ | currency, buying rate, selling rate, date
+https://www.opendata.go.ke/ | dataset name, publisher, last updated
+https://data.worldbank.org/indicator/NY.GDP.MKTP.CD?locations=KE | year, GDP in current US dollars
+https://catalog.data.gov/dataset?q=procurement | dataset title, publisher, last modified
+https://mapafrica.afdb.org/en | project name, country, sector, amount
