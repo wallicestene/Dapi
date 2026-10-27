@@ -199,6 +199,35 @@ columns that only appear after clicking "View" on each factory.
 - Don't show the client's spec document in the public demo or repo (hard rule 5).
   Write our own spec in the same style for the same public portal.
 
+### A second client spec: Great Place to Work India (2026-10-27)
+
+Spec: certified companies from greatplacetowork.in/certified-companies/ with name,
+industry, employees, issue and expiry date, website, Facebook, Instagram, LinkedIn,
+HQ, description and organization size.
+
+- No JSON call holds the data. Field matching correctly rejected the only candidate,
+  a Zoho chat widget config, so the probe said "HTML route".
+- **But the listing is structured data embedded in the HTML.** TablePress (a WordPress
+  plugin) puts each table's rows in a `<script>` as JSON arrays; the visible `<tbody>`
+  is empty until JavaScript fills it. One 2.3 MB GET holds **5,155 rows in three tables:
+  Large, Mid-size and Small Organizations**. Row shape: `[name, industry, employees,
+  "Jul 2026 - Jul 2027", "<a href=…/great/company/<slug>>View Profile</a>"]`.
+- Spec mapping: Issue Date and Expiration Date = split the certification period on
+  " - "; Organization Size = which table the row sits in; Country = the constant
+  "India".
+- Website, social links, HQ and description are on each company's profile page,
+  `/great/company/<slug>/`: server-rendered HTML, plain GET works. Without the trailing
+  slash the link 301-redirects.
+- So the whole job is one GET for the listing plus 5,155 profile GETs, no browser.
+  That many detail pages is where Crawlee's queue, concurrency limits and failed-page
+  list earn their place.
+- **Probe gap:** it only inspects JSON responses, so structured data inside HTML reads
+  as "HTML route". Embedded-state detection now matters: 2 of 22 real targets so far
+  (data.worldbank.org, GPTW India).
+- Both client specs share a shape: a listing plus a detail per record, joined, with
+  format fixes. Better Work does it over two hidden APIs; GPTW over embedded JSON plus
+  HTML pages.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
