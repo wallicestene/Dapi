@@ -341,6 +341,33 @@ to PDF with `scripts/spec-to-pdf.js`.
   the demo should use sources the owner has built scrapers for before is the owner's
   call (rule 4, ambiguity).
 
+### Investigator (2026-10-28)
+
+`node src/investigate.js <spec.json>` → `<spec>.findings.json` for the code writer.
+
+1. Loads the page and captures every JSON response (`src/investigate/browser.js`).
+2. Muse Spark matches the spec's columns to one endpoint's keys, with a `how` note for
+   derived values (`src/investigate/spark.js`, low effort).
+3. For columns still missing: finds the row of a **sample record that has values for
+   them** on the page, lists that row's clickable controls, and shows Muse Spark the
+   screenshot plus the numbered list and the spec's instructions. Picking from numbered
+   DOM controls avoids the coordinate drift seen in the vision spike.
+4. Clicks the pick, captures the new JSON, matches the missing columns against it.
+5. **Join by value:** finds which parameter of the detail request (query, body or path
+   segment, 3+ characters) equals a field of the clicked list record.
+6. Replays both endpoints without a browser (`src/investigate/replay.js`).
+
+- **Better Work, on its own:** list endpoint (184, `Total` 184, plain replay), 8
+  columns mapped, Assessment Date flagged as reformatted; picked "View" on Teijin
+  citing the spec's instruction; detail endpoint (3 records, plain replay), Issue
+  Theme as `ClusterName + ': ' + CompliancePointName`; join `assessmentId` (body) =
+  `LastAssessmentId`. Nothing unmapped. 26 s, 4,479 in / 1,850 out tokens (~$0.015).
+- After a click, `waitForLoadState('networkidle')` doesn't wait again (it fires once
+  per navigation), so the session counts in-flight requests and waits for 700 ms of
+  quiet instead.
+- The record finder now accepts an array of one object (a factory with one issue),
+  but an object of objects still needs three before it reads as records, not config.
+
 ### What the owner's earlier scrapers teach (read 2026-10-28)
 
 The owner's freelance actors `better-work-compliance` (Nov 2025),

@@ -1,0 +1,209 @@
+{
+  "spec": "Better Work factory compliance",
+  "sourceUrl": "https://portal.betterwork.org/transparency/compliance",
+  "investigatedAt": "2026-10-27T21:14:54.531Z",
+  "pageStatus": 200,
+  "list": {
+    "request": {
+      "method": "POST",
+      "url": "https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+      "payload": "countryId=&clusterId=&issueId=&factoryName=&assessmentStart=&assessmentEnd=&sort=&group=&filter=",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    "recordsPath": "$.Data",
+    "recordCount": 184,
+    "total": {
+      "key": "Total",
+      "value": 184
+    },
+    "fields": {
+      "Factory": {
+        "keys": [
+          "Name"
+        ],
+        "how": "direct"
+      },
+      "Type": {
+        "keys": [
+          "FactoryType"
+        ],
+        "how": "direct"
+      },
+      "Country": {
+        "keys": [
+          "Country"
+        ],
+        "how": "direct"
+      },
+      "Assessment Date": {
+        "keys": [
+          "AssessmentDate"
+        ],
+        "how": "reformatted from /Date(...)/ to DD Mon YYYY"
+      },
+      "Modality": {
+        "keys": [
+          "Modality"
+        ],
+        "how": "direct"
+      },
+      "Cycle": {
+        "keys": [
+          "CycleNumber"
+        ],
+        "how": "direct"
+      },
+      "Issues": {
+        "keys": [
+          "NumberOfNonCompliances"
+        ],
+        "how": "direct"
+      },
+      "Responses": {
+        "keys": [
+          "NumberOfResponse"
+        ],
+        "how": "direct"
+      },
+      "Publicly Reported Issue": {
+        "keys": [],
+        "how": "no key in this endpoint - requires detail View panel"
+      },
+      "Issue Theme": {
+        "keys": [],
+        "how": "no key in this endpoint - requires detail View panel"
+      },
+      "Legal Reference": {
+        "keys": [],
+        "how": "no key in this endpoint - requires detail View panel"
+      }
+    },
+    "replay": {
+      "works": "plain request",
+      "needsSession": false,
+      "tried": []
+    },
+    "reason": "Endpoint 0 holds the factory-level list rows: Name, FactoryType, Country, AssessmentDate, Modality, CycleNumber, NumberOfNonCompliances, NumberOfResponse match 8 columns by meaning and values. Detail issue columns come from a separate View panel and have no keys here.",
+    "sampleRecords": [
+      {
+        "OrganizationId": 1421,
+        "Country": "Vietnam",
+        "Name": "28.1 Joint Stock Company",
+        "AssessmentDate": "/Date(1731456000000)/",
+        "CycleNumber": 10,
+        "NumberOfNonCompliances": 0,
+        "LastAssessmentId": 60405,
+        "NumberOfResponse": 0,
+        "FactoryType": "Manufacture of wearing apparel",
+        "Modality": "Onsite",
+        "NewID": 0
+      },
+      {
+        "OrganizationId": 2770,
+        "Country": "Vietnam",
+        "Name": "Bai Hong Co., Ltd.",
+        "AssessmentDate": "/Date(1733270400000)/",
+        "CycleNumber": 7,
+        "NumberOfNonCompliances": 2,
+        "LastAssessmentId": 60652,
+        "NumberOfResponse": 0,
+        "FactoryType": "Manufacture of footwear (15.2)",
+        "Modality": "Onsite",
+        "NewID": 0
+      }
+    ]
+  },
+  "detail": {
+    "request": {
+      "method": "POST",
+      "url": "https://portal.betterwork.org/Issues/FactoryDetail4TransparencyCompliance",
+      "payload": "assessmentId=64424&issueId=&clusterId=",
+      "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
+    },
+    "recordsPath": "$",
+    "recordCount": 3,
+    "total": null,
+    "fields": {
+      "Publicly Reported Issue": {
+        "keys": [
+          "IssueName"
+        ],
+        "how": "direct mapping"
+      },
+      "Issue Theme": {
+        "keys": [
+          "ClusterName",
+          "CompliancePointName"
+        ],
+        "how": "joined as ClusterName + ': ' + CompliancePointName"
+      },
+      "Legal Reference": {
+        "keys": [
+          "LegalReference"
+        ],
+        "how": "direct mapping"
+      }
+    },
+    "replay": {
+      "works": "plain request",
+      "needsSession": false,
+      "tried": []
+    },
+    "reason": "Endpoint 0 records match the Teijin sample rows: IssueName equals Publicly Reported Issue, ClusterName + CompliancePointName equals Issue Theme, LegalReference equals Legal Reference.",
+    "sampleRecords": [
+      {
+        "IssueId": 34263,
+        "ClusterName": "Occupational Safety and Health",
+        "IssueName": "Fire detection and alarm system",
+        "IssueDetail": "/Date(-62135596800000)/",
+        "IsResponded": false,
+        "IsResponseEditableForUser": false,
+        "CompliancePointName": "Emergency Preparedness",
+        "LegalReference": "Law on Fire Prevention and Fire Fighting (2001); Decree 136/2020/ND-CP, Arts. 5(1)(dd), 20; TCVN 3890:2009, Art. 6(1)(3)…",
+        "AssessmentDate": "/Date(1756080000000)/",
+        "CountryName": "Vietnam",
+        "AssessmentDateStr": "25 Aug 2025",
+        "ResponseText": "",
+        "ResponseId": 0,
+        "PersonalNotes": "<HTML><BODY STYLE=\"text-align:Left;font-family:Segoe UI;font-style:normal;font-weight:normal;/*font-size:12;*/color:#000…",
+        "StatusControl": 10,
+        "NewID": 0
+      },
+      {
+        "IssueId": 34264,
+        "ClusterName": "Occupational Safety and Health",
+        "IssueName": "Number of emergency exits",
+        "IssueDetail": "/Date(-62135596800000)/",
+        "IsResponded": false,
+        "IsResponseEditableForUser": false,
+        "CompliancePointName": "Emergency Preparedness",
+        "LegalReference": "Circular 06/2022/TT-BXD; QCVN 06:2022/BXD, Arts. 3(2)(3-7, 9); TCVN 2622:1995, Art. 7(7)",
+        "AssessmentDate": "/Date(1756080000000)/",
+        "CountryName": "Vietnam",
+        "AssessmentDateStr": "25 Aug 2025",
+        "ResponseText": "",
+        "ResponseId": 0,
+        "PersonalNotes": "<HTML><BODY STYLE=\"text-align:Left;font-family:Segoe UI;font-style:normal;font-weight:normal;/*font-size:12;*/color:#000…",
+        "StatusControl": 10,
+        "NewID": 0
+      }
+    ],
+    "trigger": {
+      "record": "Teijin Frontier Shonai Co., Ltd.",
+      "control": "View",
+      "reason": "The spec instructions state the data is in the panel that opens when you click View, and control 0 is the View button for this Teijin Frontier Shonai record."
+    },
+    "join": {
+      "in": "payload",
+      "param": "assessmentId",
+      "listField": "LastAssessmentId"
+    }
+  },
+  "constants": [],
+  "unmapped": [],
+  "notes": [],
+  "tokens": {
+    "in": 4479,
+    "out": 1850
+  }
+}
