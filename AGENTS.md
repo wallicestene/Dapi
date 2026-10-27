@@ -219,7 +219,10 @@ prompt caching · token counting.
 
 ### Practical notes
 
-- Set `reasoning.effort` per request. Pay for thinking only where it matters.
+- Set reasoning effort per request. Pay for thinking only where it matters. On
+  `/v1/chat/completions` the parameter is `reasoning_effort: "low"`; sending
+  `reasoning: { effort }` there returns 400 (tested Oct 27). `low` roughly halves
+  reasoning tokens on a trivial prompt.
 - Prompt caching: cached input is $0.20 per 1M on Wonder, $0.15 on Spark. Keep the
   stable part of the prompt at the front. Check `cached_tokens` in the response.
 - No long-context premium — a full 1M context costs the same rate as an empty one.
