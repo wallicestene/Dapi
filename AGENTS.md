@@ -312,7 +312,7 @@ These are not settled. Do not assume one and build it without asking.
    actor code that gets deployed and run, or it emits a config (method, selectors
    or endpoint, pagination scheme, field map) that drives one pre-built actor.
    Codegen is more impressive and closer to how the owner actually works; config
-   cannot fail live during a demo. Decide after the spikes.
+   cannot fail live during a demo. **Decided Oct 27: config.** See SKILL.md.
 2. **Whether Apify is needed for the API route at all.** If a target serves clean
    JSON from a reachable endpoint, extraction may be plain authenticated HTTP with
    no browser and no actor. If spike results show endpoints are common, Apify may

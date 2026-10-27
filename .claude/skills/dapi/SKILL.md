@@ -31,6 +31,17 @@ The owner wants this updated as we go, one step at a time.
   Same answers as normal effort on all 6 test sites, 40–60% fewer output tokens.
 - **2026-10-27** Leave Crawlee's `retryOnBlocked` off. A site that blocks a browser
   gets reported as blocked, not worked around (scope rules in AGENTS.md).
+- **2026-10-27** Priorities. *Must have*, on two pre-tested sources: ask (typed or
+  spoken question → source and fields), investigate (route, endpoint, field map),
+  extract with evidence hashed at capture (API route + one HTML route on
+  Crawlee/Apify), receipt view, completeness count, submission (video, X post, public
+  repo, entry). *Must have for the Meta score:* a vision job the DOM can't do; the SAM
+  spike decides which. *Nice to have:* field matching on Muse Glimmer, pre-flight
+  estimate, embedded-state route. *Cut until the demo works:* hybrid route,
+  bring-your-own Apify account, generated code.
+- **2026-10-27** Open decision 1 settled: the investigation emits a config (route,
+  endpoint or selectors, pagination scheme, field map) that drives one pre-built
+  actor. No generated code, because a config can't fail live in the demo.
 
 ## Findings
 
