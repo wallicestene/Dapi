@@ -1,0 +1,20 @@
+{
+  "title": "Dapi runner input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "siteCode": {
+      "title": "Site part",
+      "type": "string",
+      "editor": "textarea",
+      "description": "ES module source exporting `start` and `handle`, as in sites/betterwork.js."
+    },
+    "spec": {
+      "title": "Spec",
+      "type": "object",
+      "editor": "json",
+      "description": "The spec reader's output (<spec>.spec.json): columns, rules and sample rows."
+    }
+  },
+  "required": ["siteCode", "spec"]
+}

@@ -315,6 +315,26 @@ to PDF with `scripts/spec-to-pdf.js`.
 - `src/compare.js` is the tester: unit-tested (`npm test`), whitespace-only and
   trailing-slash differences warn, anything else fails, blanks must stay blank.
 
+### On Apify (2026-10-28)
+
+- `node src/apify/deploy-runner.js` creates or updates the `dapi-runner` Actor in the
+  owner's account from inline source files (`runner/` + the frame), through the API,
+  and builds it. **The build took 9 s**, so per-attempt builds are cheap; the runner
+  takes the site part's code as input anyway, and a finished site part can be saved
+  as its own Actor.
+- `node src/apify/run-on-apify.js <site-part.js> <spec.json>` runs it. Better Work on
+  the platform: 427 rows, 376/376 and 51/51, 134 responses kept, same sample results,
+  **35 s** at 1 GB.
+- `dataset.get().itemCount` read **0** right after the run and 427 a few seconds
+  later. Use `listItems({ limit: 1 }).total` for an immediate count.
+- Verified on the platform: items carry `#receipt`; `listItems({ clean: true })`
+  leaves it out. The named store `dapi-evidence` held all 134 evidence records.
+- **The owner's Apify account already holds their earlier freelance actors**, including
+  `better-work-compliance`, `great-place-to-work-scraper` and `cnverify-scraper`. Hard
+  rule 1: never read, copy or reuse them. Dapi's actors are named `dapi-*`. Whether
+  the demo should use sources the owner has built scrapers for before is the owner's
+  call (rule 4, ambiguity).
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from

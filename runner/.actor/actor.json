@@ -1,0 +1,9 @@
+{
+  "actorSpecification": 1,
+  "name": "dapi-runner",
+  "title": "Dapi runner",
+  "description": "Runs a Dapi site part through the frame: evidence, receipts, completeness, sample checks.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json"
+}

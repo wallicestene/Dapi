@@ -302,8 +302,9 @@ By pipeline stage:
 Scope settings: leave `retryOnBlocked` off — it tries to get past Cloudflare bot
 protection, which breaks the scope rules. Turn `respectRobotsTxtFile` on.
 
-Still unverified: the dataset item-count API and the per-record size limit of a
-key-value store.
+Dataset item count, verified Oct 28: `dataset.get().itemCount` lags a few seconds
+after a run (it read 0 for a 427-item dataset); `listItems({ limit: 1 }).total` is
+right immediately. Still unverified: the per-record size limit of a key-value store.
 
 ## Open decisions
 

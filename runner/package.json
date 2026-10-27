@@ -1,0 +1,14 @@
+{
+  "name": "dapi-runner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Runs a Dapi site part through the frame: evidence, receipts, completeness, sample checks.",
+  "type": "module",
+  "dependencies": {
+    "apify": "3.7.2",
+    "crawlee": "3.18.2"
+  },
+  "scripts": {
+    "start": "node src/frame/actor-main.js"
+  }
+}
