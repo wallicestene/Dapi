@@ -284,6 +284,37 @@ to PDF with `scripts/spec-to-pdf.js`.
   with whitespace and trailing slashes normalized, and show those differences as
   warnings, not failures.
 
+### The frame and the tester (2026-10-27)
+
+`node src/frame/run.js <site-part.js> <spec.json>` runs a site part with Crawlee
+(`HttpCrawler`) under the Apify SDK, locally into `storage/` for now.
+
+- **The site part contract** (what Muse Spark will write): export `start` (the first
+  requests) and `handle({ request, json, body, trace, enqueue, emit, expect })`.
+  `trace('Data.3.Name')` or `trace([a, b], fn)` returns a value plus where it came from;
+  `emit(row, kind)` outputs a row; `expect(kind, n)` records what the source claims
+  exists; `enqueue({ url, method, payload, label, note, userData })` asks for more.
+  Everything else is the frame's: retries, evidence, receipts, completeness, samples.
+- **Evidence:** every response is stored in the named key-value store
+  `dapi-evidence` as `{ capturedAt, request, response, bodySha256, body }`, keyed
+  `ev-<sha256 of the record>`. Each dataset row carries a hidden `#receipt` mapping
+  every column to its evidence key and path(s), marked `derived` when we transformed
+  it, or `constant`. Apify's `clean=true` export skips `#` fields (docs:
+  dataset-items API, "skipHidden").
+- **Better Work, hand-written site part (`sites/betterwork.js`):** 427 rows (376
+  issue rows + 51 for factories without issues), completeness 376/376 and 51/51, 134
+  responses kept, 0 failed, 16 s locally. Samples: A, B2, B3 pass; B1 warns on the
+  PDF's line-wrap space, where the extractor's value is the true one.
+- Receipts checked: e.g. Teijin's "Issue Theme" traces to `1.ClusterName +
+  1.CompliancePointName` in the detail response for `assessmentId=64424`; every
+  evidence body hash verified.
+- Crawlee gotchas: same-URL POSTs need `useExtendedUniqueKey: true` or they collapse
+  into one request. Collect `enqueue` calls and add them after `handle` returns, so
+  site code stays synchronous and no request is lost. `respectRobotsTxtFile: true`
+  is on; a missing robots.txt (Better Work's is 404) allows everything.
+- `src/compare.js` is the tester: unit-tested (`npm test`), whitespace-only and
+  trailing-slash differences warn, anything else fails, blanks must stay blank.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from

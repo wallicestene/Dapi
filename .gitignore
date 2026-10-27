@@ -2,3 +2,5 @@ node_modules/
 .env
 # Probe output includes live cookie values
 spike/results/
+# Crawlee/Apify local storage from frame runs
+storage/
