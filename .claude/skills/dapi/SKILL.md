@@ -150,6 +150,25 @@ the page and asks SAM for each phrase. About $0.0025 a call; the whole spike cos
   pagination on these pages, so masks as receipt evidence for HTML records would be
   decorative, as AGENTS.md warned.
 
+### Muse Spark reading page screenshots (2026-10-27)
+
+Probe: `spike/vision-probe.js <screenshot.png> "<what the page lists>"` asks
+`muse-spark-1.3` for a box and the first line of text per record, plus the next-page
+control, then draws the boxes on the screenshot so they can be checked by eye.
+
+- **It understands the page.** World Bank: 20 of 20 records, titles read correctly,
+  `›` named as the next-page control. Companies House: 3 of 3 company blocks, the
+  borderless text records SAM couldn't see, and correctly no pagination.
+- **Positions are tight on shorter shots and loose on tall ones.** Companies House
+  (1280×1520): each box hugged its record. World Bank (1280×3000, dense table): boxes
+  drifted up to half a row near the top, and the next-page box missed `›` by ~40 px.
+  Coordinates come on a 0–1000 grid, so a 3,000 px image has 3 px steps.
+- Cost at default effort: Companies House 2,676 in / 1,050 out (8 s); World Bank
+  4,114 in / 3,316 out (12 s). About $0.008–0.02 a page.
+- Takeaway: let Muse Spark decide *what* (which list, how many records, the text each
+  starts with, which control is "next") and let the DOM give the exact *where* (the
+  element holding that text). Not built or tested yet.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
@@ -174,6 +193,12 @@ the page and asks SAM for each phrase. About $0.0025 a call; the whole spike cos
   source pixels. No match is an empty string, not an error. The raw JSON keeps the
   text in `output[].content[].text`. Docs: dev.meta.ai/docs/sam/segmenting and
   /docs/sam/reading-segmentation.
+- Images to Muse Spark on chat completions: a content part
+  `{ type: "image_url", image_url: { url: "data:image/png;base64,..." } }` next to the
+  `{ type: "text" }` part. Up to 50 images and 50 MB each inline. A ~1280 px image is
+  about 1,300–1,500 tokens. Grounded positions come back on a 0–1000 grid; convert with
+  `x = round(x_norm * width / 1000)` and clamp, since the model can say 1001.
+  Docs: dev.meta.ai/docs/image-understanding.
 - `GET /v1/models` lists what the key can use: muse-wonder-1.0, muse-spark-1.3 (and
   1.2, 1.1, contributor variants), sam-3.1, muse-voice-transcribe-1.0, muse-image-1.0.
 
@@ -187,10 +212,10 @@ have run them, not before.
 
 - **What can vision do that the DOM can't?** Playwright already gives exact on-page
   coordinates for any element, and SAM can't find records or pagination on HTML pages
-  (see Findings). Untested candidates: Muse Spark reading a screenshot to decide where
-  the records are and what to click (the investigation agent); PDFs and scanned public
-  records, where there is no DOM; SAM on object-like marks in documents (seals, stamps,
-  signatures, photos).
+  (see Findings). Muse Spark *can* read a screenshot and say which blocks are the
+  records and which control is "next" (see Findings). Still untested: binding its
+  answer to exact DOM elements; PDFs and scanned public records, where there is no DOM;
+  SAM on object-like marks in documents (seals, stamps, signatures, photos).
 - Can Muse Glimmer do field matching? If yes, running it on Baseten or Modal qualifies
   for the open-weights bonus.
 - Why do GLEIF and FDIC stall in headless Chromium? A hung request is invisible to the
