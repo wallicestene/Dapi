@@ -54,6 +54,12 @@ The owner wants this updated as we go, one step at a time.
 - **2026-10-27** Demo targets: Better Work compliance (API route) and Great Place to
   Work India (embedded data + HTML pages), using specs we write ourselves, never the
   clients' documents. CnVerify is the "honest no" moment (bot wall, personal data).
+- **2026-10-28** Clean-room rule: **the code writer never sees a hand-written site
+  part**, neither the owner's earlier actors nor `sites/betterwork.js`. It gets the
+  spec, the investigator's findings and the frame's contract. The real test is Dapi
+  producing a site part on its own that passes the same checks.
+- **2026-10-28** The owner's earlier actors for the same targets are separate prior
+  work, not part of Dapi. Keep the demo targets and say so plainly in the video.
 
 ## Findings
 
@@ -335,6 +341,37 @@ to PDF with `scripts/spec-to-pdf.js`.
   the demo should use sources the owner has built scrapers for before is the owner's
   call (rule 4, ambiguity).
 
+### What the owner's earlier scrapers teach (read 2026-10-28)
+
+The owner's freelance actors `better-work-compliance` (Nov 2025),
+`great-place-to-work-scraper` (Jul 2026) and `cnverify-scraper` (Jun 2026) predate
+the hackathon. They were read once, with the owner's permission, for practice only.
+**No code from them goes into Dapi** (hard rule 1), and they are never shown to the
+code writer. Lessons, in our own words:
+
+- **Never drop a row silently.** When a detail fetch fails, still output the record
+  with what the list gave, and say so: one used a visible error marker in the row,
+  another emitted base-only rows. Both reconcile rows pushed against rows expected
+  and warn on a mismatch. That is Dapi's completeness count, done by hand.
+- **Fetch each detail page once.** When several list rows point to the same profile,
+  group them by URL, fetch once, and fan the details out.
+- **Check every filter variant for coverage.** GPTW has four lists, including
+  `?type=mega`, not just the three tabs a visitor sees. The investigator should try a
+  page's filter values before believing it has the whole source.
+- **Embedded data can be a JavaScript literal, not JSON** (GPTW: `var myVariable =
+  [...]`). The owner parsed it in an isolated `node:vm` context; never `eval` page
+  code in-process.
+- **Prefer structured data in the HTML** (JSON-LD) over DOM selectors, and when using
+  the DOM, find fields by their visible label (`th:contains("Address") + td`) rather
+  than by position. Labels survive layout changes.
+- **Format traps:** .NET `/Date(-62135596800000)/` is year 1, the "no date"
+  placeholder, so treat it as empty; decode HTML entities inside embedded strings;
+  date ranges may be split by `-`, `–`, `—` or "to"; fix protocol-relative links
+  (`//…`) and encode non-ASCII hrefs; classify social links by domain.
+- **Out of scope for Dapi:** the CnVerify actor gets past Cloudflare with a paid
+  challenge-solving service and residential proxies. Dapi reports such sites as
+  blocked instead (decision of 2026-10-27).
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
@@ -394,6 +431,10 @@ have run them, not before.
 - Better Work: should a factory with 0 issues get one row with blank issue columns, or
   no row? The client's spec doesn't say (ours does: one row). Dapi should ask the user
   when a spec is ambiguous.
-- GPTW: the page has a fourth, unlabelled `mega` table the spec doesn't mention.
-  Questions like that only surface during investigation, so the investigator needs a
-  way to ask the user too, not just the spec reader.
+- GPTW: the page has a fourth `mega` table (`?type=mega`) that has no visible tab and
+  that the spec doesn't mention. Questions like that only surface during
+  investigation, so the investigator needs a way to ask the user too, not just the
+  spec reader.
+- Frame: should a failed detail request still emit its rows with the detail columns
+  blank and the receipt marked "detail unavailable", instead of only showing up as a
+  short count? The owner's practice says yes.
