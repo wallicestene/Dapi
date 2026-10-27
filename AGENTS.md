@@ -325,6 +325,8 @@ These are not settled. Do not assume one and build it without asking.
 
 - `spike/network-probe.js` — how often do real targets serve their data from a
   JSON endpoint that could be called directly? Decides open decisions 1 and 2.
+  **Done Oct 27:** 3 of 20 public sources (a lower bound), no hybrid cases. Results
+  and lessons are in `.claude/skills/dapi/SKILL.md`.
 - `spike/sam-probe.js` — can SAM 3.1 find record blocks and pagination in a page
   screenshot? Decides open decision 3.
 
@@ -337,5 +339,7 @@ These are not settled. Do not assume one and build it without asking.
   built during the event, and judges can read it.
 - The repo owner is the sole author. No AI co-author trailers or attribution lines
   in commits, PRs or code.
+- Record each tested finding and each agreed decision in `.claude/skills/dapi/SKILL.md`
+  as we go, and fix anything there that turns out wrong. It is the project's notebook.
 
 <!-- END OF AGENTS.md -->
