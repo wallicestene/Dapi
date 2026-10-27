@@ -228,6 +228,24 @@ HQ, description and organization size.
   format fixes. Better Work does it over two hidden APIs; GPTW over embedded JSON plus
   HTML pages.
 
+### A third client spec: CnVerify (2026-10-27)
+
+Spec: Chinese company records from cnverify.com search, with English and Chinese
+names, status, legal representative, type, founding date, phone, email, a four-level
+industry class, address, province and city.
+
+- **Blocked on every path.** A Cloudflare managed challenge (Turnstile) answers the
+  search page, `robots.txt` and the terms pages alike; the headless browser gets 403.
+  The operator has chosen to block automated access. Per the scope rules and the
+  `retryOnBlocked` decision, Dapi stops here.
+- **Personal data too:** the legal representative is a named person, and the spec
+  asks for phone and email. Even unblocked, that conflicts with AGENTS.md scope.
+- What Dapi should do with a spec like this: say it's blocked and why, name the
+  personal-data columns, and point to legitimate routes (ask the provider about an API
+  or data licence, or go to the official registry).
+- Across three client specs: two buildable without a browser after ~10 minutes of
+  investigation each, one correctly refused.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
