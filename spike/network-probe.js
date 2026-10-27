@@ -11,6 +11,8 @@ if (!url) {
 }
 
 const jsonResponses = [];
+let requestCount = 0;
+let failedCount = 0;
 
 async function main() {
   const browser = await chromium.launch({ headless: true });
@@ -23,14 +25,17 @@ async function main() {
 
   // Listeners go on before goto, or we miss the document and early XHRs.
   page.on('requestfinished', (request) => {
+    requestCount++;
     pending.push(logRequest(request));
   });
 
   page.on('requestfailed', (request) => {
+    failedCount++;
     console.log('FAILED', request.method(), request.url(), request.failure()?.errorText);
   });
 
-  await page.goto(url, { waitUntil: 'load' });
+  // goto returns the final response after redirects, so a bot wall shows up here as 403.
+  const mainResponse = await page.goto(url, { waitUntil: 'load' });
   try {
     await page.waitForLoadState('networkidle', { timeout: 10_000 });
   } catch {
@@ -41,6 +46,7 @@ async function main() {
   await browser.close();
 
   printJsonDetails();
+  printSummary(mainResponse?.status());
 }
 
 async function logRequest(request) {
@@ -55,7 +61,8 @@ async function logRequest(request) {
     // redirects have no body
   }
 
-  const isJson = looksLikeJson(contentType, body);
+  const json = parseJson(body);
+  const isJson = json !== undefined || (contentType.includes('json') && body?.length > 0);
 
   console.log(
     isJson ? 'JSON' : '    ',
@@ -78,22 +85,23 @@ async function logRequest(request) {
       // allHeaders() includes cookie and other headers that headers() leaves out.
       headers: await request.allHeaders(),
       preview: body.toString('utf8').trimStart().slice(0, 500),
+      json,
     });
   }
 }
 
-function looksLikeJson(contentType, body) {
-  if (!body || body.length === 0) return false;
-  if (contentType.includes('json')) return true;
+// Parses the body whatever the content-type says: some servers send JSON as
+// text/plain or javascript. Returns undefined if it isn't JSON.
+function parseJson(body) {
+  if (!body || body.length === 0) return undefined;
 
-  // Content-type is the server's claim. Some send JSON as text/plain or javascript.
-  const text = body.toString('utf8').trimStart();
-  if (!text.startsWith('{') && !text.startsWith('[')) return false;
+  // Some APIs prefix JSON with )]}' so it can't be run as a script.
+  const text = body.toString('utf8').trim().replace(/^\)\]\}',?/, '').trim();
+  if (!text.startsWith('{') && !text.startsWith('[')) return undefined;
   try {
-    JSON.parse(text);
-    return true;
+    return JSON.parse(text);
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -123,6 +131,118 @@ function printJsonDetails() {
 
     console.log(`  preview ${r.preview}`);
   }
+}
+
+// Hosts that serve analytics, ads and surveys, never the page's own data.
+const TRACKER_HOSTS = [
+  'doubleclick.net', 'googleadservices.com', 'google-analytics.com', 'googletagmanager.com',
+  'demdex.net', 'omtrdc.net', 'qualtrics.com', 'visualstudio.com', 'facebook.net',
+  'facebook.com', 'linkedin.com', 'licdn.com', 'hotjar.com', 'clarity.ms', 'segment.io',
+  'mixpanel.com', 'amplitude.com', 'sentry.io', 'nr-data.net', 'cloudflareinsights.com',
+];
+
+function isTracker(requestUrl) {
+  const { hostname, pathname } = new URL(requestUrl);
+  if (TRACKER_HOSTS.some((h) => hostname === h || hostname.endsWith('.' + h))) return true;
+  // Adobe Analytics often runs on the site's own subdomain, e.g. smetrics.worldbank.org.
+  if (/^s?metrics\./.test(hostname)) return true;
+  return /\/(collect|track|beacon|pixel|telemetry|analytics)\b/.test(pathname);
+}
+
+// Finds the biggest list of similar-looking objects anywhere in the JSON.
+// Records can be an array, or an object keyed by ID like World Bank's "projects".
+function findRecords(value, path = '$', depth = 0) {
+  if (depth > 4 || value === null || typeof value !== 'object') return null;
+
+  const items = Array.isArray(value) ? value : Object.values(value);
+  const objects = items.filter((v) => v && typeof v === 'object' && !Array.isArray(v));
+  let best = null;
+
+  if (objects.length >= 3 && objects.length === items.length) {
+    const firstKeys = Object.keys(objects[0]);
+    const similar = objects.every(
+      (o) => firstKeys.filter((k) => k in o).length >= firstKeys.length / 2
+    );
+    if (similar) best = { path, count: objects.length, bytes: JSON.stringify(value).length };
+  }
+
+  // Compare by bytes, not count: 100 tiny filter entries shouldn't beat 20 full records.
+  for (const [key, child] of Object.entries(value)) {
+    const found = findRecords(child, `${path}.${key}`, depth + 1);
+    if (found && (!best || found.bytes > best.bytes)) best = found;
+  }
+  return best;
+}
+
+// The source's own claim of how many records exist. This is what the
+// completeness count will check against.
+const TOTAL_KEYS = [
+  'total', 'totalcount', 'total_count', 'totalresults', 'total_results', 'numfound',
+  'recordstotal', 'totalhits', 'totalelements', 'totalitems', 'count',
+];
+
+function findTotal(value, depth = 0) {
+  if (depth > 2 || value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+
+  for (const [key, child] of Object.entries(value)) {
+    if (TOTAL_KEYS.includes(key.toLowerCase()) && Number.isFinite(Number(child))) {
+      return { key, value: Number(child) };
+    }
+  }
+  for (const child of Object.values(value)) {
+    const found = findTotal(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function shortUrl(requestUrl) {
+  const { host, pathname } = new URL(requestUrl);
+  return host + pathname;
+}
+
+function printSummary(mainStatus) {
+  const data = [];
+  const tracking = [];
+  const other = [];
+
+  for (const r of jsonResponses) {
+    if (isTracker(r.url)) {
+      tracking.push(r);
+      continue;
+    }
+    const records = findRecords(r.json);
+    if (records) data.push({ ...r, records, total: findTotal(r.json) });
+    else other.push(r);
+  }
+
+  // Biggest first: the page's main data is usually its largest response.
+  data.sort((a, b) => b.size - a.size);
+
+  console.log('\n=== Summary ===');
+  console.log(`Page:      ${url} (status ${mainStatus ?? '?'})`);
+  console.log(`Requests:  ${requestCount + failedCount} total, ${failedCount} failed`);
+  console.log(
+    `JSON:      ${jsonResponses.length} responses: ${data.length} data, ` +
+      `${tracking.length} tracking, ${other.length} other`
+  );
+
+  for (const r of data) {
+    const total = r.total ? `, source says ${r.total.value} total ("${r.total.key}")` : '';
+    console.log(
+      `  DATA   ${r.method} ${shortUrl(r.url)}  ${r.size}B, ` +
+        `${r.records.count} records at ${r.records.path}${total}`
+    );
+  }
+  for (const r of other) {
+    console.log(`  OTHER  ${r.method} ${shortUrl(r.url)}  ${r.size}B`);
+  }
+
+  let verdict;
+  if (mainStatus >= 400) verdict = `BLOCKED: page returned ${mainStatus}`;
+  else if (data.length > 0) verdict = 'JSON ENDPOINT FOUND';
+  else verdict = 'NO JSON DATA: needs the HTML route';
+  console.log(`Verdict:   ${verdict}`);
 }
 
 main().catch((err) => {
