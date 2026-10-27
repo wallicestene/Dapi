@@ -1,0 +1,17 @@
+{
+  "name": "dapi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Give it an extraction spec; it finds how the data is really served, extracts it on Apify, and proves every value.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "spec:pdf": "node scripts/spec-to-pdf.js",
+    "spec:read": "node src/read-spec.js"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1"
+  }
+}

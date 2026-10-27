@@ -1,0 +1,131 @@
+{
+  "columns": [
+    {
+      "constant": null,
+      "instructions": "",
+      "name": "Factory"
+    },
+    {
+      "constant": null,
+      "instructions": "",
+      "name": "Type"
+    },
+    {
+      "constant": null,
+      "instructions": "",
+      "name": "Country"
+    },
+    {
+      "constant": null,
+      "instructions": "Date of the factory's latest assessment.",
+      "name": "Assessment Date"
+    },
+    {
+      "constant": null,
+      "instructions": "",
+      "name": "Modality"
+    },
+    {
+      "constant": null,
+      "instructions": "",
+      "name": "Cycle"
+    },
+    {
+      "constant": null,
+      "instructions": "Number of issues the factory has, as shown in the list.",
+      "name": "Issues"
+    },
+    {
+      "constant": null,
+      "instructions": "",
+      "name": "Responses"
+    },
+    {
+      "constant": null,
+      "instructions": "The issue title in the panel that opens when you click View under Additional Information.",
+      "name": "Publicly Reported Issue"
+    },
+    {
+      "constant": null,
+      "instructions": "From the same View panel, written as \"Cluster: Compliance point\".",
+      "name": "Issue Theme"
+    },
+    {
+      "constant": null,
+      "instructions": "From the same View panel.",
+      "name": "Legal Reference"
+    }
+  ],
+  "questions": [],
+  "rowUnit": "one publicly reported issue",
+  "rules": [
+    "One row per publicly reported issue. A factory with three issues gives three rows, each repeating the factory columns.",
+    "A factory with no issues still gets one row, with the three issue columns left empty.",
+    "Write dates as day, short month, year, for example 25 Aug 2025."
+  ],
+  "samples": [
+    {
+      "label": "Sample A",
+      "values": {
+        "Factory": "PT Bintang Abadi Persada",
+        "Type": "Manufacture of wearing apparel",
+        "Country": "Indonesia",
+        "Assessment Date": "24 Apr 2018",
+        "Modality": "Onsite",
+        "Cycle": "2",
+        "Issues": "0",
+        "Responses": "0"
+      }
+    },
+    {
+      "label": "Sample B1",
+      "values": {
+        "Factory": "Teijin Frontier Shonai Co., Ltd.",
+        "Type": "Manufacture of wearing apparel",
+        "Country": "Vietnam",
+        "Assessment Date": "25 Aug 2025",
+        "Modality": "Hybrid",
+        "Cycle": "4",
+        "Issues": "3",
+        "Responses": "0",
+        "Publicly Reported Issue": "Fire detection and alarm system",
+        "Issue Theme": "Occupational Safety and Health: Emergency Preparedness",
+        "Legal Reference": "Law on Fire Prevention and Fire Fighting (2001); Decree 136/2020/ND-CP, Arts. 5(1) (dd), 20; TCVN 3890:2009, Art. 6(1)(3), 6(2); TCVN 3890:2023, Arts. 4(1,7,10), 5(2); TCVN 5738:2021, Arts. 4(2,5), 5(2), 7, 9(1), 10; Circular 17/2021/TT-BCA, Art. 5(7)"
+      }
+    },
+    {
+      "label": "Sample B2",
+      "values": {
+        "Factory": "Teijin Frontier Shonai Co., Ltd.",
+        "Type": "Manufacture of wearing apparel",
+        "Country": "Vietnam",
+        "Assessment Date": "25 Aug 2025",
+        "Modality": "Hybrid",
+        "Cycle": "4",
+        "Issues": "3",
+        "Responses": "0",
+        "Publicly Reported Issue": "Number of emergency exits",
+        "Issue Theme": "Occupational Safety and Health: Emergency Preparedness",
+        "Legal Reference": "Circular 06/2022/TT-BXD; QCVN 06:2022/BXD, Arts. 3(2)(3-7, 9); TCVN 2622:1995, Art. 7(7)"
+      }
+    },
+    {
+      "label": "Sample B3",
+      "values": {
+        "Factory": "Teijin Frontier Shonai Co., Ltd.",
+        "Type": "Manufacture of wearing apparel",
+        "Country": "Vietnam",
+        "Assessment Date": "25 Aug 2025",
+        "Modality": "Hybrid",
+        "Cycle": "4",
+        "Issues": "3",
+        "Responses": "0",
+        "Publicly Reported Issue": "Accessible unobstructed and/or unlocked emergency exits during working hours including overtime",
+        "Issue Theme": "Occupational Safety and Health: Emergency Preparedness",
+        "Legal Reference": "Decree 144/2021/ND-CP, Art. 40(2a, 5); QCVN 06:2022/BXD, Art. 3.3.5"
+      }
+    }
+  ],
+  "sourceUrl": "https://portal.betterwork.org/transparency/compliance",
+  "title": "Better Work factory compliance"
+}

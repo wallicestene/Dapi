@@ -27,8 +27,9 @@ the end of this file. Nothing under `spike/` is production code.
 
 **Problem statement chosen:** Build for Your World.
 
-**What it does.** You give it a public web source and the fields you want. It
-investigates how that data is actually served, picks the cheapest reliable
+**What it does.** You give it a spec: the public source, the columns you want, a
+few sample rows and any rules ("one row per issue"), as a PDF or text, the way data
+extraction jobs are actually written. It investigates how that data is actually served, picks the cheapest reliable
 extraction method, runs the extraction on Apify, and delivers the dataset with a
 receipt: every value traceable to the exact evidence it came from, captured and
 hashed at the moment of extraction, plus an honest completeness count.
@@ -312,7 +313,9 @@ These are not settled. Do not assume one and build it without asking.
    actor code that gets deployed and run, or it emits a config (method, selectors
    or endpoint, pagination scheme, field map) that drives one pre-built actor.
    Codegen is more impressive and closer to how the owner actually works; config
-   cannot fail live during a demo. **Decided Oct 27: config.** See SKILL.md.
+   cannot fail live during a demo. **Decided Oct 27: generated code on a fixed
+   frame, with a test loop against the spec's sample rows.** Real client specs need
+   logic a config can't express. See SKILL.md.
 2. **Whether Apify is needed for the API route at all.** If a target serves clean
    JSON from a reachable endpoint, extraction may be plain authenticated HTTP with
    no browser and no actor. If spike results show endpoints are common, Apify may

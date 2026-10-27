@@ -39,9 +39,21 @@ The owner wants this updated as we go, one step at a time.
   spike decides which. *Nice to have:* field matching on Muse Glimmer, pre-flight
   estimate, embedded-state route. *Cut until the demo works:* hybrid route,
   bring-your-own Apify account, generated code.
-- **2026-10-27** Open decision 1 settled: the investigation emits a config (route,
-  endpoint or selectors, pagination scheme, field map) that drives one pre-built
-  actor. No generated code, because a config can't fail live in the demo.
+- **2026-10-27** ~~Open decision 1: config, not generated code.~~ Replaced the same
+  day, see below.
+- **2026-10-27** Open decision 1 settled: **generated code on a fixed frame, with a
+  test loop.** We write the frame once (Crawlee setup, evidence capture and hashing,
+  completeness count, retries). Muse Spark writes only the site-specific part. Dapi
+  test-runs it on Apify against the spec's sample rows, fixes it (up to ~3 tries),
+  then runs it in full. Why: real client specs (Better Work, GPTW India) need detail
+  calls, one row per child item and combined fields, which a config can't express,
+  and the test loop removes most of the "fails live" risk.
+- **2026-10-27** Dapi's input is a **spec document** (PDF or text): columns, sample
+  rows and plain-English rules, the way clients actually write extraction jobs. Muse
+  Spark reads it; the sample rows become the test cases.
+- **2026-10-27** Demo targets: Better Work compliance (API route) and Great Place to
+  Work India (embedded data + HTML pages), using specs we write ourselves, never the
+  clients' documents. CnVerify is the "honest no" moment (bot wall, personal data).
 
 ## Findings
 
@@ -209,12 +221,15 @@ HQ, description and organization size.
   a Zoho chat widget config, so the probe said "HTML route".
 - **But the listing is structured data embedded in the HTML.** TablePress (a WordPress
   plugin) puts each table's rows in a `<script>` as JSON arrays; the visible `<tbody>`
-  is empty until JavaScript fills it. One 2.3 MB GET holds **5,155 rows in three tables:
-  Large, Mid-size and Small Organizations**. Row shape: `[name, industry, employees,
-  "Jul 2026 - Jul 2027", "<a href=…/great/company/<slug>>View Profile</a>"]`.
+  is empty until JavaScript fills it. One 2.3 MB GET holds **5,155 rows in four tables,
+  `memListTable-large`, `-mid`, `-small` and `-mega`**. Only the first three have tab
+  labels (Large 1000+, Mid-size 100–999, Small 10–99 employees). Each table's rows sit
+  in the script right after its empty `<tbody>`. Row shape: `[name, industry,
+  employees, "Jul 2026 - Jul 2027", "<a href=…/great/company/<slug>>View Profile</a>"]`.
 - Spec mapping: Issue Date and Expiration Date = split the certification period on
-  " - "; Organization Size = which table the row sits in; Country = the constant
-  "India".
+  " - "; Organization Size = which table the row sits in (H.K.Designs is in `large`,
+  matching the client's sample; a guess from the nearest heading text said "Small",
+  so map by table id, not by nearby text); Country = the constant "India".
 - Website, social links, HQ and description are on each company's profile page,
   `/great/company/<slug>/`: server-rendered HTML, plain GET works. Without the trailing
   slash the link 301-redirects.
@@ -246,6 +261,29 @@ industry class, address, province and city.
 - Across three client specs: two buildable without a browser after ~10 minutes of
   investigation each, one correctly refused.
 
+### Spec reader (2026-10-27)
+
+`src/read-spec.js <spec.pdf|.md|.txt>` sends the spec to Muse Spark and gets back,
+as schema-checked JSON: title, source URL, what one row represents, columns (with
+instructions and fixed values), rules, sample rows and questions for the spec's author.
+Writes `<spec>.spec.json`. Our own demo specs live in `specs/` as HTML and are rendered
+to PDF with `scripts/spec-to-pdf.js`.
+
+- Better Work spec (4 samples, transposed layout): 11 columns, 3 rules, 4 samples, no
+  questions. **10 of 11 checked values exact.** The miss was one space: `5(1) (dd)`
+  for `5(1)(dd)`, where the PDF wrapped the line between them. 30 s, 5,784 in /
+  7,118 out tokens, about $0.04.
+- **The PDF text layer drops wrap hyphens** ("ND-" + "CP" → "NDCP"). Muse Spark reads
+  the page images too and got `ND-CP` and `TT-BCA` right.
+- GPTW spec (one sample, column-per-row layout): 13 columns, "Always India" read as
+  `constant: "India"`, split instructions kept, and the 600-character description
+  copied exactly with its typos ("craeting", "impaccable"). 21 s, about $0.025.
+- **Lesson for the test loop:** values copied out of documents carry line-wrap noise,
+  and samples can differ from the source in trivia (the client wrote
+  `https://www.hkdesigns.co/`, the source says `https://www.hkdesigns.co`). Compare
+  with whitespace and trailing slashes normalized, and show those differences as
+  warnings, not failures.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
@@ -276,6 +314,10 @@ industry class, address, province and city.
   about 1,300–1,500 tokens. Grounded positions come back on a 0–1000 grid; convert with
   `x = round(x_norm * width / 1000)` and clamp, since the model can say 1001.
   Docs: dev.meta.ai/docs/image-understanding.
+- PDFs to Muse Spark on chat completions: a content part
+  `{ type: "file", file: { filename, file_data: "data:application/pdf;base64,..." } }`.
+  Inline up to 50 MB; text from the first 100 pages, page images from the first 50.
+  Docs: dev.meta.ai/docs/file-handling.
 - `GET /v1/models` lists what the key can use: muse-wonder-1.0, muse-spark-1.3 (and
   1.2, 1.1, contributor variants), sam-3.1, muse-voice-transcribe-1.0, muse-image-1.0.
 
@@ -299,4 +341,8 @@ have run them, not before.
   probe because it only logs finished and failed requests.
 - How much does interacting with the page (search, next page) raise the 3-in-20 rate?
 - Better Work: should a factory with 0 issues get one row with blank issue columns, or
-  no row? The spec doesn't say. Dapi should ask the user when a spec is ambiguous.
+  no row? The client's spec doesn't say (ours does: one row). Dapi should ask the user
+  when a spec is ambiguous.
+- GPTW: the page has a fourth, unlabelled `mega` table the spec doesn't mention.
+  Questions like that only surface during investigation, so the investigator needs a
+  way to ask the user too, not just the spec reader.
