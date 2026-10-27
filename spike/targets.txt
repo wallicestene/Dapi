@@ -1,0 +1,28 @@
+# Public sources Dapi's users would actually point it at. No logins, no personal data.
+# One URL per line. Lines starting with # are ignored.
+
+# Company and financial registries
+https://find-and-update.company-information.service.gov.uk/search/companies?q=safaricom
+https://search.gleif.org/#/search/simpleSearch=safaricom
+https://virksomhet.brreg.no/nb/sok?sokeord=equinor
+https://abr.business.gov.au/Search/ResultsActive?SearchText=telstra
+https://register.fca.org.uk/s/search?q=barclays&type=Companies
+https://ised-isde.canada.ca/cc/lgcy/fdrlCrpSrch.html
+https://banks.data.fdic.gov/bankfind-suite/bankfind
+
+# Procurement and public spending
+https://tenders.go.ke/
+https://projects.worldbank.org/en/projects-operations/projects-list
+https://www.usaspending.gov/agency
+https://www.contractsfinder.service.gov.uk/Search
+https://www.find-tender.service.gov.uk/Search
+https://sam.gov/search/?index=opp
+https://www.ungm.org/Public/Notice
+https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals
+
+# Public statistics and open data
+https://www.centralbank.go.ke/rates/forex-exchange-rates/
+https://www.opendata.go.ke/
+https://data.worldbank.org/indicator/NY.GDP.MKTP.CD?locations=KE
+https://catalog.data.gov/dataset?q=procurement
+https://mapafrica.afdb.org/en
