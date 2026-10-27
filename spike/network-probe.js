@@ -35,9 +35,16 @@ async function main() {
   });
 
   // goto returns the final response after redirects, so a bot wall shows up here as 403.
-  const mainResponse = await page.goto(url, { waitUntil: 'load' });
+  // 'load' waits for every image and script, and some apps never get there. We only
+  // need the network traffic, so wait for the DOM and don't let a slow page kill the run.
+  let mainResponse = null;
   try {
-    await page.waitForLoadState('networkidle', { timeout: 10_000 });
+    mainResponse = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  } catch (err) {
+    console.log(`(navigation did not finish: ${err.message.split('\n')[0]})`);
+  }
+  try {
+    await page.waitForLoadState('networkidle', { timeout: 15_000 });
   } catch {
     console.log('(network never went idle, continuing anyway)');
   }
@@ -305,7 +312,9 @@ async function printSummary(mainStatus) {
   // The verdicts map onto the method table in AGENTS.md.
   const replayed = data.filter((r) => r.replay.attempt);
   let verdict;
-  if (mainStatus >= 400) verdict = `BLOCKED: page returned ${mainStatus}`;
+  if ([401, 403, 429].includes(mainStatus)) verdict = `BLOCKED: page returned ${mainStatus}`;
+  else if (mainStatus >= 400) verdict = `ERROR: page returned ${mainStatus}`;
+  else if (data.length === 0 && mainStatus === undefined) verdict = 'NOT LOADED: page never finished loading';
   else if (data.length === 0) verdict = 'HTML ROUTE: no JSON data found';
   else if (replayed.some((r) => !r.replay.attempt.needsSession)) verdict = 'API ROUTE: endpoint callable directly';
   else if (replayed.length > 0) verdict = 'HYBRID ROUTE: endpoint needs the browser session';
