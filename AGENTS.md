@@ -328,7 +328,9 @@ These are not settled. Do not assume one and build it without asking.
   **Done Oct 27:** 3 of 20 public sources (a lower bound), no hybrid cases. Results
   and lessons are in `.claude/skills/dapi/SKILL.md`.
 - `spike/sam-probe.js` — can SAM 3.1 find record blocks and pagination in a page
-  screenshot? Decides open decision 3.
+  screenshot? Decides open decision 3. **First results Oct 27: no, on HTML pages.**
+  It boxes buttons, logos and icons accurately but finds nothing for text-based
+  records or pagination. Details in `.claude/skills/dapi/SKILL.md`.
 
 ## Working style
 

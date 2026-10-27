@@ -130,6 +130,26 @@ What it means:
   the 1.3 MB HTML document. That's a route the method table lacks: one plain GET and
   pull the state out, no browser, no selectors.
 
+### SAM 3.1 on web page screenshots (2026-10-27)
+
+Probe: `spike/sam-probe.js <url> "<noun phrase>" ...` screenshots up to 3,000 px of
+the page and asks SAM for each phrase. About $0.0025 a call; the whole spike cost ~$0.05.
+
+- **Finds object-like UI, accurately:** "logo" (the GOV.UK crown, c 0.82), "button"
+  (filled buttons only, c 0.52–0.71), "icon" (round icons, c 0.55–0.82). Every box
+  checked against the screenshot was on target.
+- **Finds nothing for text-based UI:** "search result", "row", "table row", "table",
+  "pagination", "card", "text", "link" all returned no matches. Fair tests: Companies
+  House (results are plain text blocks) and World Bank (striped table rows, pagination
+  as text links `« ‹ 1 2 3 … 10 › »`). "table" probably means furniture to SAM.
+- A neat row of equal "buttons" is not proof of pagination: on World Bank it was the
+  footer's social media icons. Check boxes against the screenshot before believing them.
+- Not fair tests yet: CBK forex (table below the shot) and EU Funding & Tenders (still
+  a loading spinner when captured).
+- **Answer to open decision 3, for HTML pages: no.** SAM can't find record blocks or
+  pagination on these pages, so masks as receipt evidence for HTML records would be
+  decorative, as AGENTS.md warned.
+
 ## Meta Model API (verified 2026-10-27)
 
 - `POST https://api.meta.ai/v1/chat/completions`, bearer `MODEL_API_KEY`, loaded from
@@ -146,6 +166,16 @@ What it means:
 - Field matching was right on all 6 sites it ran on: it picked the record endpoint,
   mapped every field to its key (`"call title" -> metadata.title`), and said "none"
   with a reason where no endpoint held the fields.
+- SAM 3.1: `POST /v1/responses`, `model: "sam-3.1"`, one user message with
+  `{ type: "input_image", image_url: "data:image/png;base64,..." }` and
+  `{ type: "input_text", text: "<one noun phrase>" }`. `metadata.include_confidence:
+  "true"` adds `c`. The answer is text: `<0f>` then comma-separated records
+  `id<|box;x1=;y1=;x2=;y2=;w=;h=;c=|><|mask;x=;y=;c=;data=H,W,~<base85>|>`. Boxes are
+  source pixels. No match is an empty string, not an error. The raw JSON keeps the
+  text in `output[].content[].text`. Docs: dev.meta.ai/docs/sam/segmenting and
+  /docs/sam/reading-segmentation.
+- `GET /v1/models` lists what the key can use: muse-wonder-1.0, muse-spark-1.3 (and
+  1.2, 1.1, contributor variants), sam-3.1, muse-voice-transcribe-1.0, muse-image-1.0.
 
 ## Crawlee and Apify
 
@@ -156,11 +186,11 @@ have run them, not before.
 ## Open questions
 
 - **What can vision do that the DOM can't?** Playwright already gives exact on-page
-  coordinates for any element, so highlighting where a value came from on an HTML page
-  doesn't need a vision model. SAM 3.1 and Muse Spark's image input need a job only they
-  can do, or the Meta score suffers. Candidates: PDFs and scanned records (no DOM),
-  checking that the value a visitor sees matches what the API returned. The SAM spike
-  (`spike/sam-probe.js`) should answer this.
+  coordinates for any element, and SAM can't find records or pagination on HTML pages
+  (see Findings). Untested candidates: Muse Spark reading a screenshot to decide where
+  the records are and what to click (the investigation agent); PDFs and scanned public
+  records, where there is no DOM; SAM on object-like marks in documents (seals, stamps,
+  signatures, photos).
 - Can Muse Glimmer do field matching? If yes, running it on Baseten or Modal qualifies
   for the open-weights bonus.
 - Why do GLEIF and FDIC stall in headless Chromium? A hung request is invisible to the
