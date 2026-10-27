@@ -9,7 +9,8 @@
   },
   "scripts": {
     "spec:pdf": "node scripts/spec-to-pdf.js",
-    "spec:read": "node src/read-spec.js"
+    "spec:read": "node src/read-spec.js",
+    "test": "node --test"
   },
   "dependencies": {
     "playwright": "^1.64.1"

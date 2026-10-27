@@ -15,7 +15,7 @@ Return:
 - rowUnit: what one output row represents, in a few words, e.g. "one compliance issue".
 - columns: every output column, in the spec's order. instructions: where or how to get the value, taken from the spec's notes ("" if it says nothing). constant: the value if the spec fixes it for every row, e.g. "set the country as India"; otherwise null.
 - rules: every instruction about the table as a whole, e.g. how rows split or how to write dates.
-- samples: every sample row, labelled as in the spec. Copy each value exactly as the spec shows it, character for character, including typos, capitals and punctuation, because these values are used as test cases. When a value wraps across lines, rejoin it the way the page shows it, keeping hyphens that belong to the value. Leave out a column the sample leaves blank.
+- samples: every sample row, labelled as in the spec. Copy each value exactly as the spec shows it, character for character, including typos, capitals and punctuation, because these values are used as test cases. When a value wraps across lines, rejoin it the way the page shows it, keeping hyphens that belong to the value. When a sample leaves a column blank, give it as an empty string: blank is an expected value too.
 - questions: anything the spec leaves unclear that would change the output, phrased as a question to the person who wrote it. Empty if nothing is unclear.
 
 Don't invent columns, samples or rules that aren't in the spec.`;
@@ -106,7 +106,7 @@ function check(spec) {
   }
   for (const name of names) {
     const column = spec.columns.find((c) => c.name === name);
-    const sampled = spec.samples.some((s) => s.values[name] !== undefined);
+    const sampled = spec.samples.some((s) => s.values[name]);
     if (!sampled && column.constant === null) problems.push(`no sample shows a value for "${name}"`);
   }
   return problems;
