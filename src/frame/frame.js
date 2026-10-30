@@ -1,8 +1,9 @@
 // The fixed frame. A site part (written by hand or by Muse Spark) only knows its
 // site: where to start, and how to turn each response into rows. The frame does the
 // rest the same way every time: requests and retries (Crawlee), a hashed copy of
-// every response kept as evidence, where each value came from, the completeness
-// count, and the check against the spec's sample rows.
+// every response kept as evidence, where each value came from, rows streamed to the
+// dataset as they are found, state saved so a resurrected run continues where it
+// stopped, the completeness count, and the check against the spec's sample rows.
 // The caller owns Actor.init() and Actor.exit(): run.js locally, actor-main.js on Apify.
 
 import { createHash } from 'node:crypto';
@@ -13,25 +14,94 @@ import { compareSamples, formatReport } from '../compare.js';
 import { extractEmbedded } from '../embedded.js';
 import { select } from '../select.js';
 
+// Saved in the run's default key-value store with every push. Apify keeps that store
+// when a run is resurrected or migrated, so the run reloads it and carries on.
+const STATE_KEY = 'DAPI_FRAME_STATE';
+
+// Rows reach the dataset in batches: a batch goes when it is full, when its first
+// row has waited FLUSH_AFTER_MS (so the first rows show up within seconds), when it
+// passes MAX_BATCH_BYTES, or when the platform says the run is about to stop. Batch
+// size follows the source's own total: ~1/200 of it, between 50 and 500 rows. Apify
+// takes 400 pushes a second per dataset and items under 9 MB, so the limit that
+// matters is size, not rate.
+const FLUSH_AFTER_MS = 2000;
+const MAX_BATCH_BYTES = 5 * 1024 * 1024;
+const batchSizeFor = (total) => (total ? Math.min(500, Math.max(50, Math.ceil(total / 200))) : 100);
+
 // testLimit: run every request that mentions a sample's values first, then at most
 // this many other follow-up requests. Lets the test loop check samples without
 // fetching thousands of detail pages; the full run (no limit) checks completeness.
 export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 4 }) {
   const columns = spec.columns.map((c) => c.name);
+  const started = Date.now();
 
   log.setLevel(LogLevel.WARNING);
   // Named, so the evidence outlives the run: unnamed stores expire after 7 days.
   const evidenceStore = await Actor.openKeyValueStore('dapi-evidence');
 
-  const rows = [];
-  const receipts = [];
-  const expected = {}; // kind -> how many the source says exist
-  const emitted = {}; // kind -> how many rows we produced
-  const failed = []; // requests that failed every retry
-  const skipped = []; // requests robots.txt ruled out
-  const partial = []; // rows delivered without their detail, and why
-  const columnProblems = new Set();
-  let captures = 0;
+  const state = (await Actor.getValue(STATE_KEY)) ?? {
+    expected: {}, // kind -> how many the source says exist
+    emitted: {}, // kind -> rows already pushed to the dataset
+    failed: [], // requests that failed every retry
+    skipped: [], // requests robots.txt ruled out
+    partial: [], // rows delivered without their detail, and why
+    columnProblems: [],
+    captures: 0,
+    pushed: 0,
+    resumed: 0,
+    delivered: [], // requests whose rows are all in the dataset (short hashes)
+  };
+  if (state.pushed > 0 || Object.keys(state.expected).length) {
+    state.resumed++;
+    console.log(`Resuming: ${state.pushed} rows were already delivered before this run stopped.`);
+  }
+  const columnProblems = new Set(state.columnProblems);
+  const delivered = new Set(state.delivered);
+  const save = () => Actor.setValue(STATE_KEY, { ...state, columnProblems: [...columnProblems], delivered: [...delivered] });
+
+  // ---- Streaming rows to the dataset ----
+  const buffer = [];
+  let bufferBytes = 0;
+  let bufferSince = 0;
+  let flushing = Promise.resolve();
+
+  // One push at a time, in order. Counts move into the saved state only once their
+  // rows are in the dataset, so after any crash the two agree.
+  function flush() {
+    flushing = flushing.then(async () => {
+      if (!buffer.length) return;
+      const batch = buffer.splice(0);
+      bufferBytes = 0;
+      bufferSince = 0;
+      await Actor.pushData(batch);
+      for (const item of batch) {
+        delivered.add(item['#request']);
+        state.emitted[item['#kind']] = (state.emitted[item['#kind']] ?? 0) + 1;
+        if (item['#partial']) state.partial.push({ what: item['#partial'], row: Object.values(item).slice(0, 2) });
+      }
+      state.pushed += batch.length;
+      await save();
+    });
+    return flushing;
+  }
+  const timer = setInterval(() => {
+    if (buffer.length && Date.now() - bufferSince >= FLUSH_AFTER_MS) flush();
+  }, 500);
+  // The platform gives a few seconds' warning before it moves or stops a run.
+  for (const event of ['migrating', 'aborting', 'persistState']) Actor.on(event, () => flush());
+
+  // A live line in the Apify console, so the user watching the run sees progress.
+  let lastStatus = 0;
+  function status(force = false) {
+    if (!force && Date.now() - lastStatus < 10_000) return;
+    lastStatus = Date.now();
+    const total = Object.values(state.expected).reduce((a, b) => a + b, 0);
+    const delivered = state.pushed + buffer.length;
+    Actor.setStatusMessage(
+      `${delivered.toLocaleString()} rows delivered${total ? ` of ${total.toLocaleString()} the source lists` : ''}` +
+        ` · ${state.failed.length} failed requests`
+    ).catch(() => {});
+  }
 
   const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
@@ -48,7 +118,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     // Every capture gets its own key; the hash covers the request, the time and the body.
     const key = `ev-${sha256(JSON.stringify(record))}`;
     await evidenceStore.setValue(key, record);
-    captures++;
+    state.captures++;
     return key;
   }
 
@@ -79,10 +149,11 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     };
   }
 
-  // Splits each cell into the plain value for the dataset and its receipt. With
-  // `unavailable` (a fallback row after a failed detail request), columns the row
-  // doesn't have are left blank, and their receipts say why.
-  function emit(row, kind, unavailable = null) {
+  // Splits each cell into the plain value for the dataset and its receipt, and queues
+  // the row for the next push. With `unavailable` (a fallback row after a failed
+  // detail request), columns the row doesn't have are left blank, and their receipts
+  // say why.
+  function emit(requestKey, row, kind, unavailable = null) {
     const plain = {};
     const receipt = {};
     for (const [column, cell] of Object.entries(row)) {
@@ -99,18 +170,35 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
         plain[c] = '';
         receipt[c] = { unavailable };
       }
-      partial.push({ what: unavailable, row: Object.values(plain).slice(0, 2) });
     }
     for (const c of columns) if (!(c in plain)) columnProblems.add(`rows are missing column "${c}"`);
     for (const c of Object.keys(plain)) {
       if (!columns.includes(c)) columnProblems.add(`rows have column "${c}", which the spec doesn't list`);
     }
 
-    // Spec column order, so the dataset reads like the spec.
-    rows.push(Object.fromEntries(columns.map((c) => [c, plain[c] ?? ''])));
-    receipts.push(receipt);
-    emitted[kind] = (emitted[kind] ?? 0) + 1;
+    // Spec column order, so the dataset reads like the spec. Fields starting with "#"
+    // are hidden: Apify's clean exports leave them out.
+    const item = {
+      ...Object.fromEntries(columns.map((c) => [c, plain[c] ?? ''])),
+      '#receipt': receipt,
+      '#kind': kind,
+      ...(unavailable && { '#partial': unavailable }),
+      '#request': requestKey,
+    };
+    if (!buffer.length) bufferSince = Date.now();
+    buffer.push(item);
+    bufferBytes += JSON.stringify(item).length;
+    status();
   }
+
+  // Full batches go at request boundaries, so one request's rows are never split
+  // between pushes (see `delivered`).
+  function flushIfFull() {
+    const total = Object.values(state.expected).reduce((a, b) => a + b, 0);
+    if (buffer.length >= batchSizeFor(total) || bufferBytes >= MAX_BATCH_BYTES) flush();
+  }
+
+  const keyOf = (request) => sha256(request.uniqueKey).slice(0, 16);
 
   // Requests to the same URL with different bodies are different requests
   // (Better Work posts every detail call to one URL), so the method and body
@@ -150,7 +238,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     requestHandlerTimeoutSecs: 120,
     respectRobotsTxtFile: true,
     onSkippedRequest: ({ url, reason }) => {
-      skipped.push({ url, reason });
+      state.skipped.push({ url, reason });
     },
     async requestHandler({ request, response, body, json }) {
       const evidence = await capture(request, response, body);
@@ -168,6 +256,12 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
         },
       };
       const queued = [];
+      let expectedChanged = false;
+      // A request whose rows were already delivered before a resurrect runs again only
+      // to re-add its follow-ups (the queue ignores repeats); its rows and counts are
+      // already in, so it emits and counts nothing.
+      const requestKey = keyOf(request);
+      const again = delivered.has(requestKey);
       await site.handle({
         request,
         json,
@@ -180,11 +274,19 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
         },
         trace: makeTracer(page, evidence),
         enqueue: (...requests) => queued.push(...requests),
-        emit,
+        emit: (row, kind) => {
+          if (!again) emit(requestKey, row, kind);
+        },
         expect: (kind, count) => {
-          expected[kind] = (expected[kind] ?? 0) + count;
+          if (again) return;
+          state.expected[kind] = (state.expected[kind] ?? 0) + count;
+          expectedChanged = true;
         },
       });
+      flushIfFull();
+      // The source's totals are saved at once: after a resurrect, the list page that
+      // gave them is already done and won't run again.
+      if (expectedChanged) await save();
       if (queued.length) await addRequests(queued);
     },
     // A detail request that failed every retry still owes its rows: the site part can
@@ -193,20 +295,32 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     async failedRequestHandler({ request }, error) {
       const reason = error.message.split('\n')[0];
       const what = request.userData.note ?? request.url;
-      failed.push({ what, error: reason });
-      for (const { row, kind } of request.userData.fallback ?? []) emit(row, kind, `${what} failed: ${reason}`);
+      state.failed.push({ what, error: reason });
+      const requestKey = keyOf(request);
+      if (delivered.has(requestKey)) return;
+      for (const { row, kind } of request.userData.fallback ?? []) emit(requestKey, row, kind, `${what} failed: ${reason}`);
+      flushIfFull();
     },
   });
 
-  const started = Date.now();
+  status(true);
+  // On a resurrected run Crawlee's request queue already knows which requests are
+  // done, so the start requests are skipped and the queue carries on.
   await crawler.run(site.start.map(toRequest));
+  clearInterval(timer);
+  await flush();
 
-  // The dataset: clean rows, each carrying its receipt in a hidden "#receipt" field
-  // that Apify's clean exports leave out.
-  await Actor.pushData(rows.map((row, i) => ({ ...row, '#receipt': receipts[i] })));
+  // The checks read the dataset back, so they cover rows delivered before a resurrect.
+  const rows = [];
+  const receipts = [];
+  await (await Actor.openDataset()).forEach((item) => {
+    const { '#receipt': receipt, '#kind': _kind, '#partial': _partial, '#request': _request, ...row } = item;
+    rows.push(row);
+    receipts.push(receipt);
+  });
 
-  const kinds = [...new Set([...Object.keys(expected), ...Object.keys(emitted)])];
-  const completeness = kinds.map((kind) => ({ kind, expected: expected[kind] ?? null, got: emitted[kind] ?? 0 }));
+  const kinds = [...new Set([...Object.keys(state.expected), ...Object.keys(state.emitted)])];
+  const completeness = kinds.map((kind) => ({ kind, expected: state.expected[kind] ?? null, got: state.emitted[kind] ?? 0 }));
   const samples = compareSamples(rows, spec.samples);
   // Rows identical in every column. If their receipts point to the same place in the
   // evidence too, the site part read the same data twice: a bug. If they come from
@@ -229,28 +343,37 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     rows: rows.length,
     duplicateRows,
     sourceDuplicates,
-    partial,
-    captures,
+    partial: state.partial,
+    captures: state.captures,
+    resumed: state.resumed,
     completeness,
-    failed,
-    skipped,
+    failed: state.failed,
+    skipped: state.skipped,
     columnProblems: [...columnProblems],
     samples,
     testMode: testLimit === null ? null : { limit: testLimit, skippedRequests: testSkipped },
   };
   await Actor.setValue('REPORT', report);
 
+  const short = completeness.filter((c) => c.expected !== null && c.got < c.expected);
+  await Actor.setStatusMessage(
+    `Done: ${rows.length.toLocaleString()} rows` +
+      (short.length ? ` · SHORT: ${short.map((c) => `${c.kind} ${c.got} of ${c.expected}`).join(', ')}` : ' · complete') +
+      ` · ${state.failed.length} failed requests`,
+    { isStatusMessageTerminal: true }
+  ).catch(() => {});
+
   console.log(`\n=== ${spec.title} ===`);
-  console.log(`Rows: ${rows.length}   Responses kept as evidence: ${captures}   Time: ${Math.round((Date.now() - started) / 1000)} s`);
+  console.log(`Rows: ${rows.length}   Responses kept as evidence: ${state.captures}   Time: ${Math.round((Date.now() - started) / 1000)} s${state.resumed ? `   (resumed ${state.resumed}x)` : ''}`);
   console.log('\nCompleteness:');
   for (const c of completeness) {
     const mark = c.expected === null ? '?' : c.got === c.expected ? 'ok' : 'SHORT';
     console.log(`  ${mark.padEnd(5)} ${c.kind.padEnd(36)} ${c.got} of ${c.expected ?? 'unknown'}`);
   }
-  console.log(`\nFailed requests: ${failed.length ? '' : 'none'}`);
-  for (const f of failed) console.log(`  ${f.what}: ${f.error}`);
-  if (partial.length) console.log(`Rows delivered without their detail (receipts say why): ${partial.length}`);
-  console.log(`Skipped by robots.txt: ${skipped.length || 'none'}`);
+  console.log(`\nFailed requests: ${state.failed.length ? '' : 'none'}`);
+  for (const f of state.failed) console.log(`  ${f.what}: ${f.error}`);
+  if (state.partial.length) console.log(`Rows delivered without their detail (receipts say why): ${state.partial.length}`);
+  console.log(`Skipped by robots.txt: ${state.skipped.length || 'none'}`);
   if (duplicateRows) console.log(`Rows read twice (same values, same evidence): ${duplicateRows}`);
   for (const d of sourceDuplicates) {
     console.log(`The source lists this record ${d.times} times: ${JSON.stringify(Object.values(d.row).slice(0, 3))}`);
