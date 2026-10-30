@@ -25,7 +25,7 @@ The module exports exactly two things:
 export const start = [ request, ... ];   // the first requests
 export async function handle(ctx) { ... } // called once per response
 
-A request is a plain object: { url, method ('GET' default, or 'POST'), headers (object), payload (string body for POST), label (string you use to tell responses apart), note (short human description, used when the request fails), userData (JSON-serializable data to carry along) }.
+A request is a plain object: { url, method ('GET' default, or 'POST'), headers (object), payload (string body for POST), label (string you use to tell responses apart), note (names the record, e.g. 'profile of H.K.Designs (India) LLP': the user sees it when the request fails), userData (JSON-serializable data to carry along), fallback ([{ row, kind }]: for a detail request, the rows to deliver if it fails every retry, holding the list columns as traced values; the frame fills the other columns with blanks marked unavailable) }.
 
 handle(ctx) receives:
 - ctx.request: the request (ctx.request.label, ctx.request.userData).
@@ -52,7 +52,7 @@ Rules:
 - Format values the way the spec's samples show them. Dates in .NET form "/Date(ms)/" are UTC milliseconds; "/Date(-62135596800000)/" means no date (empty). Decode HTML entities in text. Date ranges may be split by "-", "–", "—" or "to".
 - Fetch each distinct detail request once. When several list records share one detail page, request it once, carry all their rows in userData, and emit them all from that response.
 - When the findings list "siblings", the list is split into several tables with the same rows: read every one. A column saying which table or filter a row is under comes from that table's context, written the way the spec's samples write it.
-- HTML detail pages: build each record's URL as the findings' urlFrom says (an href inside a list field may be HTML-escaped, e.g. "\\/"), request it with GET, and read columns with the findings' verified selectors. If a record has no detail URL, or its detail request fails, its row must still come out with the list columns (the frame counts failures).
+- HTML detail pages: build each record's URL as the findings' urlFrom says (an href inside a list field may be HTML-escaped, e.g. "\\/"), request it with GET, and read columns with the findings' verified selectors. If a record has no detail URL, emit its row with the list columns. For every detail request, pass its rows as fallback, so a failed request still delivers them.
 - Embedded and HTML text can hold entities like "&amp;": decode them.
 - No other imports, no network calls of your own, no timers. Plain modern JavaScript.
 

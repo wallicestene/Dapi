@@ -29,6 +29,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const emitted = {}; // kind -> how many rows we produced
   const failed = []; // requests that failed every retry
   const skipped = []; // requests robots.txt ruled out
+  const partial = []; // rows delivered without their detail, and why
   const columnProblems = new Set();
   let captures = 0;
 
@@ -78,8 +79,10 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     };
   }
 
-  // Splits each cell into the plain value for the dataset and its receipt.
-  function emit(row, kind) {
+  // Splits each cell into the plain value for the dataset and its receipt. With
+  // `unavailable` (a fallback row after a failed detail request), columns the row
+  // doesn't have are left blank, and their receipts say why.
+  function emit(row, kind, unavailable = null) {
     const plain = {};
     const receipt = {};
     for (const [column, cell] of Object.entries(row)) {
@@ -90,6 +93,13 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
         plain[column] = cell ?? '';
         receipt[column] = { constant: true };
       }
+    }
+    if (unavailable) {
+      for (const c of columns.filter((col) => !(col in plain))) {
+        plain[c] = '';
+        receipt[c] = { unavailable };
+      }
+      partial.push({ what: unavailable, row: Object.values(plain).slice(0, 2) });
     }
     for (const c of columns) if (!(c in plain)) columnProblems.add(`rows are missing column "${c}"`);
     for (const c of Object.keys(plain)) {
@@ -105,8 +115,8 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   // Requests to the same URL with different bodies are different requests
   // (Better Work posts every detail call to one URL), so the method and body
   // go into the unique key.
-  function toRequest({ label, note, userData, ...options }) {
-    return { ...options, useExtendedUniqueKey: true, userData: { ...userData, label, note } };
+  function toRequest({ label, note, userData, fallback, ...options }) {
+    return { ...options, useExtendedUniqueKey: true, userData: { ...userData, label, note, fallback } };
   }
 
   // Test mode: a request is the samples' if its URL, body or carried data mentions a
@@ -177,8 +187,14 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       });
       if (queued.length) await addRequests(queued);
     },
+    // A detail request that failed every retry still owes its rows: the site part can
+    // attach them as `fallback` (list columns only), and they come out with the
+    // missing columns blank and marked unavailable in their receipts.
     async failedRequestHandler({ request }, error) {
-      failed.push({ what: request.userData.note ?? request.url, error: error.message.split('\n')[0] });
+      const reason = error.message.split('\n')[0];
+      const what = request.userData.note ?? request.url;
+      failed.push({ what, error: reason });
+      for (const { row, kind } of request.userData.fallback ?? []) emit(row, kind, `${what} failed: ${reason}`);
     },
   });
 
@@ -213,6 +229,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     rows: rows.length,
     duplicateRows,
     sourceDuplicates,
+    partial,
     captures,
     completeness,
     failed,
@@ -232,6 +249,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   }
   console.log(`\nFailed requests: ${failed.length ? '' : 'none'}`);
   for (const f of failed) console.log(`  ${f.what}: ${f.error}`);
+  if (partial.length) console.log(`Rows delivered without their detail (receipts say why): ${partial.length}`);
   console.log(`Skipped by robots.txt: ${skipped.length || 'none'}`);
   if (duplicateRows) console.log(`Rows read twice (same values, same evidence): ${duplicateRows}`);
   for (const d of sourceDuplicates) {

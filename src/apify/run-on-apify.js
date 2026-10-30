@@ -27,9 +27,14 @@ const log = (await apify.run(run.id).log().get()) ?? '';
 const summary = log.slice(log.indexOf('==='));
 console.log(`\n${summary.trim()}`);
 
-// dataset.get().itemCount lags for a few seconds after a run and can read 0;
-// listItems().total is right immediately.
-const { total } = await apify.dataset(run.defaultDatasetId).listItems({ limit: 1 });
+// Dataset counts lag after a run (itemCount read 0 for 427 items; listItems().total
+// read 3,174 of 5,157 after a big run), so wait until the total matches the report.
 const report = await apify.keyValueStore(run.defaultKeyValueStoreId).getRecord('REPORT');
+let total = 0;
+for (let i = 0; i < 30; i++) {
+  ({ total } = await apify.dataset(run.defaultDatasetId).listItems({ limit: 1 }));
+  if (total >= (report?.value?.rows ?? 0)) break;
+  await new Promise((r) => setTimeout(r, 2000));
+}
 console.log(`\ndataset ${run.defaultDatasetId}: ${total} items`);
 console.log(`report rows: ${report?.value?.rows}, evidence kept: ${report?.value?.captures}`);

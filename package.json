@@ -10,7 +10,7 @@
   "scripts": {
     "spec:pdf": "node scripts/spec-to-pdf.js",
     "spec:read": "node src/read-spec.js",
-    "test": "node --test"
+    "test": "node --test --test-timeout=120000 'test/*.test.js'"
   },
   "dependencies": {
     "apify": "^3.7.2",

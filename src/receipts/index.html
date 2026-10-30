@@ -126,6 +126,10 @@ async function openReceipt(i, column) {
   $('main').classList.add('open');
   const head = `<button class="close" onclick="closeReceipt()">×</button><h2>${esc(column)}</h2><div class="value">${esc(row[column]) || '<span class="sub">(empty)</span>'}</div>`;
 
+  if (r?.unavailable) {
+    panel.innerHTML = head + `<p class="note">No value: ${esc(r.unavailable)}. The row was still delivered with what the list gave, and the completeness report counts it.</p>`;
+    return;
+  }
   if (!r || r.constant) {
     panel.innerHTML = head + '<p class="note">A fixed value or a deliberate blank, set by the spec rather than taken from the source.</p>';
     return;
