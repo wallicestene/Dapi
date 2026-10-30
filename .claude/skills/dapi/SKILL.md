@@ -388,6 +388,49 @@ allowed), and failures go back to Muse Spark with the previous code, up to 3 tri
   blank row when a detail returns no issues (never drop a record), `/Date(...)/` as
   UTC with the year-1 placeholder treated as empty.
 
+### GPTW end to end: embedded data, HTML details, robots.txt (2026-10-30)
+
+- **Embedded data:** `src/embedded.js` finds literals in scripts by bracket matching
+  (JSON.parse, else an isolated `vm` with a 1 s limit). GPTW's tables now sit in
+  `$("#memListTable-…").DataTable({ data: [[…]] })`, not `var myVariable` as in the
+  owner's older actor: never rely on a variable name. 4 tables, 5,158 companies.
+- **Embedded names follow script order and differ between URLs:** large is `s7.0` on
+  `?type=mid` and `s9.0` on the bare URL. Recognise entries by the text before them
+  (last 60 chars), everywhere: investigator, replay, generated code (contract rule).
+  A generated part that hard-coded names expected 8,102 companies and could mislabel
+  sizes; only the sample's own table proved correct.
+- **robots.txt:** GPTW has `Disallow: /*?*`, so the spec's own `?type=mid` URL is
+  off-limits; the bare `/certified-companies/` serves the same four tables and is
+  allowed, as are profiles. The investigator checks with Crawlee's `RobotsTxtFile`
+  (the frame's own parser) and switches only if a plain GET returns the same data.
+  The same robots.txt blocks GPTBot, ClaudeBot and Bytespider site-wide: Dapi isn't
+  those bots and follows the `*` rules, but the owner should judge it before a demo.
+- **HTML detail pages:** when Muse Spark picks a link ("View Profile"), the
+  investigator finds the list field holding it, fetches the *sample's* own page (its
+  row isn't on screen: DataTables paginates), asks Muse Spark for selectors, verifies
+  each against the sample and retries failures once with what they matched. Website
+  failed first (`.socialicon` has `<a>` with no href) and was fixed on retry
+  (`a[href^='http']`).
+- **Duplicates:** rows identical in values AND receipts = read twice (a bug, fails the
+  verdict); identical values from different places = the source lists the record
+  twice (GPTW: Tata Hitachi), reported, never silently removed.
+- **Cost bug caught:** the replay's parsed page leaked into the findings, sending
+  2.6 MB (519K tokens, ~$0.65) per writer attempt. Findings are now ~8 KB.
+- Writer result: GPTW site part passed test mode (samples + 10 profiles), expecting
+  all 5,158. Test mode picks "the samples' requests" by the spec's first column only;
+  shared values ("Vietnam") made every request look like a sample's.
+- The GPTW listing took ~30 s and profiles ~1–2 s each from Nairobi on Oct 30; the
+  investigator now allows 120 s for page loads and 300 s for plain re-fetches.
+
+### Receipt view (2026-10-30)
+
+`node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
+opens: request + body, capture time, SHA-256 re-checked in the browser with
+`crypto.subtle`, and the evidence focused on the value (JSON record with every source
+line marked, embedded row with the cell marked, or the captured page in a sandboxed
+iframe with the element outlined; cheerio-only selectors are marked server-side). The
+captured page's styles come from the live site: GPTW took ~21 s to render.
+
 ### What the owner's earlier scrapers teach (read 2026-10-28)
 
 The owner's freelance actors `better-work-compliance` (Nov 2025),

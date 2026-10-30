@@ -159,7 +159,9 @@ async function openReceipt(i, column) {
       html += `<h2>In data embedded in the page's HTML</h2><p class="note">After <code>${esc(loc.context.slice(-80))}</code>, row <code>${esc(loc.rowPath)}</code>, cell ${esc(loc.cell)}</p><pre>[${cells.join(',\n ')}]</pre>`;
     } else {
       const page = `/api/evidence/page?${new URLSearchParams({ key: r.evidence, path: loc.path })}`;
-      html += `<h2>On the page as it was captured</h2><p class="note"><code>${esc(loc.path)}</code> · ${loc.matches} match${loc.matches === 1 ? '' : 'es'}</p><iframe sandbox="allow-same-origin" src="${page}" onload="this.contentDocument.querySelector('[data-dapi-hit]')?.scrollIntoView({ block: 'center' })"></iframe>`;
+      // The captured HTML is local; its styles and fonts still load from the live site,
+      // which can be slow, so say so until the frame is ready.
+      html += `<h2>On the page as it was captured</h2><p class="note"><code>${esc(loc.path)}</code> · ${loc.matches} match${loc.matches === 1 ? '' : 'es'}</p><p class="note" id="pageLoading">Rendering the captured page (its styles load from the live site)…</p><iframe sandbox="allow-same-origin" src="${page}" onload="document.getElementById('pageLoading')?.remove(); this.contentDocument.querySelector('[data-dapi-hit]')?.scrollIntoView({ block: 'center' })"></iframe>`;
     }
   }
   panel.innerHTML = html;
