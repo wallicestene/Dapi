@@ -8,10 +8,19 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Actor } from 'apify';
 import { runFrame } from './frame.js';
+import { probe } from './probe.js';
 
 await Actor.init();
 
-const { siteCode, spec, testLimit = null, maxConcurrency = null, robotsOverride = false } = (await Actor.getInput()) ?? {};
+const input = (await Actor.getInput()) ?? {};
+
+// Probe mode: check how the site answers Apify's servers, then stop.
+if (input.mode === 'probe') {
+  await Actor.setValue('REACH', await probe(input.requests ?? [], { countryCode: input.countryCode }));
+  await Actor.exit();
+}
+
+const { siteCode, spec, testLimit = null, maxConcurrency = null, robotsOverride = false } = input;
 if (!siteCode || !spec) throw new Error('Input needs siteCode (the site part) and spec (from read-spec)');
 
 const file = path.join(os.tmpdir(), `site-${Date.now()}.mjs`);

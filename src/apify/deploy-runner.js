@@ -18,6 +18,7 @@ const FILES = {
   '.actor/input_schema.json': 'runner/.actor/input_schema.json',
   'src/frame/actor-main.js': 'src/frame/actor-main.js',
   'src/frame/frame.js': 'src/frame/frame.js',
+  'src/frame/probe.js': 'src/frame/probe.js',
   'src/compare.js': 'src/compare.js',
   'src/embedded.js': 'src/embedded.js',
   'src/select.js': 'src/select.js',

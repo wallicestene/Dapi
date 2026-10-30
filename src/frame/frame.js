@@ -53,7 +53,12 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   // blocks cloud IPs or serves content by country). Recorded in every receipt.
   const proxyAsk = proposed.proxy?.groups?.length ? proposed.proxy : null;
   const proxyConfiguration = proxyAsk
-    ? await Actor.createProxyConfiguration({ groups: proxyAsk.groups, countryCode: proxyAsk.countryCode })
+    ? await Actor.createProxyConfiguration({
+        // Apify Proxy has no group called DATACENTER: datacenter IPs are the default
+        // when no group is named. RESIDENTIAL is a real group.
+        groups: proxyAsk.groups.filter((g) => g !== 'DATACENTER'),
+        countryCode: proxyAsk.countryCode,
+      })
     : undefined;
   const via = proxyAsk ? `Apify Proxy ${proxyAsk.groups.join('+')}${proxyAsk.countryCode ? ` (${proxyAsk.countryCode})` : ''}` : 'direct';
   if (proxyAsk) console.log(`Fetching via ${via}`);

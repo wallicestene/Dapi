@@ -63,9 +63,35 @@ export async function investigate(spec) {
       ? await replayEmbedded(list.capture.url, list.embedded.context, list.records.path, list.records.count)
       : await replay(list.capture, list.records.path);
     if (detail?.kind === 'json') detail.replay = await replay(detail.capture, detail.records.path);
-    return report({ spec, session, list, detail, wanted, notes, tokens });
+    const reachability = await reach({ spec, list, detail, notes });
+    return { ...report({ spec, session, list, detail, wanted, notes, tokens }), reachability };
   } finally {
     await session.close();
+  }
+}
+
+// How the site answers Apify's servers, where the extraction will run: the probe
+// fetches the list and the sample's detail from Apify, directly, then via datacenter
+// and residential proxy, stopping at the first that works. Each request must come
+// back holding one of the sample's values. Skipped without an Apify token.
+async function reach({ spec, list, detail, notes }) {
+  const sample = spec.samples[0];
+  const firstValue = sample?.values[spec.columns[0].name];
+  const detailValue = detail && Object.keys(detail.fields).map((c) => sample?.values[c]).find((v) => v && v.length >= 4);
+  const header = (c) => (c.headers?.['content-type'] ? { 'content-type': c.headers['content-type'] } : {});
+  const requests = [
+    { label: 'list', url: list.capture.url, method: list.capture.method, payload: list.capture.payload, headers: header(list.capture), expect: firstValue },
+  ];
+  if (detail?.kind === 'json') {
+    requests.push({ label: 'detail', url: detail.capture.url, method: detail.capture.method, payload: detail.capture.payload, headers: header(detail.capture), expect: detailValue });
+  }
+  if (detail?.kind === 'html') requests.push({ label: 'detail page', url: detail.sampleUrl, expect: detailValue });
+  try {
+    const { checkReach } = await import('./apify/reach.js');
+    return await checkReach(requests);
+  } catch (err) {
+    notes.push(`Reachability from Apify not checked: ${err.message.split('\n')[0]}`);
+    return null;
   }
 }
 
@@ -371,6 +397,11 @@ function printFindings(f) {
   console.log(`\nConstants: ${f.constants.map((c) => `${c.column} = "${c.value}"`).join(', ') || 'none'}`);
   console.log(`Unmapped: ${f.unmapped.join(', ') || 'none'}`);
   for (const n of f.notes) console.log(`Note: ${n}`);
+  if (f.reachability) {
+    const r = f.reachability;
+    console.log(`\nFrom Apify's servers: ${r.recommendation ? `works ${r.recommendation === 'direct' ? 'directly' : `via ${r.recommendation} proxy`}` : 'no way worked'}`);
+    for (const x of r.results ?? []) console.log(`  ${x.mode.padEnd(11)} ${String(x.label ?? '').padEnd(11)} ${x.error ?? `HTTP ${x.status}, ${x.ms} ms, ${x.bytes} bytes${x.blocked ? ', BLOCKED' : ''}${x.hasData === false ? ', sample value missing' : ''}`}`);
+  }
   console.log(`Muse Spark: ${f.tokens.in} tokens in, ${f.tokens.out} out`);
 }
 

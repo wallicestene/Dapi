@@ -33,10 +33,29 @@
       "editor": "checkbox",
       "default": false,
       "description": "Only with the user's approval, when the investigation found no allowed route. Overridden requests are counted in the report and marked in their evidence."
+    },
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "editor": "select",
+      "enum": [
+        "run",
+        "probe"
+      ],
+      "default": "run",
+      "description": "run: extract with the site part. probe: check how the site answers Apify's servers."
+    },
+    "requests": {
+      "title": "Probe requests",
+      "type": "array",
+      "editor": "json",
+      "description": "probe mode: [{ label, url, method, payload, headers, expect }]"
+    },
+    "countryCode": {
+      "title": "Proxy country",
+      "type": "string",
+      "editor": "textfield",
+      "description": "probe mode: country for proxy IPs, e.g. KE"
     }
-  },
-  "required": [
-    "siteCode",
-    "spec"
-  ]
+  }
 }

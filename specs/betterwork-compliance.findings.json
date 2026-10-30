@@ -1,7 +1,7 @@
 {
   "spec": "Better Work factory compliance",
   "sourceUrl": "https://portal.betterwork.org/transparency/compliance",
-  "investigatedAt": "2026-10-27T21:14:54.531Z",
+  "investigatedAt": "2026-10-30T20:46:03.063Z",
   "pageStatus": 200,
   "list": {
     "request": {
@@ -11,10 +11,11 @@
       "contentType": "application/x-www-form-urlencoded; charset=UTF-8"
     },
     "recordsPath": "$.Data",
-    "recordCount": 184,
+    "recordCount": 185,
+    "recordShape": "objects",
     "total": {
       "key": "Total",
-      "value": 184
+      "value": 185
     },
     "fields": {
       "Factory": {
@@ -67,23 +68,27 @@
       },
       "Publicly Reported Issue": {
         "keys": [],
-        "how": "no key in this endpoint - requires detail View panel"
+        "how": "not present in this endpoint"
       },
       "Issue Theme": {
         "keys": [],
-        "how": "no key in this endpoint - requires detail View panel"
+        "how": "not present in this endpoint"
       },
       "Legal Reference": {
         "keys": [],
-        "how": "no key in this endpoint - requires detail View panel"
+        "how": "not present in this endpoint"
       }
     },
     "replay": {
       "works": "plain request",
       "needsSession": false,
-      "tried": []
+      "tried": [],
+      "timing": {
+        "ms": 4120,
+        "bytes": 53712
+      }
     },
-    "reason": "Endpoint 0 holds the factory-level list rows: Name, FactoryType, Country, AssessmentDate, Modality, CycleNumber, NumberOfNonCompliances, NumberOfResponse match 8 columns by meaning and values. Detail issue columns come from a separate View panel and have no keys here.",
+    "reason": "Endpoint 0 holds the supplier/factory list that the samples are built from: Name, FactoryType, Country, Modality, CycleNumber, NumberOfNonCompliances, NumberOfResponse and AssessmentDate match the Factory, Type, Country, Modality, Cycle, Issues, Responses and Assessment Date samples in meaning and values. Issue detail columns from the View panel have no keys in this list endpoint.",
     "sampleRecords": [
       {
         "OrganizationId": 1421,
@@ -114,6 +119,7 @@
     ]
   },
   "detail": {
+    "kind": "json",
     "request": {
       "method": "POST",
       "url": "https://portal.betterwork.org/Issues/FactoryDetail4TransparencyCompliance",
@@ -122,34 +128,39 @@
     },
     "recordsPath": "$",
     "recordCount": 3,
+    "recordShape": "objects",
     "total": null,
     "fields": {
       "Publicly Reported Issue": {
         "keys": [
           "IssueName"
         ],
-        "how": "direct mapping"
+        "how": "direct value"
       },
       "Issue Theme": {
         "keys": [
           "ClusterName",
           "CompliancePointName"
         ],
-        "how": "joined as ClusterName + ': ' + CompliancePointName"
+        "how": "joined as \"ClusterName: CompliancePointName\""
       },
       "Legal Reference": {
         "keys": [
           "LegalReference"
         ],
-        "how": "direct mapping"
+        "how": "direct value"
       }
     },
     "replay": {
       "works": "plain request",
       "needsSession": false,
-      "tried": []
+      "tried": [],
+      "timing": {
+        "ms": 285,
+        "bytes": 4096
+      }
     },
-    "reason": "Endpoint 0 records match the Teijin sample rows: IssueName equals Publicly Reported Issue, ClusterName + CompliancePointName equals Issue Theme, LegalReference equals Legal Reference.",
+    "reason": "Endpoint 0 returns per-issue records whose IssueName, ClusterName+CompliancePointName, and LegalReference match the sample values for the View panel.",
     "sampleRecords": [
       {
         "IssueId": 34263,
@@ -189,9 +200,9 @@
       }
     ],
     "trigger": {
-      "record": "Teijin Frontier Shonai Co., Ltd.",
+      "record": "Teijin Frontier Shonai Co., Ltd. Manufacture of wearing appa",
       "control": "View",
-      "reason": "The spec instructions state the data is in the panel that opens when you click View, and control 0 is the View button for this Teijin Frontier Shonai record."
+      "reason": "Spec instructions say the data is in the panel that opens when you click View, and control 0 is the View button for this record."
     },
     "join": {
       "in": "payload",
@@ -204,6 +215,32 @@
   "notes": [],
   "tokens": {
     "in": 4479,
-    "out": 1850
+    "out": 1896
+  },
+  "reachability": {
+    "runId": "XqNVnvMUKYPtcNSty",
+    "recommendation": "direct",
+    "results": [
+      {
+        "mode": "direct",
+        "label": "list",
+        "status": 200,
+        "ms": 3824,
+        "bytes": 53712,
+        "blocked": false,
+        "hasData": true,
+        "works": true
+      },
+      {
+        "mode": "direct",
+        "label": "detail",
+        "status": 200,
+        "ms": 163,
+        "bytes": 4096,
+        "blocked": false,
+        "hasData": true,
+        "works": true
+      }
+    ]
   }
 }
