@@ -22,7 +22,7 @@ allows, and never hand over a short or wrong dataset quietly.
 ## The module
 
 ```js
-export const config = { maxConcurrency, maxRequestsPerMinute, maxRetries }; // see "Speed"
+export const config = { maxConcurrency, maxRequestsPerMinute, maxRetries, proxy }; // see "Speed", "Getting through"
 export const start = [ request, ... ];   // the first requests
 export async function handle(ctx) { ... } // called once per response
 ```
@@ -101,6 +101,7 @@ may be split by `-`, `–`, `—` or "to". Fix protocol-relative links (`//…`)
 
 **Speed: set `config` from the measurements.** The findings include how long the
 site took per request and how large responses were. Choose:
+
 - `maxConcurrency` — parallel requests. A fast API (under ~300 ms): 8–12. A slow or
   heavy site (over ~1.5 s, or pages over 1 MB): 2–4. Somewhere between: 4–8.
 - `maxRequestsPerMinute` — a ceiling that keeps a small public server comfortable;
@@ -110,9 +111,16 @@ site took per request and how large responses were. Choose:
 The frame clamps these to safe limits. The goal is the fastest run that finishes
 cleanly without the site pushing back, not the fastest possible burst.
 
-**Stay a good citizen.** No disguises, no tricks to get past a block: if the site
-refuses (403, a challenge page, robots.txt), let the request fail so the frame
-reports it. Public data only, no logins.
+**Getting through: use what Apify provides, when the evidence says so.** Crawlee
+already sends browser-like headers and TLS fingerprints and rotates sessions. When
+the findings show the site blocks or rate-limits cloud IPs, or serves different
+content by country, set `config.proxy`:
+`{ groups: ['RESIDENTIAL'] }` or `{ groups: ['DATACENTER'] }`, with `countryCode`
+(e.g. `'KE'`) when content depends on location. Leave it out otherwise: residential
+traffic costs money. The frame records in each receipt how its response was fetched.
+Never: CAPTCHA or challenge-solving services, logins, paywalls, or requests
+robots.txt disallows. If the site still refuses, let the request fail so the frame
+reports it. Public data only.
 
 **Plain code.** No imports, no network calls of your own, no timers, no `eval`.
 

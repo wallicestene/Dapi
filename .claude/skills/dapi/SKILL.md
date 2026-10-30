@@ -60,6 +60,17 @@ The owner wants this updated as we go, one step at a time.
   producing a site part on its own that passes the same checks.
 - **2026-10-28** The owner's earlier actors for the same targets are separate prior
   work, not part of Dapi. Keep the demo targets and say so plainly in the video.
+- **2026-10-30** Runs alert the user the moment they start (Apify run and dataset
+  links), and rows stream into the dataset as they are found; nobody waits for the
+  end. A stopped or crashed run continues on Resurrect; Start runs fresh.
+- **2026-10-30** Getting through (owner's call): Dapi uses what Apify provides,
+  Apify Proxy (datacenter or residential, with a country) and Crawlee's built-in
+  headers, fingerprints and session rotation, when the investigation shows a site
+  needs them to finish a run. Chosen from evidence, recorded in every receipt
+  (`via`), cost kept in mind. Still out: CAPTCHA or challenge-solving services,
+  logins, paywalls, requests robots.txt disallows. `retryOnBlocked` stays off.
+- **2026-10-30** The rules Muse Spark writes code under live in
+  `src/prompts/site-part-rules.md`, which the owner can read and edit.
 
 ## Findings
 

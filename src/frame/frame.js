@@ -45,6 +45,15 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     maxRetries: clamp(proposed.maxRetries, 1, 6, 3),
   };
   console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries`);
+
+  // Apify Proxy, when the site part asks for it (the investigation showed the site
+  // blocks cloud IPs or serves content by country). Recorded in every receipt.
+  const proxyAsk = proposed.proxy?.groups?.length ? proposed.proxy : null;
+  const proxyConfiguration = proxyAsk
+    ? await Actor.createProxyConfiguration({ groups: proxyAsk.groups, countryCode: proxyAsk.countryCode })
+    : undefined;
+  const via = proxyAsk ? `Apify Proxy ${proxyAsk.groups.join('+')}${proxyAsk.countryCode ? ` (${proxyAsk.countryCode})` : ''}` : 'direct';
+  if (proxyAsk) console.log(`Fetching via ${via}`);
   const started = Date.now();
 
   log.setLevel(LogLevel.WARNING);
@@ -122,6 +131,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body);
     const record = {
       capturedAt: new Date().toISOString(),
+      via,
       request: { method: request.method, url: request.url, payload: request.payload ?? null },
       response: { status: response.statusCode, contentType: response.headers['content-type'] ?? null },
       bodySha256: sha256(bytes),
@@ -243,6 +253,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   }
 
   const crawler = new HttpCrawler({
+    proxyConfiguration,
     maxConcurrency: tuning.maxConcurrency,
     maxRequestsPerMinute: tuning.maxRequestsPerMinute,
     maxRequestRetries: tuning.maxRetries,
