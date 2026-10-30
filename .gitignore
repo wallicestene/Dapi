@@ -4,3 +4,5 @@ node_modules/
 spike/results/
 # Crawlee/Apify local storage from frame runs
 storage/
+# impeccable decision-page runtime state
+.impeccable/questions/

@@ -78,6 +78,12 @@ The owner wants this updated as we go, one step at a time.
   sources that need no override (rule 4).
 - **2026-10-30** The rules Muse Spark writes code under live in
   `src/prompts/site-part-rules.md`, which the owner can read and edit.
+- **2026-10-31** Front door (owner's calls): Next.js, shadcn/ui on Radix + Tailwind
+  as the component base, 21st.dev components restyled to Dapi's own design, each
+  declared as a dependency. Main user: a non-developer with a spec. Hosted, with
+  finished jobs anyone can explore; live new jobs are shown in the video (credits
+  are limited). Design must avoid the generic AI-SaaS look: the visual direction is
+  chosen on impeccable's decision page, product context is in `PRODUCT.md`.
 
 ## Findings
 
@@ -478,6 +484,23 @@ allowed), and failures go back to Muse Spark with the previous code, up to 3 tri
   every profile column blank. Only the sample check caught it, and three repair
   attempts didn't, because "empty columns" didn't say why. Now the rules explain
   `.value`, and the verdict says outright when no detail request was ever made.
+
+### Full runs of the generated parts on Apify (2026-10-30)
+
+Both parts written by Muse Spark in the clean room, under the sharpened speed rules,
+run in full on Apify with no human edits:
+
+- **Better Work** (10/500/3): 430 of 430 issue rows in 15 s, 135 responses kept,
+  0 failed. Samples: 3 pass, 1 warn (B1's Legal Reference: the spec writes
+  "5(1) (dd)", the source "5(1)(dd)"; delivered as the source has it).
+- **GPTW India** (10/480/3): 5,158 of 5,158 companies in 956 s (~16 min), 4,773
+  responses kept, sample passes. One profile (Cerner Healthcare Solutions India) got
+  a 403 on every retry; its row was still delivered with the list columns and a
+  receipt saying why. The two companies the source lists twice were reported, not
+  removed.
+- The GPTW run **resumed once by itself** (an Apify migration, no one pressed
+  anything) and finished with no rows read twice: the streaming and saved-state work
+  held under a real interruption, not only the staged abort.
 
 ### Receipt view (2026-10-30)
 
