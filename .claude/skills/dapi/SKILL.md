@@ -440,6 +440,45 @@ allowed), and failures go back to Muse Spark with the previous code, up to 3 tri
 - The GPTW listing took ~30 s and profiles ~1–2 s each from Nairobi on Oct 30; the
   investigator now allows 120 s for page loads and 300 s for plain re-fetches.
 
+### Streaming, resurrect and alerts (2026-10-30)
+
+- **Streaming:** rows go to the dataset in batches of ~1/200 of the source's total
+  (50–500), pushed at request boundaries, within 2 s of the first buffered row, and
+  on migrating/aborting/persistState. Apify: 400 pushes/s per dataset, items < 9 MB,
+  no limit on items per push, so size, not rate, is the constraint. On the GPTW run,
+  rows were visible in the dataset from second ~47 (132 rows) onward.
+- **Saved state** (`DAPI_FRAME_STATE` in the default key-value store): counts,
+  failures, partial rows and delivered requests, written with every push, so the
+  saved counts always match the dataset. End-of-run checks read the dataset back.
+- **Resurrect test (GPTW, full run):** graceful abort at 386 rows → state said
+  pushed 386, emitted 386, expected 5,158, 383 requests delivered. Resurrected: it
+  carried on, "resumed 1x", no rows read twice, source duplicates still reported.
+  Finished SHORT 5,148 of 5,158: one 403 profile (old part, no fallback rows) and
+  ~9 rows in flight at the abort. Fixed: once `aborting`/`migrating` arrives, each
+  finishing request awaits its own rows' push before Crawlee marks it done.
+- Apify dataset counts lag on big runs too: `listItems().total` read 3,174 of 5,157
+  a minute after the run; `run-on-apify.js` waits for it to match the report.
+- **Alerts:** `run-on-apify.js` starts the run and prints the console and dataset
+  links at once, then rows so far every 15 s. The frame's status line shows "N rows
+  delivered of M the source lists · F failed" in the Apify console.
+
+### Reachability from Apify and measured speed (2026-10-30)
+
+- The runner has a probe mode: fetch the list and the sample's detail from Apify,
+  direct → datacenter → residential, stop at the first that returns the sample's
+  value without block signs. Apify Proxy has no `DATACENTER` group: datacenter is the
+  default when no group is named; `RESIDENTIAL` is a group.
+- Better Work from Apify: direct, list 4.1 s / 54 KB, detail 148 ms. GPTW from Apify:
+  direct, listing 1.9 s / 2.4 MB (vs ~30 s from Nairobi), profile 250 ms / 210 KB.
+- With vague speed rules Muse Spark chose 4 concurrent / 180 per minute for both
+  (GPTW ≥ 26 min). With "use Apify-side timings, pace by the detail requests, aim
+  for minutes": Better Work 10/500/3, GPTW 10/480/3 (~10 min).
+- **`String(traced)` is `"[object Object]"`.** A GPTW part built profile URLs that
+  way, so every company took the "no profile" branch: 5,158 rows, complete counts,
+  every profile column blank. Only the sample check caught it, and three repair
+  attempts didn't, because "empty columns" didn't say why. Now the rules explain
+  `.value`, and the verdict says outright when no detail request was ever made.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
