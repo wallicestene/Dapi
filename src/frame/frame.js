@@ -16,7 +16,7 @@ import { select } from '../select.js';
 // testLimit: run every request that mentions a sample's values first, then at most
 // this many other follow-up requests. Lets the test loop check samples without
 // fetching thousands of detail pages; the full run (no limit) checks completeness.
-export async function runFrame({ site, spec, testLimit = null }) {
+export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 4 }) {
   const columns = spec.columns.map((c) => c.name);
 
   log.setLevel(LogLevel.WARNING);
@@ -133,7 +133,7 @@ export async function runFrame({ site, spec, testLimit = null }) {
   }
 
   const crawler = new HttpCrawler({
-    maxConcurrency: 4, // gentle on public sites
+    maxConcurrency, // 4 by default: gentle on public sites
     maxRequestRetries: 3,
     // Slow government servers: a 2 MB page can take minutes.
     navigationTimeoutSecs: 300,

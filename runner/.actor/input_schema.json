@@ -14,7 +14,23 @@
       "type": "object",
       "editor": "json",
       "description": "The spec reader's output (<spec>.spec.json): columns, rules and sample rows."
+    },
+    "testLimit": {
+      "title": "Test limit",
+      "type": "integer",
+      "editor": "number",
+      "description": "Run the samples' requests plus this many other follow-ups. Leave empty for a full run."
+    },
+    "maxConcurrency": {
+      "title": "Max concurrency",
+      "type": "integer",
+      "editor": "number",
+      "default": 4,
+      "description": "Parallel requests. Keep it gentle on public sites."
     }
   },
-  "required": ["siteCode", "spec"]
+  "required": [
+    "siteCode",
+    "spec"
+  ]
 }

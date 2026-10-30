@@ -1,5 +1,5 @@
 // Runs a site part on Apify through the dapi-runner Actor and prints its report.
-// Usage: node src/apify/run-on-apify.js <site-part.js> <spec.json>
+// Usage: node src/apify/run-on-apify.js <site-part.js> <spec.json> [concurrency]
 
 import fs from 'node:fs';
 import { apify, RUNNER } from './client.js';
@@ -13,11 +13,12 @@ if (!sitePath || !specPath) {
 const input = {
   siteCode: fs.readFileSync(sitePath, 'utf8'),
   spec: JSON.parse(fs.readFileSync(specPath, 'utf8')),
+  maxConcurrency: Number(process.argv[4] ?? 4),
 };
 
 const { username } = await apify.user('me').get();
 const started = Date.now();
-const run = await apify.actor(`${username}/${RUNNER}`).call(input, { memory: 1024, timeout: 900 });
+const run = await apify.actor(`${username}/${RUNNER}`).call(input, { memory: 2048, timeout: 3600 });
 console.log(`run ${run.id} ${run.status} in ${Math.round((Date.now() - started) / 1000)} s`);
 console.log(`console: https://console.apify.com/actors/runs/${run.id}`);
 
