@@ -1,0 +1,223 @@
+{
+  "spec": "Great Place to Work India: certified companies",
+  "sourceUrl": "https://www.greatplacetowork.in/certified-companies/?type=mid",
+  "investigatedAt": "2026-10-30T19:23:31.046Z",
+  "pageStatus": 200,
+  "list": {
+    "request": {
+      "method": "GET",
+      "url": "https://www.greatplacetowork.in/certified-companies/?type=mid",
+      "payload": null,
+      "contentType": null
+    },
+    "embedded": {
+      "name": "s7.0",
+      "context": "); return; } var table_memListTable_large = $(\"#memListTable-large\").DataTable("
+    },
+    "recordsPath": "embedded:s7.0.data",
+    "recordCount": 1206,
+    "recordShape": "arrays of 5 cells",
+    "siblings": [
+      {
+        "name": "s8.0",
+        "context": "ed.\"); return; } var table_memListTable_mid = $(\"#memListTable-mid\").DataTable(",
+        "recordsPath": "embedded:s8.0.data",
+        "recordCount": 2845
+      },
+      {
+        "name": "s9.0",
+        "context": "); return; } var table_memListTable_small = $(\"#memListTable-small\").DataTable(",
+        "recordsPath": "embedded:s9.0.data",
+        "recordCount": 1079
+      },
+      {
+        "name": "s10.0",
+        "context": ".\"); return; } var table_memListTable_mega = $(\"#memListTable-mega\").DataTable(",
+        "recordsPath": "embedded:s10.0.data",
+        "recordCount": 28
+      }
+    ],
+    "total": null,
+    "fields": {
+      "Organization name": {
+        "keys": [
+          "0"
+        ],
+        "how": ""
+      },
+      "Industry": {
+        "keys": [
+          "1"
+        ],
+        "how": "HTML-entity decoded, e.g. &amp; to &"
+      },
+      "No. of employees": {
+        "keys": [
+          "2"
+        ],
+        "how": ""
+      },
+      "Issue Date": {
+        "keys": [
+          "3"
+        ],
+        "how": "split value on \" - \" and take first part, e.g. \"Jul 2026 - Jul 2027\" -> \"Jul 2026\""
+      },
+      "Expiration Date": {
+        "keys": [
+          "3"
+        ],
+        "how": "split value on \" - \" and take second part, e.g. \"Jul 2026 - Jul 2027\" -> \"Jul 2027\""
+      },
+      "Website": {
+        "keys": [],
+        "how": ""
+      },
+      "Facebook URL": {
+        "keys": [],
+        "how": ""
+      },
+      "Instagram URL": {
+        "keys": [],
+        "how": ""
+      },
+      "LinkedIn URL": {
+        "keys": [],
+        "how": ""
+      },
+      "HQ Location": {
+        "keys": [],
+        "how": ""
+      },
+      "Company Description": {
+        "keys": [],
+        "how": ""
+      },
+      "Organization Size": {
+        "keys": [],
+        "how": ""
+      }
+    },
+    "replay": {
+      "works": null,
+      "needsSession": null,
+      "tried": [
+        "plain GET: TimeoutError"
+      ]
+    },
+    "reason": "Endpoint 1 is the Large-organizations DataTable ($.data). Each record is [name, industry, employee count, \"Mon YYYY - Mon YYYY\" certification period, View-Profile link]. This matches Organization name, Industry (HTML-encoded), No. of employees, and Issue/Expiration Date as first/second half of the period. Profile-page fields (Website, social URLs, HQ, Description) are not in the record, only the profile link at index 4. Size Large Organizations corresponds to the -large table, not mid/small/mega.",
+    "sampleRecords": [
+      [
+        "Hetero Labs Limited",
+        "Biotechnology &amp; Pharmaceuticals",
+        "4961",
+        "Oct 2026 - Oct 2027",
+        "<a href=\"https://www.greatplacetowork.in/great/company/hetero-labs-limited\" target=\"_blank\" rel=\"noopener noreferrer\" cl…"
+      ],
+      [
+        "Sun Life Global Solutions Private Limited",
+        "Information Technology",
+        "2968",
+        "Oct 2026 - Oct 2027",
+        "<a href=\"https://www.greatplacetowork.in/great/company/sun-life-india-service-centre-pvt-ltd\" target=\"_blank\" rel=\"noope…"
+      ]
+    ]
+  },
+  "detail": {
+    "kind": "html",
+    "urlFrom": {
+      "listField": "4",
+      "how": "the href of the <a> inside this field"
+    },
+    "sampleUrl": "https://www.greatplacetowork.in/great/company/h-k-designs-india-llp/",
+    "replay": {
+      "works": "plain request",
+      "needsSession": false,
+      "tried": []
+    },
+    "fields": {
+      "Website": {
+        "keys": [
+          "css:.row.pt-4 > .col-lg-4.socialicon ul li a[href^='http']:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter']):not([href*='youtube.com'])@href"
+        ],
+        "how": "Website link in profile socialicon list filtered to http links excluding known social domains",
+        "verified": true,
+        "sampleValue": "https://www.hkdesigns.co",
+        "got": "https://www.hkdesigns.co",
+        "fixedOnRetry": true
+      },
+      "Facebook URL": {
+        "keys": [
+          "css:.socialicon a[href*='facebook.com']@href"
+        ],
+        "how": "Link in socialicon block whose href contains facebook.com",
+        "verified": true,
+        "sampleValue": "https://www.facebook.com/hkdesignsinc",
+        "got": "https://www.facebook.com/hkdesignsinc"
+      },
+      "Instagram URL": {
+        "keys": [
+          "css:.socialicon a[href*='instagram.com']@href"
+        ],
+        "how": "Link in socialicon block whose href contains instagram.com",
+        "verified": true,
+        "sampleValue": "https://instagram.com/hk_designs_inc",
+        "got": "https://instagram.com/hk_designs_inc"
+      },
+      "LinkedIn URL": {
+        "keys": [
+          "css:.socialicon a[href*='linkedin.com']@href"
+        ],
+        "how": "Link in socialicon block whose href contains linkedin.com",
+        "verified": true,
+        "sampleValue": "https://www.linkedin.com/company/hkdesignsinc",
+        "got": "https://www.linkedin.com/company/hkdesignsinc"
+      },
+      "HQ Location": {
+        "keys": [
+          "css:h6:contains('HQ LOCATION') + p"
+        ],
+        "how": "Paragraph following the HQ LOCATION label",
+        "verified": true,
+        "sampleValue": "Mumbai",
+        "got": "Mumbai"
+      },
+      "Company Description": {
+        "keys": [
+          "css:.why-great-content p"
+        ],
+        "how": "Paragraph inside why-great-content block",
+        "verified": true,
+        "sampleValue": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect and appreciation from and withing the industry. we have come to symbolize a way of life and benchmark of style , we have embarks on a remarkable journey towards success. Our Vision is to become world's largest jewellery manufacturer in the world by 2028 guided by our core values of quality, sustainablity and innovation propelling us forward.",
+        "got": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect a"
+      },
+      "Organization Size": {
+        "keys": [],
+        "how": "Not on the profile detail page, comes from list filter only",
+        "verified": false,
+        "sampleValue": "Large Organizations",
+        "got": ""
+      }
+    },
+    "jsonLd": 0,
+    "trigger": {
+      "record": "Hetero Labs Limited Biotechnology & Pharmaceuticals 4961 Oct",
+      "control": "View Profile",
+      "reason": "Missing columns instructions point to the company's profile page (View Profile), and control 0 is the 'View Profile' link for Hetero Labs Limited."
+    }
+  },
+  "constants": [
+    {
+      "column": "Country",
+      "value": "India"
+    }
+  ],
+  "unmapped": [
+    "Organization Size"
+  ],
+  "notes": [],
+  "tokens": {
+    "in": 5972,
+    "out": 5318
+  }
+}

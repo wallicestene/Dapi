@@ -42,6 +42,13 @@ export function findRecords(value, path = '$', depth = 0) {
   const objects = items.filter((v) => v && typeof v === 'object' && !Array.isArray(v));
   let best = null;
 
+  // Rows can be arrays of cells, as in a DataTables `data: [[...], ...]`. Their keys
+  // are the cell indexes ("0", "1", ...).
+  const rows = Array.isArray(value) ? items.filter((v) => Array.isArray(v) && v.length >= 2) : [];
+  if (rows.length >= 1 && rows.length === items.length && rows.every((r) => r.length === rows[0].length)) {
+    return { path, count: rows.length, bytes: JSON.stringify(value).length, records: rows, tabular: true };
+  }
+
   // An array of one object can be one record (a factory with a single issue); an
   // object of objects needs a few before it reads as records rather than config.
   const minimum = Array.isArray(value) ? 1 : 3;

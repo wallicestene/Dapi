@@ -40,10 +40,13 @@ export async function matchColumns({ columns, samples, candidates }) {
     samples: samples.map((s) => s.values),
     endpoints: candidates.map((c, i) => ({
       id: i,
-      endpoint: `${c.method} ${c.url.split('?')[0]}`,
+      endpoint: c.embedded
+        ? `data embedded in the page's HTML (${c.embedded.name}), after: ${c.embedded.context.slice(-80)}`
+        : `${c.method} ${c.url.split('?')[0]}`,
       recordPath: c.records.path,
       recordCount: c.records.count,
-      sampleRecords: c.records.records.slice(0, 2).map((r) => shrink(r)),
+      // Rows that are arrays: keys are cell indexes, so keep every cell.
+      sampleRecords: c.records.records.slice(0, 2).map((r) => (Array.isArray(r) ? r.map((cell) => shrink(cell, 1)) : shrink(r))),
     })),
   };
   const { content, usage } = await chat({

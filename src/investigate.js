@@ -1,9 +1,9 @@
-// Investigator: finds where a spec's data really lives. Loads the page, watches its
-// JSON traffic, and asks Muse Spark which endpoint holds which columns. When columns
-// are still missing, it finds a sample record's row on the page, lets Muse Spark pick
-// the control that reveals more (from a screenshot and the numbered controls), clicks
-// it, and works out how the new request joins to the list. Writes
-// <spec>.findings.json for the code writer.
+// Investigator: finds where a spec's data really lives. Loads the page, collects its
+// JSON traffic and the data embedded in its HTML, and asks Muse Spark which source
+// holds which columns. When columns are still missing, it finds a record's row on the
+// page, lets Muse Spark pick the control that reveals more (from a screenshot and the
+// numbered controls), and follows it: a click that fires a JSON request, or a link to
+// an HTML detail page. Writes <spec>.findings.json for the code writer.
 // Usage: node src/investigate.js <spec.json>
 
 import fs from 'node:fs';
@@ -11,7 +11,9 @@ import { pathToFileURL } from 'node:url';
 import { openPage, findRecordRow, clickablesIn } from './investigate/browser.js';
 import { isTracker, findRecords, findTotal, shrink, at } from './investigate/data.js';
 import { matchColumns, pickControl } from './investigate/spark.js';
-import { replay } from './investigate/replay.js';
+import { mapHtmlDetail } from './investigate/html.js';
+import { replay, replayEmbedded } from './investigate/replay.js';
+import { extractEmbedded } from './embedded.js';
 
 export async function investigate(spec) {
   const notes = [];
@@ -23,45 +25,82 @@ export async function investigate(spec) {
   const wanted = spec.columns.filter((c) => c.constant === null);
 
   const session = await openPage(spec.sourceUrl);
+  if (!session.html) {
+    // The browser gave up before the document arrived; the embedded data is still
+    // worth a plain request.
+    try {
+      const res = await fetch(spec.sourceUrl, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(300_000) });
+      if (res.ok) {
+        session.html = await res.text();
+        session.status ??= res.status;
+        notes.push('The browser timed out loading the page; its HTML came from a plain request.');
+      }
+    } catch (err) {
+      notes.push(`The page didn't load in the browser or by plain request (${err.name}).`);
+    }
+  }
   try {
-    // 1. What the page loads by itself.
-    const list = await findSource({ columns: wanted, samples: spec.samples, captures: session.captured, count });
+    // 1. What the page loads by itself: JSON responses, and data embedded in its HTML.
+    const candidates = [...jsonCandidates(session.captured), ...embeddedCandidates(session)];
+    const list = await chooseSource({ columns: wanted, samples: spec.samples, candidates, count });
     if (!list) {
-      notes.push('No JSON response on page load holds the spec\'s records: likely the HTML route.');
+      notes.push("Neither the page's JSON traffic nor its embedded data holds the spec's records: likely the HTML route.");
       return report({ spec, session, list: null, detail: null, wanted, notes, tokens });
     }
+    if (list.embedded) list.siblings = siblingsOf(list, candidates);
     let missing = wanted.filter((c) => !list.fields[c.name]?.keys.length);
 
-    // 2. Columns the list doesn't have: reveal them on one sample record.
+    // 2. Columns the list doesn't have: reveal them from one record.
     let detail = null;
     if (missing.length) {
       detail = await revealDetail({ spec, session, list, missing, count, notes });
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
     }
 
-    list.replay = await replay(list.capture, list.records.path);
-    if (detail) detail.replay = await replay(detail.capture, detail.records.path);
+    list.replay = list.embedded
+      ? await replayEmbedded(list.capture.url, list.embedded.name, list.records.path, list.records.count)
+      : await replay(list.capture, list.records.path);
+    if (detail?.kind === 'json') detail.replay = await replay(detail.capture, detail.records.path);
     return report({ spec, session, list, detail, wanted, notes, tokens });
   } finally {
     await session.close();
   }
 }
 
-// The captured JSON response that holds the most of these columns, per Muse Spark.
-async function findSource({ columns, samples, captures, count }) {
-  const candidates = captures
+function jsonCandidates(captures) {
+  return captures
     .filter((c) => !isTracker(c.url))
     .map((c) => ({ ...c, records: findRecords(c.json) }))
     .filter((c) => c.records);
-  if (!candidates.length) return null;
+}
 
+// Each embedded literal is a candidate source too. Its record path is written in the
+// frame's trace syntax: "embedded:s7.0.data".
+function embeddedCandidates(session) {
+  if (!session.html) return [];
+  return extractEmbedded(session.html)
+    .map((e) => ({
+      method: 'GET',
+      url: session.finalUrl,
+      payload: null,
+      headers: {},
+      json: e.value,
+      embedded: { name: e.name, context: e.context },
+      records: findRecords(e.value),
+    }))
+    .filter((c) => c.records);
+}
+
+// The candidate that holds the most of these columns, per Muse Spark.
+async function chooseSource({ columns, samples, candidates, count }) {
+  if (!candidates.length) return null;
   const match = await matchColumns({ columns, samples, candidates });
   count(match.usage);
   if (match.best === null) return null;
-
   const capture = candidates[match.best];
   return {
     capture,
+    embedded: capture.embedded ?? null,
     records: capture.records,
     total: findTotal(capture.json),
     fields: Object.fromEntries(match.fields.map((f) => [f.column, { keys: f.keys, how: f.how }])),
@@ -69,50 +108,123 @@ async function findSource({ columns, samples, captures, count }) {
   };
 }
 
+// Other embedded literals with rows of the same shape: the same list split into
+// tables (GPTW: one per organization size).
+function siblingsOf(list, candidates) {
+  const shape = (r) => (Array.isArray(r) ? `row:${r.length}` : Object.keys(r).sort().join(','));
+  const mine = shape(list.records.records[0]);
+  return candidates
+    .filter((c) => c.embedded && c.embedded.name !== list.embedded.name && shape(c.records.records[0]) === mine)
+    .map((c) => ({ name: c.embedded.name, context: c.embedded.context, recordsPath: tracePath(c), recordCount: c.records.count }));
+}
+
+const tracePath = (c) => (c.embedded ? `embedded:${c.embedded.name}${c.records.path.slice(1)}` : c.records.path);
+
+// All list records, including sibling tables, for finding a sample by value.
+function allListRecords(list, session) {
+  const names = new Set([list.embedded?.name, ...(list.siblings ?? []).map((s) => s.name)]);
+  if (!list.embedded) return list.records.records;
+  return extractEmbedded(session.html)
+    .filter((e) => names.has(e.name))
+    .flatMap((e) => findRecords(e.value)?.records ?? []);
+}
+
 async function revealDetail({ spec, session, list, missing, count, notes }) {
-  // A sample that has values for the missing columns, so the record we open has them.
+  // A sample with values for the missing columns, so the record we open has them.
   const samples = spec.samples.filter((s) => missing.some((c) => s.values[c.name]));
   const anchors = Object.entries(list.fields).filter(([, f]) => f.keys.length === 1);
+  const records = allListRecords(list, session);
 
   for (const sample of samples) {
     for (const [column, field] of anchors) {
       const value = sample.values[column];
       if (!value || value.length < 4) continue;
-      const record = list.records.records.find((r) => String(at(r, field.keys[0])) === value);
-      const row = record && (await findRecordRow(session.page, value));
+      const record = records.find((r) => String(at(r, field.keys[0])) === value);
+      if (!record) continue;
+
+      // The sample's own row, or, when the page doesn't show it (paginated tables),
+      // the first visible row of the same list.
+      let row = await findRecordRow(session.page, value);
+      let shownRecord = record;
+      if (!row) {
+        for (const other of records.slice(0, 20)) {
+          row = await findRecordRow(session.page, String(at(other, field.keys[0])));
+          if (row) {
+            shownRecord = other;
+            break;
+          }
+        }
+      }
       if (!row) continue;
 
       await row.scrollIntoViewIfNeeded();
       const controls = await clickablesIn(row);
       if (!controls.length) continue;
       const recordText = (await row.innerText()).replace(/\s+/g, ' ').slice(0, 300);
-      const screenshot = await session.page.screenshot();
-
-      const pick = await pickControl({ screenshot, recordText, missing, controls });
+      const pick = await pickControl({ screenshot: await session.page.screenshot(), recordText, missing, controls });
       count(pick.usage);
       if (pick.control === null) {
-        notes.push(`On "${value}", Muse Spark found no control that reveals ${missing.map((c) => c.name).join(', ')}: ${pick.reason}`);
+        notes.push(`On "${recordText.slice(0, 40)}", Muse Spark found no control that reveals ${missing.map((c) => c.name).join(', ')}: ${pick.reason}`);
         continue;
       }
       const control = controls[pick.control];
-      const captures = await session.during('click', () => control.element.click());
-      const found = await findSource({ columns: missing, samples: spec.samples, captures, count });
-      if (!found) {
-        notes.push(`Clicking "${control.text}" on "${value}" brought no JSON holding the missing columns.`);
+      const trigger = { record: recordText.slice(0, 60), control: control.text, reason: pick.reason };
+
+      // A link to another page: the detail is an HTML page, fetched without a browser.
+      if (control.href && /^https?:\/\/|^\//.test(control.href)) {
+        const html = await htmlDetail({ control, shownRecord, record, missing, sample, count, notes });
+        if (html) return { ...html, trigger };
         continue;
       }
-      return {
-        ...found,
-        trigger: { record: value, control: control.text, reason: pick.reason },
-        join: findJoin(found.capture, record),
-      };
+
+      // Otherwise click it and see which JSON arrives.
+      const captures = await session.during('click', () => control.element.click());
+      const found = await chooseSource({ columns: missing, samples: spec.samples, candidates: jsonCandidates(captures), count });
+      if (!found) {
+        notes.push(`Clicking "${control.text}" brought no JSON holding the missing columns.`);
+        continue;
+      }
+      return { ...found, kind: 'json', trigger, join: findJoin(found.capture, shownRecord) };
     }
   }
-  notes.push('Could not reveal the missing columns from any sample record.');
+  notes.push('Could not reveal the missing columns from any record.');
   return null;
 }
 
-// How a detail request points back to its list record: which of the request's
+// The detail link lives in one of the list record's fields (GPTW: an <a href> inside
+// field 4). Take the sample record's own link from that field, fetch its page, and map
+// the missing columns to verified selectors.
+async function htmlDetail({ control, shownRecord, record, missing, sample, count, notes }) {
+  const href = new URL(control.href, 'https://x.invalid').pathname;
+  const fieldOf = (r) =>
+    Object.keys(r).find((k) => typeof r[k] === 'string' && r[k].replace(/\\\//g, '/').includes(href));
+  const linkField = fieldOf(shownRecord);
+  if (linkField === undefined) {
+    notes.push(`The "${control.text}" link isn't in any field of the list record, so it can't be built per record.`);
+    return null;
+  }
+  const raw = String(record[linkField]).replace(/\\\//g, '/');
+  const url = raw.match(/href="([^"]+)"/)?.[1] ?? raw.match(/https?:\/\/[^\s"'<>]+/)?.[0];
+  if (!url) return null;
+
+  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) {
+    notes.push(`The sample's detail page ${url} returned HTTP ${res.status} to a plain request.`);
+    return null;
+  }
+  const html = await res.text();
+  const { fields, jsonLd } = await mapHtmlDetail({ html, missing, sample, count });
+  return {
+    kind: 'html',
+    urlFrom: { listField: linkField, how: /href=/.test(raw) ? 'the href of the <a> inside this field' : 'the field is the URL' },
+    sampleUrl: res.url,
+    replay: { works: 'plain request', needsSession: false, tried: [] },
+    fields,
+    jsonLd,
+  };
+}
+
+// How a JSON detail request points back to its list record: which of the request's
 // parameters carries which of the record's values (e.g. assessmentId = LastAssessmentId).
 function findJoin(capture, record) {
   const places = [];
@@ -151,25 +263,31 @@ function describe(source) {
       payload: capture.payload,
       contentType: capture.headers['content-type'] ?? null,
     },
-    recordsPath: source.records.path,
+    ...(source.embedded && { embedded: source.embedded }),
+    recordsPath: tracePath(capture),
     recordCount: source.records.count,
+    recordShape: source.records.tabular ? `arrays of ${source.records.records[0].length} cells` : 'objects',
+    ...(source.siblings?.length && { siblings: source.siblings }),
     total: source.total,
     fields: source.fields,
     replay: source.replay,
     reason: source.reason,
-    sampleRecords: source.records.records.slice(0, 2).map((r) => shrink(r)),
+    sampleRecords: source.records.records.slice(0, 2).map((r) => (Array.isArray(r) ? r.map((c) => shrink(c, 1)) : shrink(r))),
   };
 }
 
 function report({ spec, session, list, detail, wanted, notes, tokens }) {
   const mapped = (c) => list?.fields[c.name]?.keys.length || detail?.fields[c.name]?.keys.length;
+  let detailOut = null;
+  if (detail?.kind === 'json') detailOut = { kind: 'json', ...describe(detail), trigger: detail.trigger, join: detail.join };
+  if (detail?.kind === 'html') detailOut = detail;
   return {
     spec: spec.title,
     sourceUrl: spec.sourceUrl,
     investigatedAt: new Date().toISOString(),
     pageStatus: session.status ?? null,
     list: list && describe(list),
-    detail: detail && { ...describe(detail), trigger: detail.trigger, join: detail.join },
+    detail: detailOut,
     constants: spec.columns.filter((c) => c.constant !== null).map((c) => ({ column: c.name, value: c.constant })),
     unmapped: wanted.filter((c) => !mapped(c)).map((c) => c.name),
     notes,
@@ -178,23 +296,34 @@ function report({ spec, session, list, detail, wanted, notes, tokens }) {
 }
 
 function printFindings(f) {
-  const line = (label, s) => {
-    if (!s) return;
-    const r = s.request;
-    console.log(`\n${label}: ${r.method} ${r.url.split('?')[0]}${r.payload ? `  body: ${r.payload.slice(0, 70)}` : ''}`);
-    console.log(`  records at ${s.recordsPath}: ${s.recordCount}${s.total ? `, source says ${s.total.value} ("${s.total.key}")` : ''}`);
-    console.log(`  replay: ${s.replay?.works ?? `failed (${s.replay?.tried.join('; ')})`}`);
-    for (const [column, field] of Object.entries(s.fields)) {
-      if (field.keys.length) console.log(`  ${column} <- ${field.keys.join(' + ')}${field.how ? `  (${field.how})` : ''}`);
+  const fields = (fs) => {
+    for (const [column, field] of Object.entries(fs)) {
+      if (!field.keys.length) continue;
+      const check = field.verified === undefined ? '' : field.verified ? '  ✓ matches sample' : `  ✗ sample "${field.sampleValue}", got "${field.got}"`;
+      console.log(`  ${column} <- ${field.keys.join(' + ')}${field.how ? `  (${field.how})` : ''}${check}`);
     }
   };
   console.log(`${f.spec}\n${f.sourceUrl} (status ${f.pageStatus ?? '?'})`);
-  line('List', f.list);
+  if (f.list) {
+    const r = f.list.request;
+    console.log(`\nList: ${r.method} ${r.url.split('?')[0]}${r.payload ? `  body: ${r.payload.slice(0, 70)}` : ''}`);
+    if (f.list.embedded) console.log(`  embedded ${f.list.embedded.name}: …${f.list.embedded.context.slice(-60)}`);
+    console.log(`  records at ${f.list.recordsPath}: ${f.list.recordCount} (${f.list.recordShape})${f.list.total ? `, source says ${f.list.total.value}` : ''}`);
+    for (const s of f.list.siblings ?? []) console.log(`  + same rows at ${s.recordsPath}: ${s.recordCount}  (…${s.context.slice(-45)})`);
+    console.log(`  replay: ${f.list.replay?.works ?? `failed (${f.list.replay?.tried.join('; ')})`}`);
+    fields(f.list.fields);
+  }
   if (f.detail) {
-    console.log(`\nClicked "${f.detail.trigger.control}" on "${f.detail.trigger.record}": ${f.detail.trigger.reason}`);
-    line('Detail', f.detail);
-    const j = f.detail.join;
-    console.log(`  join: ${j ? `${j.param} (in ${j.in}) = list ${j.listField}` : 'not found'}`);
+    console.log(`\nPicked "${f.detail.trigger.control}" on "${f.detail.trigger.record}": ${f.detail.trigger.reason}`);
+    if (f.detail.kind === 'html') {
+      console.log(`Detail: HTML page per record, URL from list field ${f.detail.urlFrom.listField} (${f.detail.urlFrom.how}); sample page ${f.detail.sampleUrl}`);
+    } else {
+      const r = f.detail.request;
+      console.log(`Detail: ${r.method} ${r.url.split('?')[0]}${r.payload ? `  body: ${r.payload.slice(0, 70)}` : ''}`);
+      const j = f.detail.join;
+      console.log(`  join: ${j ? `${j.param} (in ${j.in}) = list ${j.listField}` : 'not found'}; replay: ${f.detail.replay?.works}`);
+    }
+    fields(f.detail.fields);
   }
   console.log(`\nConstants: ${f.constants.map((c) => `${c.column} = "${c.value}"`).join(', ') || 'none'}`);
   console.log(`Unmapped: ${f.unmapped.join(', ') || 'none'}`);

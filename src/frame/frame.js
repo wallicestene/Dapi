@@ -7,10 +7,16 @@
 
 import { createHash } from 'node:crypto';
 import { Actor } from 'apify';
+import * as cheerio from 'cheerio';
 import { HttpCrawler, log, LogLevel } from 'crawlee';
 import { compareSamples, formatReport } from '../compare.js';
+import { extractEmbedded } from '../embedded.js';
+import { select } from '../select.js';
 
-export async function runFrame({ site, spec }) {
+// testLimit: run every request that mentions a sample's values first, then at most
+// this many other follow-up requests. Lets the test loop check samples without
+// fetching thousands of detail pages; the full run (no limit) checks completeness.
+export async function runFrame({ site, spec, testLimit = null }) {
   const columns = spec.columns.map((c) => c.name);
 
   log.setLevel(LogLevel.WARNING);
@@ -47,12 +53,21 @@ export async function runFrame({ site, spec }) {
 
   // A traced value carries where it came from: the evidence key and the path(s)
   // inside that response. trace('Data.3.Name'), or trace([a, b], (a, b) => ...) for
-  // a value built from several fields.
-  function makeTracer(json, evidence) {
-    const at = (p) => p.split('.').reduce((o, key) => (o == null ? undefined : o[key]), json);
+  // a value built from several fields. A path is one of:
+  //   'Data.3.Name'                   inside the JSON response
+  //   'embedded:s7.0.data.17.0'       inside data embedded in the HTML
+  //   'css:<selector>[@attr]'         the first match on the HTML page ('css*:' for all)
+  function makeTracer(page, evidence) {
+    const dig = (value, path) => (path ? path.split('.') : []).reduce((o, key) => (o == null ? undefined : o[key]), value);
+    const resolve = (p) => {
+      if (p.startsWith('css:') || p.startsWith('css*:')) return select(page.$, p);
+      const embedded = p.match(/^embedded:(s\d+\.\d+)(?:\.(.*))?$/);
+      if (embedded) return dig(page.embedded.find((e) => e.name === embedded[1])?.value, embedded[2]);
+      return dig(page.json, p);
+    };
     return (paths, derive) => {
       const list = Array.isArray(paths) ? paths : [paths];
-      const values = list.map(at);
+      const values = list.map(resolve);
       return {
         $traced: true,
         value: derive ? derive(...values) : values[0],
@@ -94,28 +109,73 @@ export async function runFrame({ site, spec }) {
     return { ...options, useExtendedUniqueKey: true, userData: { ...userData, label, note } };
   }
 
+  // Test mode: a request is the samples' if its URL, body or carried data mentions a
+  // sample's identifying value: its first column, which in specs is nearly always the
+  // record's name. Other values ("Vietnam", an industry) are shared by hundreds.
+  const firstColumn = spec.columns[0].name;
+  const sampleValues = spec.samples.map((s) => s.values[firstColumn] ?? '').filter((v) => v.length >= 4);
+  const mentionsSample = (r) => {
+    const text = JSON.stringify([r.url, r.payload, r.userData]);
+    return sampleValues.some((v) => text.includes(v));
+  };
+  let testBudget = testLimit;
+  let testSkipped = 0;
+
+  async function addRequests(requests) {
+    if (testLimit === null) return crawler.addRequests(requests.map(toRequest));
+    const first = requests.filter(mentionsSample);
+    const others = requests.filter((r) => !mentionsSample(r));
+    const allowed = others.slice(0, Math.max(0, testBudget));
+    testBudget -= allowed.length;
+    testSkipped += others.length - allowed.length;
+    if (first.length) await crawler.addRequests(first.map(toRequest), { forefront: true });
+    if (allowed.length) await crawler.addRequests(allowed.map(toRequest));
+  }
+
   const crawler = new HttpCrawler({
     maxConcurrency: 4, // gentle on public sites
     maxRequestRetries: 3,
+    // Slow government servers: a 2 MB page can take minutes.
+    navigationTimeoutSecs: 300,
+    requestHandlerTimeoutSecs: 120,
     respectRobotsTxtFile: true,
     onSkippedRequest: ({ url, reason }) => {
       skipped.push({ url, reason });
     },
     async requestHandler({ request, response, body, json }) {
       const evidence = await capture(request, response, body);
+      const text = Buffer.isBuffer(body) ? body.toString('utf8') : body;
+      // Parsed only if the site part asks: most responses need one or the other.
+      let $;
+      let embedded;
+      const page = {
+        json,
+        get $() {
+          return ($ ??= cheerio.load(text));
+        },
+        get embedded() {
+          return (embedded ??= extractEmbedded(text));
+        },
+      };
       const queued = [];
       await site.handle({
         request,
         json,
-        body: Buffer.isBuffer(body) ? body.toString('utf8') : body,
-        trace: makeTracer(json, evidence),
+        body: text,
+        get $() {
+          return page.$;
+        },
+        get embedded() {
+          return page.embedded;
+        },
+        trace: makeTracer(page, evidence),
         enqueue: (...requests) => queued.push(...requests),
         emit,
         expect: (kind, count) => {
           expected[kind] = (expected[kind] ?? 0) + count;
         },
       });
-      if (queued.length) await crawler.addRequests(queued.map(toRequest));
+      if (queued.length) await addRequests(queued);
     },
     async failedRequestHandler({ request }, error) {
       failed.push({ what: request.userData.note ?? request.url, error: error.message.split('\n')[0] });
@@ -132,7 +192,16 @@ export async function runFrame({ site, spec }) {
   const kinds = [...new Set([...Object.keys(expected), ...Object.keys(emitted)])];
   const completeness = kinds.map((kind) => ({ kind, expected: expected[kind] ?? null, got: emitted[kind] ?? 0 }));
   const samples = compareSamples(rows, spec.samples);
-  const report = { rows: rows.length, captures, completeness, failed, skipped, columnProblems: [...columnProblems], samples };
+  const report = {
+    rows: rows.length,
+    captures,
+    completeness,
+    failed,
+    skipped,
+    columnProblems: [...columnProblems],
+    samples,
+    testMode: testLimit === null ? null : { limit: testLimit, skippedRequests: testSkipped },
+  };
   await Actor.setValue('REPORT', report);
 
   console.log(`\n=== ${spec.title} ===`);
@@ -145,6 +214,7 @@ export async function runFrame({ site, spec }) {
   console.log(`\nFailed requests: ${failed.length ? '' : 'none'}`);
   for (const f of failed) console.log(`  ${f.what}: ${f.error}`);
   console.log(`Skipped by robots.txt: ${skipped.length || 'none'}`);
+  if (testLimit !== null) console.log(`Test mode: ${testSkipped} follow-up requests not run (limit ${testLimit}), so counts can't be checked`);
   console.log(`Columns: ${columnProblems.size ? [...columnProblems].join('; ') : 'match the spec'}`);
   console.log(`\nSamples (${samples.length}):\n${formatReport(samples)}`);
 

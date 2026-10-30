@@ -62,9 +62,15 @@ export async function openPage(url) {
   }
 
   let status;
+  let html = null;
   try {
     // goto returns the final response after redirects, so a bot wall shows up as 403.
-    status = (await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }))?.status();
+    // Generous: a 2 MB page on a slow government server can take over a minute.
+    const main = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    status = main?.status();
+    // The HTML as the server sent it, before scripts changed the DOM: embedded data
+    // lives here, and it's what a plain GET will see.
+    html = (await main?.text().catch(() => null)) ?? null;
   } catch (err) {
     console.log(`(navigation did not finish: ${err.message.split('\n')[0]})`);
   }
@@ -73,6 +79,8 @@ export async function openPage(url) {
   return {
     page,
     status,
+    html,
+    finalUrl: page.url(),
     captured,
     // Runs an action (a click) and returns the JSON captured because of it.
     async during(name, action) {
