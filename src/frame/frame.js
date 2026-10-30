@@ -116,8 +116,19 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const timer = setInterval(() => {
     if (buffer.length && Date.now() - bufferSince >= FLUSH_AFTER_MS) flush();
   }, 500);
-  // The platform gives a few seconds' warning before it moves or stops a run.
-  for (const event of ['migrating', 'aborting', 'persistState']) Actor.on(event, () => flush());
+  // The platform gives a few seconds' warning before it moves or stops a run. From
+  // then on, each request that finishes waits for its own rows to be pushed before
+  // Crawlee marks it done, so no rows are in flight when the run stops. (Without the
+  // warning, a hard crash can still lose up to FLUSH_AFTER_MS of rows; the
+  // completeness count reports it.)
+  let stopping = false;
+  for (const event of ['migrating', 'aborting']) {
+    Actor.on(event, () => {
+      stopping = true;
+      flush();
+    });
+  }
+  Actor.on('persistState', () => flush());
 
   // A live line in the Apify console, so the user watching the run sees progress.
   let lastStatus = 0;
@@ -328,10 +339,12 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
           expectedChanged = true;
         },
       });
-      flushIfFull();
+      if (stopping) await flush();
+      else flushIfFull();
       // The source's totals are saved at once: after a resurrect, the list page that
       // gave them is already done and won't run again.
       if (expectedChanged) await save();
+      state.enqueued = (state.enqueued ?? 0) + queued.length;
       if (queued.length) await addRequests(queued);
     },
     // A detail request that failed every retry still owes its rows: the site part can
@@ -344,7 +357,8 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       const requestKey = keyOf(request);
       if (delivered.has(requestKey)) return;
       for (const { row, kind } of request.userData.fallback ?? []) emit(requestKey, row, kind, `${what} failed: ${reason}`);
-      flushIfFull();
+      if (stopping) await flush();
+      else flushIfFull();
     },
   });
 
@@ -391,6 +405,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     partial: state.partial,
     captures: state.captures,
     resumed: state.resumed,
+    enqueued: state.enqueued ?? 0,
     robotsOverridden: state.robotsOverridden ?? 0,
     completeness,
     failed: state.failed,

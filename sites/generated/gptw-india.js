@@ -1,146 +1,190 @@
-export const start = [{ url: "https://www.greatplacetowork.in/certified-companies/", label: "list", note: "Certified companies list with all size tables", userData: {} }];
-
-function decodeEntities(s) {
-  if (typeof s !== "string") return s;
-  return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-}
-
-function cleanText(v) {
-  if (typeof v === "string") return decodeEntities(v).trim();
-  if (v == null) return v;
-  return String(v).trim();
-}
-
-function cleanEmp(v) {
-  if (v == null) return v;
-  if (typeof v === "string") return v.trim();
-  return String(v).trim();
-}
-
-function issuePart(v) {
-  if (typeof v !== "string") return v;
-  const s = v.trim();
-  const parts = s.split(/\s+to\s+|\s*[-\u2013\u2014]\s*/i);
-  if (parts.length >= 2) return parts[0].trim();
-  return s;
-}
-
-function expPart(v) {
-  if (typeof v !== "string") return v;
-  const s = v.trim();
-  const parts = s.split(/\s+to\s+|\s*[-\u2013\u2014]\s*/i);
-  if (parts.length >= 2) return parts[parts.length - 1].trim();
-  return "";
-}
-
-function cleanDetail(v) {
-  if (typeof v === "string") return decodeEntities(v).trim();
-  if (v == null) return v;
-  if (typeof v === "number") return String(v).trim();
-  return v;
-}
-
-function extractUrl(cell, base) {
-  if (typeof cell !== "string") return null;
-  const m = cell.match(/href\s*=\s*(['"])(.*?)\1/i);
-  if (!m) return null;
-  let u = m[2].replace(/\\\//g, "/").trim();
-  if (!u) return null;
-  u = decodeEntities(u).trim();
-  if (!u || u === "#") return null;
-  try {
-    if (/^https?:\/\//i.test(u)) return u;
-    if (u.startsWith("/")) return "https://www.greatplacetowork.in" + u;
-    const abs = new URL(u, base || "https://www.greatplacetowork.in/").toString();
-    return abs;
-  } catch (e) {
-    return u;
-  }
-}
-
+export const config = { maxConcurrency: 10, maxRequestsPerMinute: 480, maxRetries: 3 };
+export const start = [{ url: "https://www.greatplacetowork.in/certified-companies/", label: "list", note: "certified companies list (all sizes)" }];
 export async function handle(ctx) {
+  const decodeEnt = (v) => {
+    if (typeof v !== "string") return "";
+    let s = v;
+    s = s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'");
+    s = s.replace(/&#(\d+);/g, (m, n) => { try { return String.fromCharCode(parseInt(n, 10)); } catch (e) { return m; } });
+    s = s.replace(/&#x([0-9a-fA-F]+);/g, (m, h) => { try { return String.fromCharCode(parseInt(h, 16)); } catch (e) { return m; } });
+    return s.trim();
+  };
+  const splitFirst = (v) => {
+    if (typeof v !== "string") return "";
+    let parts = v.split(" - ");
+    if (parts.length < 2) parts = v.split(/\s*[\u2013\u2014]\s*|\s+to\s+/i);
+    if (parts.length < 2) parts = v.split(/\s*-\s*/);
+    return (parts[0] || "").trim();
+  };
+  const splitSecond = (v) => {
+    if (typeof v !== "string") return "";
+    let parts = v.split(" - ");
+    if (parts.length < 2) parts = v.split(/\s*[\u2013\u2014]\s*|\s+to\s+/i);
+    if (parts.length < 2) parts = v.split(/\s*-\s*/);
+    if (parts.length < 2) return "";
+    return parts.slice(1).join(" - ").trim();
+  };
+  const extractHref = (v) => {
+    if (typeof v !== "string") return "";
+    const m = v.match(/href\s*=\s*(['"])(.*?)\1/i);
+    if (!m) return "";
+    let u = (m[2] || "").trim();
+    if (u.indexOf("//") === 0) u = "https:" + u;
+    return u;
+  };
+  const fixUrl = (v) => {
+    if (typeof v !== "string") return "";
+    let u = v.trim();
+    if (!u) return "";
+    if (u.indexOf("//") === 0) u = "https:" + u;
+    return u;
+  };
+  const pickWebsite = (v) => {
+    if (!Array.isArray(v)) return fixUrl(v);
+    for (let i = 0; i < v.length; i++) {
+      let u = (typeof v[i] === "string" ? v[i] : "").trim();
+      if (!u) continue;
+      const low = u.toLowerCase();
+      if (low.indexOf("facebook.com") !== -1) continue;
+      if (low.indexOf("instagram.com") !== -1) continue;
+      if (low.indexOf("linkedin.com") !== -1) continue;
+      if (low.indexOf("twitter") !== -1) continue;
+      if (low.indexOf("youtube.com") !== -1) continue;
+      if (low.indexOf("youtu.be") !== -1) continue;
+      if (u.indexOf("//") === 0) u = "https:" + u;
+      return u;
+    }
+    return "";
+  };
+  const cleanText = (v) => {
+    if (typeof v !== "string") return "";
+    return v.replace(/\s+/g, " ").trim();
+  };
   const label = ctx.request && ctx.request.label;
-  if (label === "list") {
-    const defs = [
-      { key: "large", size: "Large Organizations" },
-      { key: "mid", size: "Mid-size Organizations" },
-      { key: "small", size: "Small Organizations" },
-      { key: "mega", size: "Mega Organizations" }
+  if (!label || label === "list") {
+    const tables = [
+      { needle: "memListTable-large", size: "Large Organizations" },
+      { needle: "memListTable-mid", size: "Mid-size Organizations" },
+      { needle: "memListTable-small", size: "Small Organizations" },
+      { needle: "memListTable-mega", size: "Mega Organizations" }
     ];
+    const embedded = ctx.embedded || [];
+    const found = [];
+    let total = 0;
+    for (let t = 0; t < tables.length; t++) {
+      const needle = tables[t].needle;
+      let entry = null;
+      for (let e = 0; e < embedded.length; e++) {
+        const c = embedded[e].context || "";
+        if (c.indexOf(needle) !== -1) { entry = embedded[e]; break; }
+      }
+      if (!entry) continue;
+      let data = null;
+      if (entry.value && Array.isArray(entry.value.data)) data = entry.value.data;
+      else if (Array.isArray(entry.value)) data = entry.value;
+      else data = [];
+      total += data.length;
+      found.push({ table: tables[t], entry: entry, data: data });
+    }
+    ctx.expect("companies", total);
     const byUrl = new Map();
-    for (const def of defs) {
-      const entry = (ctx.embedded || []).find(e => e.context && e.context.includes("memListTable-" + def.key));
-      if (!entry || !entry.value || !Array.isArray(entry.value.data)) continue;
-      const data = entry.value.data;
-      ctx.expect("companies", data.length);
+    for (let f = 0; f < found.length; f++) {
+      const table = found[f].table;
+      const entry = found[f].entry;
+      const data = found[f].data;
       for (let i = 0; i < data.length; i++) {
         const base = "embedded:" + entry.name + ".data." + i;
-        const org = ctx.trace(base + ".0", cleanText);
-        const ind = ctx.trace(base + ".1", cleanText);
-        const emp = ctx.trace(base + ".2", cleanEmp);
-        const issue = ctx.trace(base + ".3", issuePart);
-        const exp = ctx.trace(base + ".3", expPart);
-        let rawCell = null;
-        try { rawCell = data[i][4]; } catch (e) { rawCell = null; }
-        const durl = extractUrl(rawCell, ctx.request.url);
-        if (!durl) {
+        const orgT = ctx.trace(base + ".0");
+        const indT = ctx.trace(base + ".1", decodeEnt);
+        const empT = ctx.trace(base + ".2");
+        const issueT = ctx.trace(base + ".3", splitFirst);
+        const expT = ctx.trace(base + ".3", splitSecond);
+        const linkT = ctx.trace(base + ".4", extractHref);
+        let detailUrl = "";
+        try { detailUrl = linkT && linkT.value ? String(linkT.value).trim() : ""; } catch (e) { detailUrl = ""; }
+        if (detailUrl.indexOf("//") === 0) detailUrl = "https:" + detailUrl;
+        const baseObj = { org: orgT, ind: indT, emp: empT, issue: issueT, exp: expT, size: table.size };
+        if (detailUrl) {
+          if (!byUrl.has(detailUrl)) byUrl.set(detailUrl, []);
+          byUrl.get(detailUrl).push(baseObj);
+        } else {
           ctx.emit({
-            "Organization name": org,
+            "Organization name": orgT,
             "Country": "India",
-            "Industry": ind,
-            "No. of employees": emp,
-            "Issue Date": issue,
-            "Expiration Date": exp,
+            "Industry": indT,
+            "No. of employees": empT,
+            "Issue Date": issueT,
+            "Expiration Date": expT,
             "Website": "",
             "Facebook URL": "",
             "Instagram URL": "",
             "LinkedIn URL": "",
             "HQ Location": "",
             "Company Description": "",
-            "Organization Size": def.size
+            "Organization Size": table.size
           }, "companies");
-        } else {
-          const rec = { org, ind, emp, issue, exp, size: def.size };
-          if (!byUrl.has(durl)) byUrl.set(durl, []);
-          byUrl.get(durl).push(rec);
         }
       }
     }
-    for (const [u, rows] of byUrl) {
-      ctx.enqueue({ url: u, label: "detail", note: "Company profile page", userData: { rows } });
+    for (const [url, bases] of byUrl) {
+      let firstName = url;
+      try { if (bases[0] && bases[0].org && bases[0].org.value) firstName = String(bases[0].org.value); } catch (e) {}
+      const fallbacks = bases.map((b) => ({
+        row: {
+          "Organization name": b.org,
+          "Country": "India",
+          "Industry": b.ind,
+          "No. of employees": b.emp,
+          "Issue Date": b.issue,
+          "Expiration Date": b.exp,
+          "Website": "",
+          "Facebook URL": "",
+          "Instagram URL": "",
+          "LinkedIn URL": "",
+          "HQ Location": "",
+          "Company Description": "",
+          "Organization Size": b.size
+        },
+        kind: "companies"
+      }));
+      const userBases = bases.map((b) => ({ org: b.org, ind: b.ind, emp: b.emp, issue: b.issue, exp: b.exp, size: b.size }));
+      ctx.enqueue({
+        url: url,
+        label: "profile",
+        note: "profile of " + firstName,
+        userData: { bases: userBases },
+        fallback: fallbacks
+      });
     }
     return;
   }
-  if (label === "detail") {
-    const rows = (ctx.request.userData && ctx.request.userData.rows) || [];
-    if (!rows.length) return;
-    const websiteT = ctx.trace("css:div.col-lg-4.socialicon ul li a:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter.com']):not([href*='youtube.com'])@href", cleanDetail);
-    const fbT = ctx.trace("css:.socialicon a[href*='facebook.com']@href", cleanDetail);
-    const igT = ctx.trace("css:.socialicon a[href*='instagram.com']@href", cleanDetail);
-    const liT = ctx.trace("css:.socialicon a[href*='linkedin.com']@href", cleanDetail);
-    const hqT = ctx.trace("css:*:contains('HQ LOCATION') + p", cleanDetail);
-    const descT = ctx.trace("css:div.why-great-content p", cleanDetail);
-    const websiteOut = (websiteT === undefined || websiteT === null) ? "" : websiteT;
-    const fbOut = (fbT === undefined || fbT === null) ? "" : fbT;
-    const igOut = (igT === undefined || igT === null) ? "" : igT;
-    const liOut = (liT === undefined || liT === null) ? "" : liT;
-    const hqOut = (hqT === undefined || hqT === null) ? "" : hqT;
-    const descOut = (descT === undefined || descT === null) ? "" : descT;
-    for (const r of rows) {
+  if (label === "profile") {
+    const ud = (ctx.request && ctx.request.userData) || {};
+    const bases = Array.isArray(ud.bases) ? ud.bases : [];
+    if (bases.length === 0) return;
+    let websiteT = ctx.trace("css:.socialicon ul li a:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter']):not([href*='youtube.com'])@href", fixUrl);
+    try { if (!websiteT.value) websiteT = ctx.trace("css*:.socialicon ul li a@href", pickWebsite); } catch (e) {}
+    const fbT = ctx.trace("css:.socialicon a[href*='facebook.com']@href", fixUrl);
+    const igT = ctx.trace("css:.socialicon a[href*='instagram.com']@href", fixUrl);
+    const liT = ctx.trace("css:.socialicon a[href*='linkedin.com']@href", fixUrl);
+    const hqT = ctx.trace("css:h6:contains('HQ LOCATION') + p", cleanText);
+    const descT = ctx.trace("css:.why-great-content p", cleanText);
+    for (let i = 0; i < bases.length; i++) {
+      const b = bases[i];
       ctx.emit({
-        "Organization name": r.org,
+        "Organization name": b.org,
         "Country": "India",
-        "Industry": r.ind,
-        "No. of employees": r.emp,
-        "Issue Date": r.issue,
-        "Expiration Date": r.exp,
-        "Website": websiteOut,
-        "Facebook URL": fbOut,
-        "Instagram URL": igOut,
-        "LinkedIn URL": liOut,
-        "HQ Location": hqOut,
-        "Company Description": descOut,
-        "Organization Size": r.size
+        "Industry": b.ind,
+        "No. of employees": b.emp,
+        "Issue Date": b.issue,
+        "Expiration Date": b.exp,
+        "Website": websiteT,
+        "Facebook URL": fbT,
+        "Instagram URL": igT,
+        "LinkedIn URL": liT,
+        "HQ Location": hqT,
+        "Company Description": descT,
+        "Organization Size": b.size
       }, "companies");
     }
     return;

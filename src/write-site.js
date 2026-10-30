@@ -72,9 +72,14 @@ function runLocally(sitePath, specPath) {
 // Whitespace and trailing-slash warnings are allowed (see the tester). In test mode,
 // rows behind requests the frame didn't run can't be counted, so a shortfall is only
 // a failure if nothing was held back.
-export function verdict(report) {
+export function verdict(report, findings = null) {
   if (!report) return { passed: false, problems: ['the run crashed before writing a report'] };
   const problems = [];
+  // Said plainly, because empty columns alone don't say why.
+  if (findings?.detail && !report.enqueued) {
+    const cols = Object.keys(findings.detail.fields ?? {}).join(', ');
+    problems.push(`no detail request was ever made, but the findings say ${cols} come from detail ${findings.detail.kind === 'html' ? 'pages' : 'requests'}: check how detail URLs or payloads are built (traced values hold their plain value in .value)`);
+  }
   const heldBack = report.testMode?.skippedRequests > 0;
   for (const c of report.completeness) {
     if (c.expected === null) problems.push(`"${c.kind}": no expected count from the source (call expect)`);
@@ -119,7 +124,7 @@ async function main() {
     if (written.notes) console.log(`  notes: ${written.notes}`);
 
     const run = await runLocally(path.resolve(outPath), path.resolve(specPath));
-    const result = verdict(run.report);
+    const result = verdict(run.report, findings);
     if (run.report) {
       console.log(`  rows ${run.report.rows}; ${run.report.completeness.map((c) => `${c.kind} ${c.got}/${c.expected}`).join('; ')}`);
       console.log(`  samples: ${run.report.samples.map((s) => `${s.label} ${s.status}`).join(', ')}`);

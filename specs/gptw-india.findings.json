@@ -1,7 +1,7 @@
 {
   "spec": "Great Place to Work India: certified companies",
   "sourceUrl": "https://www.greatplacetowork.in/certified-companies/?type=mid",
-  "investigatedAt": "2026-10-30T19:48:56.987Z",
+  "investigatedAt": "2026-10-30T20:48:24.889Z",
   "pageStatus": 200,
   "list": {
     "request": {
@@ -43,67 +43,71 @@
         "keys": [
           "0"
         ],
-        "how": "direct value at index 0"
+        "how": "direct"
       },
       "Industry": {
         "keys": [
           "1"
         ],
-        "how": "direct value at index 1"
+        "how": "direct, HTML-decoded"
       },
       "No. of employees": {
         "keys": [
           "2"
         ],
-        "how": "direct value at index 2"
+        "how": "direct"
       },
       "Issue Date": {
         "keys": [
           "3"
         ],
-        "how": "split value at index 3 on ' - ' and take first part, e.g. 'Jul 2026 - Jul 2027' -> 'Jul 2026'"
+        "how": "split on ' - ', take first part of Certification period"
       },
       "Expiration Date": {
         "keys": [
           "3"
         ],
-        "how": "split value at index 3 on ' - ' and take second part, e.g. 'Jul 2026 - Jul 2027' -> 'Jul 2027'"
+        "how": "split on ' - ', take second part of Certification period"
       },
       "Website": {
         "keys": [],
-        "how": "not in this list record; requires profile page linked in index 4"
+        "how": "no key in this endpoint - only on profile page linked in record"
       },
       "Facebook URL": {
         "keys": [],
-        "how": "not in this list record; requires profile page linked in index 4"
+        "how": "no key in this endpoint - only on profile page"
       },
       "Instagram URL": {
         "keys": [],
-        "how": "not in this list record; requires profile page linked in index 4"
+        "how": "no key in this endpoint - only on profile page"
       },
       "LinkedIn URL": {
         "keys": [],
-        "how": "not in this list record; requires profile page linked in index 4"
+        "how": "no key in this endpoint - only on profile page"
       },
       "HQ Location": {
         "keys": [],
-        "how": "not in this list record; requires profile page linked in index 4"
+        "how": "no key in this endpoint - only on profile page"
       },
       "Company Description": {
         "keys": [],
-        "how": "not in this list record; requires profile page linked in index 4"
+        "how": "no key in this endpoint - only on profile page"
       },
       "Organization Size": {
         "keys": [],
-        "how": "not in record keys; implied by source table table_memListTable_large = Large Organizations"
+        "how": "no key in this endpoint - implied by endpoint being the Large table; constant Large Organizations for this endpoint"
       }
     },
     "replay": {
       "works": "plain request",
       "needsSession": false,
-      "tried": []
+      "tried": [],
+      "timing": {
+        "ms": 1911,
+        "bytes": 2472261
+      }
     },
-    "reason": "Sample row is Large Organizations with 1770 employees and period Jul 2026 - Jul 2027. Endpoint 1 is the Large table (table_memListTable_large, 1206 records) with [name, industry, employees, certification period, profile link] matching all list-level columns. Endpoints 2,3,4 are mid-size, small, and mega tables with different employee ranges. Profile-only columns have no keys in the list record.",
+    "reason": "Sample row with 1770 employees and Organization Size Large Organizations matches the Large table (id 1, 1206 records) array format [name, industry, employees, 'MMM YYYY - MMM YYYY', profile link]. Issue/Expiration are split halves of index 3. Profile-only fields have no keys here.",
     "sampleRecords": [
       [
         "Hetero Labs Limited",
@@ -131,14 +135,18 @@
     "replay": {
       "works": "plain request",
       "needsSession": false,
-      "tried": []
+      "tried": [],
+      "timing": {
+        "ms": 1878,
+        "bytes": 209669
+      }
     },
     "fields": {
       "Website": {
         "keys": [
-          "css:div.col-lg-4.socialicon ul li a:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter.com']):not([href*='youtube.com'])@href"
+          "css:.socialicon ul li a:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter']):not([href*='youtube.com'])@href"
         ],
-        "how": "Website link is the only link in socialicon block without a social domain, excluded via :not filters",
+        "how": "Website link in socialicon block excluding known social domains",
         "verified": true,
         "sampleValue": "https://www.hkdesigns.co",
         "got": "https://www.hkdesigns.co",
@@ -148,7 +156,7 @@
         "keys": [
           "css:.socialicon a[href*='facebook.com']@href"
         ],
-        "how": "Link in socialicon block whose href contains facebook.com",
+        "how": "Link in the socialicon block whose href contains facebook.com",
         "verified": true,
         "sampleValue": "https://www.facebook.com/hkdesignsinc",
         "got": "https://www.facebook.com/hkdesignsinc"
@@ -157,7 +165,7 @@
         "keys": [
           "css:.socialicon a[href*='instagram.com']@href"
         ],
-        "how": "Link in socialicon block whose href contains instagram.com",
+        "how": "Link in the socialicon block whose href contains instagram.com",
         "verified": true,
         "sampleValue": "https://instagram.com/hk_designs_inc",
         "got": "https://instagram.com/hk_designs_inc"
@@ -166,33 +174,32 @@
         "keys": [
           "css:.socialicon a[href*='linkedin.com']@href"
         ],
-        "how": "Link in socialicon block whose href contains linkedin.com",
+        "how": "Link in the socialicon block whose href contains linkedin.com",
         "verified": true,
         "sampleValue": "https://www.linkedin.com/company/hkdesignsinc",
         "got": "https://www.linkedin.com/company/hkdesignsinc"
       },
       "HQ Location": {
         "keys": [
-          "css:*:contains('HQ LOCATION') + p"
+          "css:h6:contains('HQ LOCATION') + p"
         ],
-        "how": "Element immediately after the HQ LOCATION label",
+        "how": "Paragraph immediately following the HQ LOCATION label",
         "verified": true,
         "sampleValue": "Mumbai",
         "got": "Mumbai"
       },
       "Company Description": {
         "keys": [
-          "css:div.why-great-content p"
+          "css:.why-great-content p"
         ],
-        "how": "Single paragraph inside why-great-content block",
+        "how": "Paragraph text inside the why-great-content block",
         "verified": true,
         "sampleValue": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect and appreciation from and withing the industry. we have come to symbolize a way of life and benchmark of style , we have embarks on a remarkable journey towards success. Our Vision is to become world's largest jewellery manufacturer in the world by 2028 guided by our core values of quality, sustainablity and innovation propelling us forward.",
-        "got": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect a",
-        "fixedOnRetry": true
+        "got": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect a"
       },
       "Organization Size": {
         "keys": [],
-        "how": "Not on profile page - only available as list filter",
+        "how": "Not on the profile page - comes from the list filter only, so leave empty.",
         "verified": false,
         "sampleValue": "Large Organizations",
         "got": ""
@@ -202,7 +209,7 @@
     "trigger": {
       "record": "Hetero Labs Limited Biotechnology & Pharmaceuticals 4961 Oct",
       "control": "View Profile",
-      "reason": "Control 0 is the 'View Profile' link for Hetero Labs Limited, which matches the spec instructions stating the missing fields are on the company's profile page (View Profile)."
+      "reason": "Control 0 'View Profile' matches the spec's instruction that missing fields are on the company's profile page (View Profile)."
     }
   },
   "constants": [
@@ -218,7 +225,33 @@
     "robots.txt disallows https://www.greatplacetowork.in/certified-companies/?type=mid; https://www.greatplacetowork.in/certified-companies/ is allowed and serves the same data, so the findings use it."
   ],
   "tokens": {
-    "in": 6300,
-    "out": 5472
+    "in": 5977,
+    "out": 6397
+  },
+  "reachability": {
+    "runId": "oqsXMvJxJzuvoDfYF",
+    "recommendation": "direct",
+    "results": [
+      {
+        "mode": "direct",
+        "label": "list",
+        "status": 200,
+        "ms": 1893,
+        "bytes": 2472261,
+        "blocked": false,
+        "hasData": true,
+        "works": true
+      },
+      {
+        "mode": "direct",
+        "label": "detail page",
+        "status": 200,
+        "ms": 250,
+        "bytes": 209669,
+        "blocked": false,
+        "hasData": true,
+        "works": true
+      }
+    ]
   }
 }

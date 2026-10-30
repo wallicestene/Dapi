@@ -58,6 +58,12 @@ label (to tell responses apart), note, userData, fallback }`.
   value from several fields. **Trace every value that comes from the response**;
   never copy raw values into rows, or they lose their receipts. Traced values are
   plain JSON, so they can travel in `userData` and be emitted later.
+
+  A traced value is an object `{ value, evidence, paths, ... }`. Put the traced value
+  itself into rows. When your code needs the plain value for its own logic, such as
+  building a detail URL or deciding whether a record has one, read `.value`:
+  `const link = ctx.trace(path, extractHref); if (link.value) ctx.enqueue({ url: link.value, ... })`.
+  `String(traced)` is `"[object Object]"`, never the value.
 - `ctx.emit(row, kind)` — outputs one row: every spec column, spelled exactly as the
   spec, mapped to a traced value, or a plain string for constants and deliberate
   blanks. `kind` labels what the row counts as, e.g. `'issue rows'`.
@@ -99,17 +105,25 @@ spec's samples write it.
 `/Date(-62135596800000)/` means no date. Decode HTML entities (`&amp;`). Date ranges
 may be split by `-`, `–`, `—` or "to". Fix protocol-relative links (`//…`).
 
-**Speed: set `config` from the measurements.** The findings include how long the
-site took per request and how large responses were. Choose:
+**Speed: set `config` from the measurements.** The goal is the fastest run that
+finishes cleanly without the site pushing back, not the fastest possible burst, and
+not a needlessly slow one either: the user is waiting.
 
-- `maxConcurrency` — parallel requests. A fast API (under ~300 ms): 8–12. A slow or
-  heavy site (over ~1.5 s, or pages over 1 MB): 2–4. Somewhere between: 4–8.
-- `maxRequestsPerMinute` — a ceiling that keeps a small public server comfortable;
-  120–600 for most sites, lower for slow ones.
-- `maxRetries` — 3 by default; 5 for a site that was slow or flaky while measured.
+- **Trust the measurements from Apify's servers** (`findings.reachability.results`):
+  that's where the run happens. Timings from the investigation's own connection
+  (`replay.timing`) can be far slower or faster.
+- **Pace by the bulk of the requests.** A job is usually one or a few list requests
+  and then many detail requests: set the pace for the detail requests. One large list
+  page must not slow down thousands of small detail pages.
+- `maxConcurrency` — detail responses under ~500 ms and ~500 KB: 8–12. Over ~1.5 s
+  or over ~1 MB each: 2–4. Between: 4–8.
+- `maxRequestsPerMinute` — work it out from the job's size. Estimate the requests
+  (list pages + one per detail) and aim for a run of minutes, not hours: e.g. 5,000
+  quick detail pages at 480/min ≈ 10 minutes. 300–600 suits most public sites that
+  answered quickly; go lower only if the measurements show the site is slow.
+- `maxRetries` — 3. Use 5 only if the measurements showed errors or timeouts.
 
-The frame clamps these to safe limits. The goal is the fastest run that finishes
-cleanly without the site pushing back, not the fastest possible burst.
+The frame clamps these to safe limits. Say in `notes` how you got the numbers.
 
 **Getting through: use what Apify provides, when the evidence says so.** Crawlee
 already sends browser-like headers and TLS fingerprints and rotates sessions. When
