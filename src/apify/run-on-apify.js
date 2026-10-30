@@ -30,8 +30,9 @@ if (args[0] === '--abort') {
   const input = {
     siteCode: fs.readFileSync(sitePath, 'utf8'),
     spec: JSON.parse(fs.readFileSync(specPath, 'utf8')),
-    // Empty: the site part's own config decides.
-    maxConcurrency: concurrency ? Number(concurrency) : null,
+    // Left out unless given: then the site part's own config decides. (The input
+    // schema rejects null for an integer field.)
+    ...(concurrency && { maxConcurrency: Number(concurrency) }),
   };
   run = await apify.actor(`${username}/${RUNNER}`).start(input, { memory: 2048, timeout: 3600 });
 }
