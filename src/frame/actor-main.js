@@ -11,12 +11,12 @@ import { runFrame } from './frame.js';
 
 await Actor.init();
 
-const { siteCode, spec, testLimit = null, maxConcurrency = null } = (await Actor.getInput()) ?? {};
+const { siteCode, spec, testLimit = null, maxConcurrency = null, robotsOverride = false } = (await Actor.getInput()) ?? {};
 if (!siteCode || !spec) throw new Error('Input needs siteCode (the site part) and spec (from read-spec)');
 
 const file = path.join(os.tmpdir(), `site-${Date.now()}.mjs`);
 fs.writeFileSync(file, siteCode);
 const site = await import(pathToFileURL(file).href);
 
-await runFrame({ site, spec, testLimit, maxConcurrency });
+await runFrame({ site, spec, testLimit, maxConcurrency, robotsOverride });
 await Actor.exit();

@@ -68,7 +68,14 @@ The owner wants this updated as we go, one step at a time.
   headers, fingerprints and session rotation, when the investigation shows a site
   needs them to finish a run. Chosen from evidence, recorded in every receipt
   (`via`), cost kept in mind. Still out: CAPTCHA or challenge-solving services,
-  logins, paywalls, requests robots.txt disallows. `retryOnBlocked` stays off.
+  logins, paywalls. `retryOnBlocked` stays off. Target sites are public registries
+  and similar: data any visitor can see.
+- **2026-10-30** robots.txt (owner's call): obeyed by default. The investigator
+  first looks for an allowed route with the same data (GPTW: the bare URL). Only if
+  there is none does the plan ask the user whether to fetch anyway; on a yes the
+  run uses `robotsOverride`, and the report counts and the evidence marks every
+  request fetched despite robots.txt. Never silently. For the hackathon demo, use
+  sources that need no override (rule 4).
 - **2026-10-30** The rules Muse Spark writes code under live in
   `src/prompts/site-part-rules.md`, which the owner can read and edit.
 

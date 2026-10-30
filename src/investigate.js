@@ -102,7 +102,7 @@ async function respectRobots(list, notes) {
     }
   }
   list.robotsBlocked = true;
-  notes.push(`robots.txt disallows ${url}, and no allowed URL with the same data was found. Dapi won't extract it.`);
+  notes.push(`robots.txt disallows ${url}, and no allowed URL with the same data was found. Dapi needs the user's approval to fetch it anyway; without it, the run skips these requests.`);
 }
 
 function jsonCandidates(captures) {

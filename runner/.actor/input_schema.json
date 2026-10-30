@@ -26,6 +26,13 @@
       "type": "integer",
       "editor": "number",
       "description": "Parallel requests for this run. Leave empty to use the site part's own config, set from Dapi's measurements."
+    },
+    "robotsOverride": {
+      "title": "Fetch despite robots.txt",
+      "type": "boolean",
+      "editor": "checkbox",
+      "default": false,
+      "description": "Only with the user's approval, when the investigation found no allowed route. Overridden requests are counted in the report and marked in their evidence."
     }
   },
   "required": [

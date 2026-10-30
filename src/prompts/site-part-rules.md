@@ -118,9 +118,12 @@ content by country, set `config.proxy`:
 `{ groups: ['RESIDENTIAL'] }` or `{ groups: ['DATACENTER'] }`, with `countryCode`
 (e.g. `'KE'`) when content depends on location. Leave it out otherwise: residential
 traffic costs money. The frame records in each receipt how its response was fetched.
-Never: CAPTCHA or challenge-solving services, logins, paywalls, or requests
-robots.txt disallows. If the site still refuses, let the request fail so the frame
-reports it. Public data only.
+Never: CAPTCHA or challenge-solving services, logins or paywalls. If the site still
+refuses, let the request fail so the frame reports it. Public data only.
+
+**robots.txt is the frame's job.** Use the URLs the findings give: the investigator
+already chose allowed ones where an equivalent exists. Don't rewrite URLs to dodge a
+rule; whether a disallowed request runs is the user's decision, made per job.
 
 **Plain code.** No imports, no network calls of your own, no timers, no `eval`.
 

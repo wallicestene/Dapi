@@ -9,7 +9,7 @@
 import { createHash } from 'node:crypto';
 import { Actor } from 'apify';
 import * as cheerio from 'cheerio';
-import { HttpCrawler, log, LogLevel } from 'crawlee';
+import { HttpCrawler, RobotsTxtFile, log, LogLevel } from 'crawlee';
 import { compareSamples, formatReport } from '../compare.js';
 import { extractEmbedded } from '../embedded.js';
 import { select } from '../select.js';
@@ -31,7 +31,10 @@ const batchSizeFor = (total) => (total ? Math.min(500, Math.max(50, Math.ceil(to
 // testLimit: run every request that mentions a sample's values first, then at most
 // this many other follow-up requests. Lets the test loop check samples without
 // fetching thousands of detail pages; the full run (no limit) checks completeness.
-export async function runFrame({ site, spec, testLimit = null, maxConcurrency = null }) {
+// robotsOverride: robots.txt is obeyed unless the user approved fetching despite it
+// for this job (the investigator found no allowed route). Overridden requests are
+// counted in the report and marked in their evidence.
+export async function runFrame({ site, spec, testLimit = null, maxConcurrency = null, robotsOverride = false }) {
   const columns = spec.columns.map((c) => c.name);
 
   // Speed: the site part proposes a config from the investigator's measurements; the
@@ -127,11 +130,24 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
   // Keeps the server's exact response, hashed and timestamped at the moment of capture.
+  // With an approved override, still know which requests robots.txt disallowed.
+  const robotsFiles = new Map();
+  async function disallowedByRobots(url) {
+    if (!robotsOverride) return false;
+    const origin = new URL(url).origin;
+    if (!robotsFiles.has(origin)) robotsFiles.set(origin, RobotsTxtFile.find(url).catch(() => null));
+    const robots = await robotsFiles.get(origin);
+    return robots ? !robots.isAllowed(url) : false;
+  }
+
   async function capture(request, response, body) {
     const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body);
+    const overridden = await disallowedByRobots(request.url);
+    if (overridden) state.robotsOverridden = (state.robotsOverridden ?? 0) + 1;
     const record = {
       capturedAt: new Date().toISOString(),
       via,
+      ...(overridden && { robots: 'disallowed: fetched with the user\'s approval' }),
       request: { method: request.method, url: request.url, payload: request.payload ?? null },
       response: { status: response.statusCode, contentType: response.headers['content-type'] ?? null },
       bodySha256: sha256(bytes),
@@ -260,7 +276,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     // Slow government servers: a 2 MB page can take minutes.
     navigationTimeoutSecs: 300,
     requestHandlerTimeoutSecs: 120,
-    respectRobotsTxtFile: true,
+    respectRobotsTxtFile: !robotsOverride,
     onSkippedRequest: ({ url, reason }) => {
       state.skipped.push({ url, reason });
     },
@@ -370,6 +386,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     partial: state.partial,
     captures: state.captures,
     resumed: state.resumed,
+    robotsOverridden: state.robotsOverridden ?? 0,
     completeness,
     failed: state.failed,
     skipped: state.skipped,
@@ -398,6 +415,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   for (const f of state.failed) console.log(`  ${f.what}: ${f.error}`);
   if (state.partial.length) console.log(`Rows delivered without their detail (receipts say why): ${state.partial.length}`);
   console.log(`Skipped by robots.txt: ${state.skipped.length || 'none'}`);
+  if (state.robotsOverridden) console.log(`Fetched despite robots.txt, with the user's approval: ${state.robotsOverridden} requests`);
   if (duplicateRows) console.log(`Rows read twice (same values, same evidence): ${duplicateRows}`);
   for (const d of sourceDuplicates) {
     console.log(`The source lists this record ${d.times} times: ${JSON.stringify(Object.values(d.row).slice(0, 3))}`);
