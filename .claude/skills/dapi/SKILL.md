@@ -368,6 +368,26 @@ to PDF with `scripts/spec-to-pdf.js`.
 - The record finder now accepts an array of one object (a factory with one issue),
   but an object of objects still needs three before it reads as records, not config.
 
+### Code writer and test loop (2026-10-30)
+
+`node src/write-site.js <spec.json> <findings.json> <out.js>`: Muse Spark writes a
+site part from the frame's contract (described in prose in the prompt, no example
+site part: clean-room rule), the spec and the findings. The frame runs it locally,
+`verdict()` checks completeness, failed requests, columns and samples (warnings
+allowed), and failures go back to Muse Spark with the previous code, up to 3 tries.
+
+- **Better Work, clean room: passed on attempt 1.** 159 lines, 2,777 in / 8,096 out
+  tokens (~$0.04), 35 s to write. 430 rows, 430/430, samples A/B2/B3 pass, B1 the
+  known whitespace warning. Same result on Apify through `dapi-runner` (27 s, 135
+  evidence records, 430 dataset items).
+- **The source changed between runs:** 427 rows / 376 issues on Oct 27, 430 / 379 on
+  Oct 30. The hand-written part gives 430 today too. Counts must come from the source
+  on every run, never be hard-coded.
+- What the writer chose on its own: one row kind with per-factory `expect`, traced
+  factory values carried through `userData` so issue rows keep their receipts, a
+  blank row when a detail returns no issues (never drop a record), `/Date(...)/` as
+  UTC with the year-1 placeholder treated as empty.
+
 ### What the owner's earlier scrapers teach (read 2026-10-28)
 
 The owner's freelance actors `better-work-compliance` (Nov 2025),
