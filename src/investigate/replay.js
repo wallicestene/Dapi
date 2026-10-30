@@ -6,21 +6,29 @@ import { parseJson, findRecords } from './data.js';
 import { extractEmbedded } from '../embedded.js';
 
 // Embedded data replays if a plain GET of the page holds the same literal, at the same
-// path, with about as many rows (sites add and remove records between fetches).
-export async function replayEmbedded(url, name, recordsPath, count) {
+// path, with about as many rows (sites add and remove records between fetches). The
+// literal is recognised by the text before it, never by its name: names follow script
+// order, which differs between URLs of the same page (GPTW: s7.0 on ?type=mid is s9.0
+// without the query). Returns the page's entries, so callers can rename.
+export async function replayEmbedded(url, context, recordsPath, count) {
   try {
-    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(30_000) });
+    // Pages with embedded data can be megabytes from a slow server (GPTW: 2.4 MB, ~30 s).
+    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(300_000) });
     if (!res.ok) return { works: null, needsSession: null, tried: [`plain GET: HTTP ${res.status}`] };
-    const entry = extractEmbedded(await res.text()).find((e) => e.name === name);
+    const entries = extractEmbedded(await res.text());
+    const entry = entries.find((e) => sameContext(e.context, context));
     const records = entry && findRecords(entry.value);
     if (records?.path === recordsPath && Math.abs(records.count - count) <= Math.max(5, count * 0.05)) {
-      return { works: 'plain request', needsSession: false, tried: [] };
+      return { works: 'plain request', needsSession: false, tried: [], entries };
     }
-    return { works: null, needsSession: null, tried: [`plain GET: ${entry ? 'different content' : `no embedded ${name}`}`] };
+    return { works: null, needsSession: null, tried: [`plain GET: ${entry ? 'different content' : 'no matching embedded data'}`] };
   } catch (err) {
     return { works: null, needsSession: null, tried: [`plain GET: ${err.name}`] };
   }
 }
+
+// The text right before a literal identifies it: compare the last 60 characters.
+export const sameContext = (a, b) => a.slice(-60) === b.slice(-60);
 
 // Headers fetch sets itself, or that would break a replay.
 const SKIP = new Set(['host', 'content-length', 'connection', 'accept-encoding']);

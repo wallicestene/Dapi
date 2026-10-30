@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dapi receipts</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --ink: #1c1c1a; --muted: #6b6b66; --line: #e4e3df;
+    --accent: #b45309; --mark: rgba(245, 158, 11, 0.22); --ok: #15803d; --bad: #b91c1c; --warn: #a16207;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  header { padding: 18px 24px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  h1 { margin: 0; font-size: 18px; }
+  .sub { color: var(--muted); margin-top: 2px; }
+  .checks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; background: var(--bg); }
+  .chip.ok { color: var(--ok); border-color: #bbf7d0; background: #f0fdf4; }
+  .chip.bad { color: var(--bad); border-color: #fecaca; background: #fef2f2; }
+  .chip.warn { color: var(--warn); border-color: #fde68a; background: #fffbeb; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 0; transition: grid-template-columns .2s; height: calc(100vh - 118px); }
+  main.open { grid-template-columns: minmax(0, 1fr) minmax(420px, 46%); }
+  .tablewrap { overflow: auto; }
+  .toolbar { padding: 10px 24px; display: flex; gap: 12px; align-items: center; }
+  .toolbar input { flex: 0 1 320px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+  table { border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; max-width: 260px; }
+  th { position: sticky; top: 0; background: var(--bg); font-weight: 600; z-index: 1; white-space: nowrap; }
+  td { cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td:hover { background: var(--mark); }
+  td.picked { background: var(--mark); outline: 2px solid var(--accent); outline-offset: -2px; }
+  td.const { color: var(--muted); }
+  aside { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 18px 20px; }
+  aside h2 { margin: 0 0 2px; font-size: 13px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+  .value { font-size: 17px; font-weight: 600; margin-bottom: 14px; word-break: break-word; }
+  dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin: 0 0 16px; font-size: 13px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; word-break: break-all; }
+  code, pre { font-family: var(--mono); font-size: 12.5px; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow: auto; max-height: 360px; white-space: pre-wrap; word-break: break-word; }
+  mark { background: var(--mark); outline: 2px solid var(--accent); border-radius: 3px; padding: 0 2px; }
+  .hash.ok { color: var(--ok); } .hash.bad { color: var(--bad); }
+  iframe { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .note { color: var(--muted); font-size: 12.5px; margin: 6px 0 14px; }
+  .close { float: right; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Loading…</h1>
+  <div class="sub" id="sub"></div>
+  <div class="checks" id="checks"></div>
+</header>
+<div class="toolbar"><input id="filter" placeholder="Filter rows…"><span class="sub" id="shown"></span></div>
+<main id="main">
+  <div class="tablewrap"><table id="table"></table></div>
+  <aside id="receipt" hidden></aside>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let rows = [];
+let columns = [];
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+async function load() {
+  const { rows: data, report } = await (await fetch('/api/table')).json();
+  rows = data;
+  columns = Object.keys(rows[0] ?? {}).filter((c) => !c.startsWith('#'));
+  $('title').textContent = 'Delivered dataset';
+  $('sub').textContent = `${rows.length} rows · ${report.captures} server responses kept as evidence · every cell has a receipt`;
+
+  const chips = [];
+  for (const c of report.completeness) {
+    const ok = c.expected !== null && c.got === c.expected;
+    chips.push(`<span class="chip ${ok ? 'ok' : 'bad'}">${esc(c.kind)}: ${c.got} of ${c.expected ?? '?'} the source says exist</span>`);
+  }
+  chips.push(`<span class="chip ${report.failed.length ? 'bad' : 'ok'}">${report.failed.length} failed requests</span>`);
+  for (const s of report.samples) chips.push(`<span class="chip ${s.status === 'pass' ? 'ok' : s.status === 'warn' ? 'warn' : 'bad'}">${esc(s.label)}: ${s.status}</span>`);
+  $('checks').innerHTML = chips.join('');
+  render();
+}
+
+function render() {
+  const q = $('filter').value.toLowerCase();
+  const shown = rows.map((r, i) => [r, i]).filter(([r]) => !q || columns.some((c) => String(r[c]).toLowerCase().includes(q)));
+  const visible = shown.slice(0, 500);
+  $('shown').textContent = shown.length > 500 ? `showing 500 of ${shown.length}` : `${shown.length} rows`;
+  $('table').innerHTML =
+    `<thead><tr>${columns.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>` +
+    visible
+      .map(([r, i]) => `<tr>${columns.map((c) => `<td data-row="${i}" data-col="${esc(c)}" class="${r['#receipt']?.[c]?.constant ? 'const' : ''}" title="${esc(r[c])}">${esc(r[c])}</td>`).join('')}</tr>`)
+      .join('') +
+    '</tbody>';
+}
+
+$('filter').addEventListener('input', render);
+$('table').addEventListener('click', (e) => {
+  const td = e.target.closest('td');
+  if (!td) return;
+  document.querySelectorAll('td.picked').forEach((el) => el.classList.remove('picked'));
+  td.classList.add('picked');
+  openReceipt(Number(td.dataset.row), td.dataset.col);
+});
+
+async function sha256(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function jsonView(record, key) {
+  // The record, pretty-printed, with the line holding the value marked.
+  const lines = JSON.stringify(record, null, 2).split('\n').map(esc);
+  const marker = Array.isArray(record) ? null : `  &quot;${esc(key)}&quot;:`;
+  return lines.map((l, i) => (marker ? l.startsWith(marker) : i === Number(key) + 1) ? `<mark>${l}</mark>` : l).join('\n');
+}
+
+async function openReceipt(i, column) {
+  const row = rows[i];
+  const r = row['#receipt']?.[column];
+  const panel = $('receipt');
+  panel.hidden = false;
+  $('main').classList.add('open');
+  const head = `<button class="close" onclick="closeReceipt()">×</button><h2>${esc(column)}</h2><div class="value">${esc(row[column]) || '<span class="sub">(empty)</span>'}</div>`;
+
+  if (!r || r.constant) {
+    panel.innerHTML = head + '<p class="note">A fixed value or a deliberate blank, set by the spec rather than taken from the source.</p>';
+    return;
+  }
+  panel.innerHTML = head + '<p class="note">Loading the evidence…</p>';
+  const q = new URLSearchParams({ key: r.evidence });
+  r.paths.forEach((p) => q.append('path', p));
+  const ev = await (await fetch(`/api/evidence?${q}`)).json();
+
+  let html = head;
+  html += `<dl>
+    <dt>Request</dt><dd><code>${esc(ev.request.method)} ${esc(ev.request.url)}</code></dd>
+    ${ev.request.payload ? `<dt>Body</dt><dd><code>${esc(ev.request.payload)}</code></dd>` : ''}
+    <dt>Captured</dt><dd>${esc(new Date(ev.capturedAt).toLocaleString())}</dd>
+    <dt>Response</dt><dd>HTTP ${ev.response.status} · ${esc(ev.response.contentType ?? '')} · ${(ev.bodyBytes / 1024).toFixed(1)} KB</dd>
+    <dt>SHA-256</dt><dd><code>${ev.bodySha256}</code><div class="hash" id="hash">Re-checking in your browser…</div></dd>
+  </dl>`;
+  if (r.derived) html += `<p class="note">Derived: built from ${r.paths.map((p) => `<code>${esc(p)}</code>`).join(' + ')} and reformatted to the spec's format.</p>`;
+
+  for (const loc of ev.located) {
+    if (loc.kind === 'json') {
+      html += `<h2>In the server's JSON response</h2><p class="note">At <code>${esc(loc.path)}</code></p><pre>${jsonView(loc.record, loc.key)}</pre>`;
+    } else if (loc.kind === 'embedded') {
+      const cells = (Array.isArray(loc.row) ? loc.row : [loc.row]).map((c, j) => (String(j) === loc.cell ? `<mark>${esc(JSON.stringify(c))}</mark>` : esc(JSON.stringify(c))));
+      html += `<h2>In data embedded in the page's HTML</h2><p class="note">After <code>${esc(loc.context.slice(-80))}</code>, row <code>${esc(loc.rowPath)}</code>, cell ${esc(loc.cell)}</p><pre>[${cells.join(',\n ')}]</pre>`;
+    } else {
+      const page = `/api/evidence/page?${new URLSearchParams({ key: r.evidence, path: loc.path })}`;
+      html += `<h2>On the page as it was captured</h2><p class="note"><code>${esc(loc.path)}</code> · ${loc.matches} match${loc.matches === 1 ? '' : 'es'}</p><iframe sandbox="allow-same-origin" src="${page}" onload="this.contentDocument.querySelector('[data-dapi-hit]')?.scrollIntoView({ block: 'center' })"></iframe>`;
+    }
+  }
+  panel.innerHTML = html;
+
+  const body = await (await fetch(`/api/evidence/body?key=${r.evidence}`)).text();
+  const ok = (await sha256(body)) === ev.bodySha256;
+  $('hash').className = `hash ${ok ? 'ok' : 'bad'}`;
+  $('hash').textContent = ok ? '✓ Matches the hash taken at capture: this is exactly what the server sent.' : '✗ Does not match: the evidence changed after capture.';
+}
+
+function closeReceipt() {
+  $('receipt').hidden = true;
+  $('main').classList.remove('open');
+  document.querySelectorAll('td.picked').forEach((el) => el.classList.remove('picked'));
+}
+
+load();
+</script>
+</body>
+</html>

@@ -40,21 +40,31 @@ export function pdfPart(buffer, filename) {
   };
 }
 
-// Retries 429s and 5xx with exponential backoff and jitter, honouring Retry-After.
-// Rate limits are per team, so one busy run can hit them for everything else.
+// Retries 429s, 5xx and dropped connections with exponential backoff and jitter,
+// honouring Retry-After. Rate limits are per team, so one busy run can hit them for
+// everything else.
 async function post(path, body, timeoutMs, attempts = 3) {
   if (!process.env.MODEL_API_KEY) throw new Error('MODEL_API_KEY is not set: add it to dapi/.env');
+  const backoff = (attempt) => new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 1000 + Math.random() * 1000));
 
   for (let attempt = 1; ; attempt++) {
-    const res = await fetch(`${API}${path}`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${process.env.MODEL_API_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    let res;
+    try {
+      res = await fetch(`${API}${path}`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${process.env.MODEL_API_KEY}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      // DNS hiccups and resets surface as "fetch failed"; a timeout does not retry.
+      if (err.name === 'TimeoutError' || attempt === attempts) throw err;
+      await backoff(attempt);
+      continue;
+    }
     if (res.ok) return res.json();
 
     const retryable = res.status === 429 || res.status >= 500;
@@ -62,7 +72,7 @@ async function post(path, body, timeoutMs, attempts = 3) {
       throw new Error(`Meta API ${path} returned HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     }
     const retryAfter = Number(res.headers.get('retry-after'));
-    const waitMs = retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 1000 + Math.random() * 1000;
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    if (retryAfter > 0) await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+    else await backoff(attempt);
   }
 }

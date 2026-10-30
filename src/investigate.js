@@ -8,11 +8,12 @@
 
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { RobotsTxtFile } from 'crawlee';
 import { openPage, findRecordRow, clickablesIn } from './investigate/browser.js';
 import { isTracker, findRecords, findTotal, shrink, at } from './investigate/data.js';
 import { matchColumns, pickControl } from './investigate/spark.js';
 import { mapHtmlDetail } from './investigate/html.js';
-import { replay, replayEmbedded } from './investigate/replay.js';
+import { replay, replayEmbedded, sameContext } from './investigate/replay.js';
 import { extractEmbedded } from './embedded.js';
 
 export async function investigate(spec) {
@@ -57,14 +58,51 @@ export async function investigate(spec) {
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
     }
 
+    await respectRobots(list, notes);
     list.replay = list.embedded
-      ? await replayEmbedded(list.capture.url, list.embedded.name, list.records.path, list.records.count)
+      ? await replayEmbedded(list.capture.url, list.embedded.context, list.records.path, list.records.count)
       : await replay(list.capture, list.records.path);
     if (detail?.kind === 'json') detail.replay = await replay(detail.capture, detail.records.path);
     return report({ spec, session, list, detail, wanted, notes, tokens });
   } finally {
     await session.close();
   }
+}
+
+// The frame obeys robots.txt (Crawlee's own parser), so the findings must only point
+// at allowed URLs. If the list URL is disallowed only because of its query string
+// (GPTW: "Disallow: /*?*"), the same URL without one is used, provided a plain
+// request returns the same data. Otherwise say so plainly.
+async function respectRobots(list, notes) {
+  const url = list.capture.url;
+  let robots;
+  try {
+    robots = await RobotsTxtFile.find(url);
+  } catch {
+    return; // no robots.txt: everything is allowed
+  }
+  if (robots.isAllowed(url)) return;
+
+  const bare = url.split('?')[0];
+  if (bare !== url && robots.isAllowed(bare) && list.embedded) {
+    const same = await replayEmbedded(bare, list.embedded.context, list.records.path, list.records.count);
+    if (same.works) {
+      // The same tables, but possibly under other names on this URL: rename by context.
+      const rename = (name, context) => same.entries.find((e) => sameContext(e.context, context))?.name ?? name;
+      const embedded = { ...list.embedded, name: rename(list.embedded.name, list.embedded.context) };
+      list.capture = { ...list.capture, url: bare, embedded };
+      list.embedded = embedded;
+      for (const s of list.siblings ?? []) {
+        const name = rename(s.name, s.context);
+        s.recordsPath = s.recordsPath.replace(`embedded:${s.name}`, `embedded:${name}`);
+        s.name = name;
+      }
+      notes.push(`robots.txt disallows ${url}; ${bare} is allowed and serves the same data, so the findings use it.`);
+      return;
+    }
+  }
+  list.robotsBlocked = true;
+  notes.push(`robots.txt disallows ${url}, and no allowed URL with the same data was found. Dapi won't extract it.`);
 }
 
 function jsonCandidates(captures) {
@@ -268,9 +306,12 @@ function describe(source) {
     recordCount: source.records.count,
     recordShape: source.records.tabular ? `arrays of ${source.records.records[0].length} cells` : 'objects',
     ...(source.siblings?.length && { siblings: source.siblings }),
+    ...(source.robotsBlocked && { robotsBlocked: true }),
     total: source.total,
     fields: source.fields,
-    replay: source.replay,
+    // The replay's parsed page (entries) is for renaming only: never into the findings,
+    // where it would send megabytes of the site's data to Muse Spark on every attempt.
+    replay: source.replay && { works: source.replay.works, needsSession: source.replay.needsSession, tried: source.replay.tried },
     reason: source.reason,
     sampleRecords: source.records.records.slice(0, 2).map((r) => (Array.isArray(r) ? r.map((c) => shrink(c, 1)) : shrink(r))),
   };

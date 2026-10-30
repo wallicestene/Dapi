@@ -1,39 +1,39 @@
 {
   "spec": "Great Place to Work India: certified companies",
   "sourceUrl": "https://www.greatplacetowork.in/certified-companies/?type=mid",
-  "investigatedAt": "2026-10-30T19:23:31.046Z",
+  "investigatedAt": "2026-10-30T19:48:56.987Z",
   "pageStatus": 200,
   "list": {
     "request": {
       "method": "GET",
-      "url": "https://www.greatplacetowork.in/certified-companies/?type=mid",
+      "url": "https://www.greatplacetowork.in/certified-companies/",
       "payload": null,
       "contentType": null
     },
     "embedded": {
-      "name": "s7.0",
+      "name": "s9.0",
       "context": "); return; } var table_memListTable_large = $(\"#memListTable-large\").DataTable("
     },
-    "recordsPath": "embedded:s7.0.data",
+    "recordsPath": "embedded:s9.0.data",
     "recordCount": 1206,
     "recordShape": "arrays of 5 cells",
     "siblings": [
       {
-        "name": "s8.0",
+        "name": "s10.0",
         "context": "ed.\"); return; } var table_memListTable_mid = $(\"#memListTable-mid\").DataTable(",
-        "recordsPath": "embedded:s8.0.data",
+        "recordsPath": "embedded:s10.0.data",
         "recordCount": 2845
       },
       {
-        "name": "s9.0",
+        "name": "s11.0",
         "context": "); return; } var table_memListTable_small = $(\"#memListTable-small\").DataTable(",
-        "recordsPath": "embedded:s9.0.data",
+        "recordsPath": "embedded:s11.0.data",
         "recordCount": 1079
       },
       {
-        "name": "s10.0",
+        "name": "s12.0",
         "context": ".\"); return; } var table_memListTable_mega = $(\"#memListTable-mega\").DataTable(",
-        "recordsPath": "embedded:s10.0.data",
+        "recordsPath": "embedded:s12.0.data",
         "recordCount": 28
       }
     ],
@@ -43,69 +43,67 @@
         "keys": [
           "0"
         ],
-        "how": ""
+        "how": "direct value at index 0"
       },
       "Industry": {
         "keys": [
           "1"
         ],
-        "how": "HTML-entity decoded, e.g. &amp; to &"
+        "how": "direct value at index 1"
       },
       "No. of employees": {
         "keys": [
           "2"
         ],
-        "how": ""
+        "how": "direct value at index 2"
       },
       "Issue Date": {
         "keys": [
           "3"
         ],
-        "how": "split value on \" - \" and take first part, e.g. \"Jul 2026 - Jul 2027\" -> \"Jul 2026\""
+        "how": "split value at index 3 on ' - ' and take first part, e.g. 'Jul 2026 - Jul 2027' -> 'Jul 2026'"
       },
       "Expiration Date": {
         "keys": [
           "3"
         ],
-        "how": "split value on \" - \" and take second part, e.g. \"Jul 2026 - Jul 2027\" -> \"Jul 2027\""
+        "how": "split value at index 3 on ' - ' and take second part, e.g. 'Jul 2026 - Jul 2027' -> 'Jul 2027'"
       },
       "Website": {
         "keys": [],
-        "how": ""
+        "how": "not in this list record; requires profile page linked in index 4"
       },
       "Facebook URL": {
         "keys": [],
-        "how": ""
+        "how": "not in this list record; requires profile page linked in index 4"
       },
       "Instagram URL": {
         "keys": [],
-        "how": ""
+        "how": "not in this list record; requires profile page linked in index 4"
       },
       "LinkedIn URL": {
         "keys": [],
-        "how": ""
+        "how": "not in this list record; requires profile page linked in index 4"
       },
       "HQ Location": {
         "keys": [],
-        "how": ""
+        "how": "not in this list record; requires profile page linked in index 4"
       },
       "Company Description": {
         "keys": [],
-        "how": ""
+        "how": "not in this list record; requires profile page linked in index 4"
       },
       "Organization Size": {
         "keys": [],
-        "how": ""
+        "how": "not in record keys; implied by source table table_memListTable_large = Large Organizations"
       }
     },
     "replay": {
-      "works": null,
-      "needsSession": null,
-      "tried": [
-        "plain GET: TimeoutError"
-      ]
+      "works": "plain request",
+      "needsSession": false,
+      "tried": []
     },
-    "reason": "Endpoint 1 is the Large-organizations DataTable ($.data). Each record is [name, industry, employee count, \"Mon YYYY - Mon YYYY\" certification period, View-Profile link]. This matches Organization name, Industry (HTML-encoded), No. of employees, and Issue/Expiration Date as first/second half of the period. Profile-page fields (Website, social URLs, HQ, Description) are not in the record, only the profile link at index 4. Size Large Organizations corresponds to the -large table, not mid/small/mega.",
+    "reason": "Sample row is Large Organizations with 1770 employees and period Jul 2026 - Jul 2027. Endpoint 1 is the Large table (table_memListTable_large, 1206 records) with [name, industry, employees, certification period, profile link] matching all list-level columns. Endpoints 2,3,4 are mid-size, small, and mega tables with different employee ranges. Profile-only columns have no keys in the list record.",
     "sampleRecords": [
       [
         "Hetero Labs Limited",
@@ -138,9 +136,9 @@
     "fields": {
       "Website": {
         "keys": [
-          "css:.row.pt-4 > .col-lg-4.socialicon ul li a[href^='http']:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter']):not([href*='youtube.com'])@href"
+          "css:div.col-lg-4.socialicon ul li a:not([href*='facebook.com']):not([href*='instagram.com']):not([href*='linkedin.com']):not([href*='twitter.com']):not([href*='youtube.com'])@href"
         ],
-        "how": "Website link in profile socialicon list filtered to http links excluding known social domains",
+        "how": "Website link is the only link in socialicon block without a social domain, excluded via :not filters",
         "verified": true,
         "sampleValue": "https://www.hkdesigns.co",
         "got": "https://www.hkdesigns.co",
@@ -175,25 +173,26 @@
       },
       "HQ Location": {
         "keys": [
-          "css:h6:contains('HQ LOCATION') + p"
+          "css:*:contains('HQ LOCATION') + p"
         ],
-        "how": "Paragraph following the HQ LOCATION label",
+        "how": "Element immediately after the HQ LOCATION label",
         "verified": true,
         "sampleValue": "Mumbai",
         "got": "Mumbai"
       },
       "Company Description": {
         "keys": [
-          "css:.why-great-content p"
+          "css:div.why-great-content p"
         ],
-        "how": "Paragraph inside why-great-content block",
+        "how": "Single paragraph inside why-great-content block",
         "verified": true,
         "sampleValue": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect and appreciation from and withing the industry. we have come to symbolize a way of life and benchmark of style , we have embarks on a remarkable journey towards success. Our Vision is to become world's largest jewellery manufacturer in the world by 2028 guided by our core values of quality, sustainablity and innovation propelling us forward.",
-        "got": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect a"
+        "got": "H.K.Designs is a pioneer in innovation and craeting cutting edge jewelery design. we make diamond studded gold jewellery of impaccable quality that has built reputation and has garnered both respect a",
+        "fixedOnRetry": true
       },
       "Organization Size": {
         "keys": [],
-        "how": "Not on the profile detail page, comes from list filter only",
+        "how": "Not on profile page - only available as list filter",
         "verified": false,
         "sampleValue": "Large Organizations",
         "got": ""
@@ -203,7 +202,7 @@
     "trigger": {
       "record": "Hetero Labs Limited Biotechnology & Pharmaceuticals 4961 Oct",
       "control": "View Profile",
-      "reason": "Missing columns instructions point to the company's profile page (View Profile), and control 0 is the 'View Profile' link for Hetero Labs Limited."
+      "reason": "Control 0 is the 'View Profile' link for Hetero Labs Limited, which matches the spec instructions stating the missing fields are on the company's profile page (View Profile)."
     }
   },
   "constants": [
@@ -215,9 +214,11 @@
   "unmapped": [
     "Organization Size"
   ],
-  "notes": [],
+  "notes": [
+    "robots.txt disallows https://www.greatplacetowork.in/certified-companies/?type=mid; https://www.greatplacetowork.in/certified-companies/ is allowed and serves the same data, so the findings use it."
+  ],
   "tokens": {
-    "in": 5972,
-    "out": 5318
+    "in": 6300,
+    "out": 5472
   }
 }

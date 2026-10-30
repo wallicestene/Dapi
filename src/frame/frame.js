@@ -192,8 +192,27 @@ export async function runFrame({ site, spec, testLimit = null }) {
   const kinds = [...new Set([...Object.keys(expected), ...Object.keys(emitted)])];
   const completeness = kinds.map((kind) => ({ kind, expected: expected[kind] ?? null, got: emitted[kind] ?? 0 }));
   const samples = compareSamples(rows, spec.samples);
+  // Rows identical in every column. If their receipts point to the same place in the
+  // evidence too, the site part read the same data twice: a bug. If they come from
+  // different places, the source itself lists the record twice: a fact to report,
+  // not to hide.
+  const byValues = new Map();
+  rows.forEach((r, i) => {
+    const key = JSON.stringify(r);
+    byValues.set(key, [...(byValues.get(key) ?? []), i]);
+  });
+  let duplicateRows = 0;
+  const sourceDuplicates = [];
+  for (const group of byValues.values()) {
+    if (group.length < 2) continue;
+    const places = new Set(group.map((i) => JSON.stringify(receipts[i])));
+    duplicateRows += group.length - places.size;
+    if (places.size > 1) sourceDuplicates.push({ row: rows[group[0]], times: places.size });
+  }
   const report = {
     rows: rows.length,
+    duplicateRows,
+    sourceDuplicates,
     captures,
     completeness,
     failed,
@@ -214,6 +233,10 @@ export async function runFrame({ site, spec, testLimit = null }) {
   console.log(`\nFailed requests: ${failed.length ? '' : 'none'}`);
   for (const f of failed) console.log(`  ${f.what}: ${f.error}`);
   console.log(`Skipped by robots.txt: ${skipped.length || 'none'}`);
+  if (duplicateRows) console.log(`Rows read twice (same values, same evidence): ${duplicateRows}`);
+  for (const d of sourceDuplicates) {
+    console.log(`The source lists this record ${d.times} times: ${JSON.stringify(Object.values(d.row).slice(0, 3))}`);
+  }
   if (testLimit !== null) console.log(`Test mode: ${testSkipped} follow-up requests not run (limit ${testLimit}), so counts can't be checked`);
   console.log(`Columns: ${columnProblems.size ? [...columnProblems].join('; ') : 'match the spec'}`);
   console.log(`\nSamples (${samples.length}):\n${formatReport(samples)}`);

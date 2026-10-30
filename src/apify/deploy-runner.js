@@ -19,6 +19,8 @@ const FILES = {
   'src/frame/actor-main.js': 'src/frame/actor-main.js',
   'src/frame/frame.js': 'src/frame/frame.js',
   'src/compare.js': 'src/compare.js',
+  'src/embedded.js': 'src/embedded.js',
+  'src/select.js': 'src/select.js',
 };
 
 const sourceFiles = Object.entries(FILES).map(([name, from]) => ({
