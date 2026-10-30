@@ -17,46 +17,9 @@ import { chat } from './meta.js';
 const MAX_ATTEMPTS = 3;
 const root = fileURLToPath(new URL('../', import.meta.url));
 
+// The rules Muse Spark writes under live in a document the owner can read and edit.
 // Kept first and unchanged so the API can cache it.
-const CONTRACT = `You write a "site part": one ES module that extracts a dataset from one website. A fixed frame runs it with Crawlee's HttpCrawler and handles requests, retries, evidence, receipts, completeness and checks. Your module only knows the site.
-
-The module exports exactly two things:
-
-export const start = [ request, ... ];   // the first requests
-export async function handle(ctx) { ... } // called once per response
-
-A request is a plain object: { url, method ('GET' default, or 'POST'), headers (object), payload (string body for POST), label (string you use to tell responses apart), note (names the record, e.g. 'profile of H.K.Designs (India) LLP': the user sees it when the request fails), userData (JSON-serializable data to carry along), fallback ([{ row, kind }]: for a detail request, the rows to deliver if it fails every retry, holding the list columns as traced values; the frame fills the other columns with blanks marked unavailable) }.
-
-handle(ctx) receives:
-- ctx.request: the request (ctx.request.label, ctx.request.userData).
-- ctx.json: the parsed JSON response (undefined if not JSON). ctx.body: the raw text.
-- ctx.$: the response loaded in cheerio, for HTML pages.
-- ctx.embedded: data embedded in an HTML response's scripts, as [{ name, context, value }]. name is like 's7.0'; context is the text just before the data (e.g. '$("#memListTable-large").DataTable('), which says what it is. Names follow script order and change from one URL or day to the next, so NEVER hard-code a name: on every response, find each entry by a distinctive part of its context (e.g. 'memListTable-large'), then use that entry's name in trace paths.
-- ctx.trace(path) -> a traced value from THIS response. A path is one of:
-    'Data.3.Name' or '0.IssueName'        dots and indexes into ctx.json
-    'embedded:s7.0.data.17.0'             into ctx.embedded's entry s7.0, then its value
-    'css:<selector>' / 'css:<selector>@href'   text or attribute of the first match on the HTML page
-    'css*:<selector>@href'                an array, one per match
-  ctx.trace(path, fn) applies fn to the value; ctx.trace([pathA, pathB], (a, b) => ...) builds one value from several fields. Traced values record where each value came from: use trace for every value that comes from the response, never copy raw values into rows.
-- ctx.emit(row, kind): outputs one row. row maps every spec column name (exact spelling) to a traced value, or to a plain string for constants and deliberate blanks. kind is a short label for what the row counts as, e.g. 'issue rows'.
-- ctx.expect(kind, count): records how many rows of that kind the SOURCE says exist, from the source's own numbers (totals, per-record counts). Call it so the frame can report completeness. Calls add up.
-- ctx.enqueue(request, ...): asks for more requests. It is synchronous; do not await it.
-
-Traced values are plain JSON objects, so they can travel in a request's userData to a later response and be emitted from there, keeping their receipts.
-
-Rules:
-- Use the endpoints, payloads, record paths, keys and join from the findings. Don't invent endpoints.
-- Every spec column in every row, spelled exactly as the spec. Constants as plain strings.
-- Follow the spec's rules about what one row is, including rows for records with nothing to expand.
-- Never drop a record silently: if the source says N exist, emit N or let the counts show the gap. If the source lists the same record twice, emit it as the source has it; the frame reports source duplicates to the user. Don't deduplicate unless the spec says to.
-- Format values the way the spec's samples show them. Dates in .NET form "/Date(ms)/" are UTC milliseconds; "/Date(-62135596800000)/" means no date (empty). Decode HTML entities in text. Date ranges may be split by "-", "–", "—" or "to".
-- Fetch each distinct detail request once. When several list records share one detail page, request it once, carry all their rows in userData, and emit them all from that response.
-- When the findings list "siblings", the list is split into several tables with the same rows: read every one. A column saying which table or filter a row is under comes from that table's context, written the way the spec's samples write it.
-- HTML detail pages: build each record's URL as the findings' urlFrom says (an href inside a list field may be HTML-escaped, e.g. "\\/"), request it with GET, and read columns with the findings' verified selectors. If a record has no detail URL, emit its row with the list columns. For every detail request, pass its rows as fallback, so a failed request still delivers them.
-- Embedded and HTML text can hold entities like "&amp;": decode them.
-- No other imports, no network calls of your own, no timers. Plain modern JavaScript.
-
-Return the full module source in "code", and a short note on any assumption in "notes".`;
+const CONTRACT = fs.readFileSync(new URL('./prompts/site-part-rules.md', import.meta.url), 'utf8');
 
 const SCHEMA = {
   type: 'object',

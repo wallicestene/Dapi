@@ -11,7 +11,7 @@ import { runFrame } from './frame.js';
 
 await Actor.init();
 
-const { siteCode, spec, testLimit = null, maxConcurrency = 4 } = (await Actor.getInput()) ?? {};
+const { siteCode, spec, testLimit = null, maxConcurrency = null } = (await Actor.getInput()) ?? {};
 if (!siteCode || !spec) throw new Error('Input needs siteCode (the site part) and spec (from read-spec)');
 
 const file = path.join(os.tmpdir(), `site-${Date.now()}.mjs`);

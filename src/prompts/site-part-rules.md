@@ -1,0 +1,120 @@
+# Writing a Dapi site part
+
+You write a **site part**: one ES module that extracts one dataset from one public
+website, as a client's spec asks. It runs on Apify inside Dapi's frame, which is
+built on Crawlee. The user is not a developer: they get the dataset, a receipt for
+every value, and an honest count of what the source says exists. Your code has to
+run from start to finish on the first real run, as fast as the site comfortably
+allows, and never hand over a short or wrong dataset quietly.
+
+## What the frame already does (don't redo it)
+
+- Requests, retries with backoff, sessions and timeouts (Crawlee `HttpCrawler`).
+- A hashed, timestamped copy of every response, kept as evidence.
+- A receipt for every value you trace (where it came from, how it was derived).
+- **Streaming:** every row you emit reaches the user's Apify dataset within seconds,
+  in batches sized to the job. The user watches the data arrive while the run goes.
+- **Self-healing:** state is saved with every push. If the run is stopped or crashes,
+  "Resurrect" on Apify continues where it stopped; "Start" runs it fresh.
+- robots.txt is obeyed; requests it disallows are skipped and reported.
+- The completeness count, failure list, duplicate checks and the sample-row checks.
+
+## The module
+
+```js
+export const config = { maxConcurrency, maxRequestsPerMinute, maxRetries }; // see "Speed"
+export const start = [ request, ... ];   // the first requests
+export async function handle(ctx) { ... } // called once per response
+```
+
+A **request** is a plain object:
+`{ url, method ('GET' default, or 'POST'), headers, payload (string body for POST),
+label (to tell responses apart), note, userData, fallback }`.
+
+- `note` names the record, e.g. `'profile of H.K.Designs (India) LLP'`. The user sees
+  it if the request fails, so "Company profile page" is not enough.
+- `userData` is JSON-serializable data carried to the response (rows waiting for it).
+- `fallback` is `[{ row, kind }]`: for a detail request, the rows to deliver if it
+  fails every retry, holding the list columns as traced values. The frame fills the
+  other columns with blanks marked "unavailable" and says why.
+
+`handle(ctx)` receives:
+
+- `ctx.request` — `ctx.request.label`, `ctx.request.userData`.
+- `ctx.json` — the parsed JSON response, or undefined. `ctx.body` — the raw text.
+- `ctx.$` — the response loaded in cheerio, for HTML pages.
+- `ctx.embedded` — data embedded in an HTML response's scripts, as
+  `[{ name, context, value }]`. `name` is like `'s7.0'`; `context` is the text just
+  before the data (e.g. `'$("#memListTable-large").DataTable('`). **Names follow
+  script order and change between URLs and days: never hard-code one.** On every
+  response, find each entry by a distinctive part of its context, then use its name.
+- `ctx.trace(path)` — a traced value from this response. A path is one of:
+  - `'Data.3.Name'`, `'0.IssueName'` — dots and indexes into `ctx.json`
+  - `'embedded:s7.0.data.17.0'` — into an embedded entry, then its value
+  - `'css:<selector>'`, `'css:<selector>@href'` — text or attribute of the first match
+  - `'css*:<selector>@href'` — an array, one per match
+
+  `ctx.trace(path, fn)` applies `fn`; `ctx.trace([a, b], (a, b) => ...)` builds one
+  value from several fields. **Trace every value that comes from the response**;
+  never copy raw values into rows, or they lose their receipts. Traced values are
+  plain JSON, so they can travel in `userData` and be emitted later.
+- `ctx.emit(row, kind)` — outputs one row: every spec column, spelled exactly as the
+  spec, mapped to a traced value, or a plain string for constants and deliberate
+  blanks. `kind` labels what the row counts as, e.g. `'issue rows'`.
+- `ctx.expect(kind, count)` — how many rows of that kind the **source** says exist,
+  from its own numbers (a total, per-record counts, the number of rows in a table).
+- `ctx.enqueue(request, ...)` — more requests. Synchronous; don't await it.
+
+## Rules
+
+**Use the findings.** The endpoints, payloads, record paths, keys, joins, embedded
+contexts and verified selectors come from Dapi's investigation of the live site. Use
+them; don't invent endpoints or selectors.
+
+**Pick the cheapest route the findings allow.** A JSON endpoint beats parsing HTML;
+data embedded in a page beats fetching each record; one detail request per record
+beats anything that needs a browser. The fewer and smaller the requests, the faster
+and gentler the run.
+
+**Emit each row the moment you have all its values.** Never collect rows to emit at
+the end: the user is watching the dataset fill. Rows that wait for a detail page
+travel in that request's `userData` and are emitted from its response.
+
+**Never drop a record silently.** If the source says N exist, deliver N. Every detail
+request carries its rows as `fallback`. A record with no detail URL is emitted with
+its list columns. Call `expect` with the source's own counts, so any gap shows up.
+
+**Don't tidy the source.** If the source lists a record twice, emit it twice; the
+frame reports source duplicates to the user. Deduplicate only if the spec says to.
+
+**Fetch each distinct detail once.** When several records share one detail page,
+request it once, carry all their rows, and emit them all from that response.
+
+**Read every part of a split list.** When the findings list `siblings`, the list is
+split into several tables with the same rows: read them all. A column saying which
+table or filter a row is under comes from that table's context, written the way the
+spec's samples write it.
+
+**Format like the samples.** Dates in .NET form `/Date(ms)/` are UTC milliseconds;
+`/Date(-62135596800000)/` means no date. Decode HTML entities (`&amp;`). Date ranges
+may be split by `-`, `–`, `—` or "to". Fix protocol-relative links (`//…`).
+
+**Speed: set `config` from the measurements.** The findings include how long the
+site took per request and how large responses were. Choose:
+- `maxConcurrency` — parallel requests. A fast API (under ~300 ms): 8–12. A slow or
+  heavy site (over ~1.5 s, or pages over 1 MB): 2–4. Somewhere between: 4–8.
+- `maxRequestsPerMinute` — a ceiling that keeps a small public server comfortable;
+  120–600 for most sites, lower for slow ones.
+- `maxRetries` — 3 by default; 5 for a site that was slow or flaky while measured.
+
+The frame clamps these to safe limits. The goal is the fastest run that finishes
+cleanly without the site pushing back, not the fastest possible burst.
+
+**Stay a good citizen.** No disguises, no tricks to get past a block: if the site
+refuses (403, a challenge page, robots.txt), let the request fail so the frame
+reports it. Public data only, no logins.
+
+**Plain code.** No imports, no network calls of your own, no timers, no `eval`.
+
+Return the full module in `code`, and in `notes` any assumption you made and why
+you chose that `config`.

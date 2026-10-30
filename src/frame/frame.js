@@ -31,8 +31,20 @@ const batchSizeFor = (total) => (total ? Math.min(500, Math.max(50, Math.ceil(to
 // testLimit: run every request that mentions a sample's values first, then at most
 // this many other follow-up requests. Lets the test loop check samples without
 // fetching thousands of detail pages; the full run (no limit) checks completeness.
-export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 4 }) {
+export async function runFrame({ site, spec, testLimit = null, maxConcurrency = null }) {
   const columns = spec.columns.map((c) => c.name);
+
+  // Speed: the site part proposes a config from the investigator's measurements; the
+  // frame clamps it to limits that stay gentle on public sites. A setting given for
+  // the run itself wins.
+  const clamp = (v, lo, hi, fallback) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : fallback);
+  const proposed = site.config ?? {};
+  const tuning = {
+    maxConcurrency: clamp(maxConcurrency ?? proposed.maxConcurrency, 1, 20, 4),
+    maxRequestsPerMinute: clamp(proposed.maxRequestsPerMinute, 30, 1200, 600),
+    maxRetries: clamp(proposed.maxRetries, 1, 6, 3),
+  };
+  console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries`);
   const started = Date.now();
 
   log.setLevel(LogLevel.WARNING);
@@ -231,8 +243,9 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   }
 
   const crawler = new HttpCrawler({
-    maxConcurrency, // 4 by default: gentle on public sites
-    maxRequestRetries: 3,
+    maxConcurrency: tuning.maxConcurrency,
+    maxRequestsPerMinute: tuning.maxRequestsPerMinute,
+    maxRequestRetries: tuning.maxRetries,
     // Slow government servers: a 2 MB page can take minutes.
     navigationTimeoutSecs: 300,
     requestHandlerTimeoutSecs: 120,

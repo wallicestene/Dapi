@@ -245,18 +245,20 @@ async function htmlDetail({ control, shownRecord, record, missing, sample, count
   const url = raw.match(/href="([^"]+)"/)?.[1] ?? raw.match(/https?:\/\/[^\s"'<>]+/)?.[0];
   if (!url) return null;
 
-  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20_000) });
+  const started = Date.now();
+  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(60_000) });
   if (!res.ok) {
     notes.push(`The sample's detail page ${url} returned HTTP ${res.status} to a plain request.`);
     return null;
   }
   const html = await res.text();
+  const timing = { ms: Date.now() - started, bytes: Buffer.byteLength(html) };
   const { fields, jsonLd } = await mapHtmlDetail({ html, missing, sample, count });
   return {
     kind: 'html',
     urlFrom: { listField: linkField, how: /href=/.test(raw) ? 'the href of the <a> inside this field' : 'the field is the URL' },
     sampleUrl: res.url,
-    replay: { works: 'plain request', needsSession: false, tried: [] },
+    replay: { works: 'plain request', needsSession: false, tried: [], timing },
     fields,
     jsonLd,
   };
@@ -311,7 +313,7 @@ function describe(source) {
     fields: source.fields,
     // The replay's parsed page (entries) is for renaming only: never into the findings,
     // where it would send megabytes of the site's data to Muse Spark on every attempt.
-    replay: source.replay && { works: source.replay.works, needsSession: source.replay.needsSession, tried: source.replay.tried },
+    replay: source.replay && { works: source.replay.works, needsSession: source.replay.needsSession, tried: source.replay.tried, timing: source.replay.timing },
     reason: source.reason,
     sampleRecords: source.records.records.slice(0, 2).map((r) => (Array.isArray(r) ? r.map((c) => shrink(c, 1)) : shrink(r))),
   };

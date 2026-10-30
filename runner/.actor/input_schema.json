@@ -25,8 +25,7 @@
       "title": "Max concurrency",
       "type": "integer",
       "editor": "number",
-      "default": 4,
-      "description": "Parallel requests. Keep it gentle on public sites."
+      "description": "Parallel requests for this run. Leave empty to use the site part's own config, set from Dapi's measurements."
     }
   },
   "required": [

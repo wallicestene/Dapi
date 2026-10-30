@@ -30,7 +30,8 @@ if (args[0] === '--abort') {
   const input = {
     siteCode: fs.readFileSync(sitePath, 'utf8'),
     spec: JSON.parse(fs.readFileSync(specPath, 'utf8')),
-    maxConcurrency: Number(concurrency ?? 4),
+    // Empty: the site part's own config decides.
+    maxConcurrency: concurrency ? Number(concurrency) : null,
   };
   run = await apify.actor(`${username}/${RUNNER}`).start(input, { memory: 2048, timeout: 3600 });
 }

@@ -13,13 +13,16 @@ import { extractEmbedded } from '../embedded.js';
 export async function replayEmbedded(url, context, recordsPath, count) {
   try {
     // Pages with embedded data can be megabytes from a slow server (GPTW: 2.4 MB, ~30 s).
+    const started = Date.now();
     const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(300_000) });
     if (!res.ok) return { works: null, needsSession: null, tried: [`plain GET: HTTP ${res.status}`] };
-    const entries = extractEmbedded(await res.text());
+    const html = await res.text();
+    const timing = { ms: Date.now() - started, bytes: Buffer.byteLength(html) };
+    const entries = extractEmbedded(html);
     const entry = entries.find((e) => sameContext(e.context, context));
     const records = entry && findRecords(entry.value);
     if (records?.path === recordsPath && Math.abs(records.count - count) <= Math.max(5, count * 0.05)) {
-      return { works: 'plain request', needsSession: false, tried: [], entries };
+      return { works: 'plain request', needsSession: false, tried: [], entries, timing };
     }
     return { works: null, needsSession: null, tried: [`plain GET: ${entry ? 'different content' : 'no matching embedded data'}`] };
   } catch (err) {
@@ -54,9 +57,14 @@ export async function replay(capture, recordsPath) {
 
   const tried = [];
   for (const attempt of attempts) {
+    const started = Date.now();
     const result = await tryOnce(capture, attempt.headers, recordsPath);
-    if (result === 'ok') return { works: attempt.label, needsSession: Boolean(attempt.needsSession), tried };
-    tried.push(`${attempt.label}: ${result}`);
+    if (result.ok) {
+      // How the site behaved, for choosing the run's speed: time and size of one call.
+      const timing = { ms: Date.now() - started, bytes: result.bytes };
+      return { works: attempt.label, needsSession: Boolean(attempt.needsSession), tried, timing };
+    }
+    tried.push(`${attempt.label}: ${result.error}`);
   }
   return { works: null, needsSession: null, tried };
 }
@@ -70,11 +78,11 @@ async function tryOnce(capture, headers, recordsPath) {
       body: capture.method === 'GET' ? undefined : (capture.payload ?? undefined),
       signal: AbortSignal.timeout(15_000),
     });
-    if (!res.ok) return `HTTP ${res.status}`;
-    const json = parseJson(Buffer.from(await res.arrayBuffer()));
-    if (findRecords(json)?.path !== recordsPath) return `HTTP ${res.status} but different content`;
-    return 'ok';
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (findRecords(parseJson(bytes))?.path !== recordsPath) return { ok: false, error: `HTTP ${res.status} but different content` };
+    return { ok: true, bytes: bytes.length };
   } catch (err) {
-    return err.name;
+    return { ok: false, error: err.name };
   }
 }
