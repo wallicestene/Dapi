@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Dapi · Audit Working Papers</title>
+<style>
+:root{--ground:#eef1ea;--sheet:#f8f9f5;--rule:#d5dbcf;--rule2:#e4e8de;--ink:#22252a;--ink2:#5b6068;--red:#c0392b;--green:#2f7d4f;--greenwash:#dfeadf;--redwash:#f6dfdb;
+--sans:"Helvetica Neue",Arial,sans-serif;--cond:"Avenir Next Condensed","Helvetica Neue",sans-serif;--mono:Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--ground);color:var(--ink);font:14px/1.45 var(--sans);font-variant-numeric:tabular-nums}
+.top{height:56px;display:flex;align-items:center;gap:28px;padding:0 28px;border-bottom:1px solid var(--rule);background:var(--sheet)}
+.word{font:700 22px var(--cond);letter-spacing:.5px}
+.nav{display:flex;gap:20px}.nav a{color:var(--ink2);text-decoration:none;font-weight:500;padding:17px 0}.nav a.on{color:var(--ink);box-shadow:inset 0 -2px var(--ink)}
+.sp{flex:1}.btn{font:600 13px var(--sans);padding:8px 14px;border-radius:5px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink)}.btn.pri{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.jobbar{padding:22px 28px 0;display:flex;align-items:flex-end;gap:24px}
+.jobbar h1{font:600 30px/1.1 var(--cond)}.jobbar p{color:var(--ink2);margin-top:4px}
+.jobbar .fig{margin-left:auto;text-align:right}.fig b{font:600 44px/1 var(--cond)}.fig span{display:block;color:var(--ink2);font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);margin:18px 28px 0;border:1px solid var(--rule);background:var(--sheet);border-radius:6px}
+.steps div{padding:12px 14px;border-right:1px solid var(--rule2)}.steps div:last-child{border:0}
+.steps b{display:block;font-weight:600;font-size:13px}.steps span{font-size:12px;color:var(--ink2)}
+.tk{font-weight:700;margin-right:5px}.g{color:var(--green)}.r{color:var(--red)}
+.steps .now{box-shadow:inset 0 -3px var(--ink)}
+.body{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:18px 28px 0}
+.paper{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.tools{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--rule)}
+.tools input{flex:0 0 240px;font:13px var(--sans);padding:7px 10px;border:1px solid var(--rule);border-radius:5px;background:#fff}
+.chip{font-size:12px;padding:4px 9px;border:1px solid var(--rule);border-radius:12px;color:var(--ink2)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font:600 12px var(--sans);color:var(--ink2);padding:9px 10px;border-bottom:1px solid var(--rule)}
+td{padding:9px 10px;border-bottom:1px solid var(--rule2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+td.n{color:var(--ink2);text-align:right;width:44px}
+td sup{font:700 11px var(--sans);margin-left:4px;vertical-align:1px}
+tr.sel td{background:var(--greenwash)}tr.sel td.cell{box-shadow:inset 0 0 0 2px var(--green)}
+tfoot td{font-weight:600;border-top:2px solid var(--ink);border-bottom:3px double var(--ink);background:var(--sheet)}
+.legend{display:flex;gap:22px;padding:10px 14px;font-size:12.5px;color:var(--ink2);border-top:1px solid var(--rule)}
+.side h2{font:600 13px var(--sans);color:var(--ink2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:16px;margin-bottom:14px}
+.val{font-size:15px;line-height:1.5;margin-bottom:12px}
+.ticks div{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--rule2);font-size:13px}
+.ticks .tk{width:18px;text-align:center}
+pre{font:11.5px/1.55 var(--mono);background:#fff;border:1px solid var(--rule);padding:10px;border-radius:5px;white-space:pre-wrap;color:var(--ink2)}
+pre em{font-style:normal;color:var(--ink);background:var(--greenwash)}
+.small{font-size:12px;color:var(--ink2);margin-top:8px}
+</style></head><body>
+<header class="top"><span class="word">Dapi</span><nav class="nav"><a href="#">Jobs</a><a class="on" href="#">Better Work factory compliance</a></nav><span class="sp"></span><button class="btn">Open run on Apify</button><button class="btn pri">New job</button></header>
+<div class="jobbar"><div><h1>Better Work factory compliance</h1><p>portal.betterwork.org · one row per publicly reported issue</p></div>
+<div class="fig"><b>312 / 430</b><span>issue rows delivered · streaming, 9 s in</span></div></div>
+<div class="steps">
+<div><b><span class="tk g">✓</span>Spec read</b><span>11 columns, 4 samples</span></div>
+<div><b><span class="tk g">✓</span>Site investigated</b><span>its own data feed</span></div>
+<div><b><span class="tk g">✓</span>Extraction written</b><span>tested on 10 factories</span></div>
+<div><b><span class="tk r">≈</span>Samples agreed</b><span>3 exact, 1 spacing</span></div>
+<div class="now"><b>Running on Apify</b><span>0 failed requests</span></div>
+<div><b>Footed</b><span>after the last row</span></div></div>
+<div class="body">
+<section class="paper">
+<div class="tools"><input placeholder="Filter rows"><span class="chip">All 312</span><span class="chip">Exceptions 1</span><span class="chip">Missing 0</span></div>
+<table><thead><tr><th>#</th><th>Factory</th><th>Country</th><th>Assessed</th><th>Publicly reported issue</th><th>Legal reference</th></tr></thead><tbody>
+<tr><td class="n">317</td><td>Fairway Apparel S.A.</td><td>Haiti<sup class="g">✓</sup></td><td>1 Mar 2023<sup class="g">✓</sup></td><td>Storage of chemicals and hazardous substances<sup class="g">✓</sup></td><td>Art. 439 para. 9 of the Labour Code<sup class="g">✓</sup></td></tr>
+<tr><td class="n">318</td><td>Fairway Apparel S.A.</td><td>Haiti<sup class="g">✓</sup></td><td>1 Mar 2023<sup class="g">✓</sup></td><td>Unlocked emergency exits during working hours<sup class="g">✓</sup></td><td>R164, para. 3(a); ILO Ergonomics…<sup class="g">✓</sup></td></tr>
+<tr><td class="n">319</td><td>Fairway Apparel S.A.</td><td>Haiti<sup class="g">✓</sup></td><td>1 Mar 2023<sup class="g">✓</sup></td><td>Periodic emergency drills<sup class="g">✓</sup></td><td>R164, para. 3(q); ILO Ergonomics…<sup class="g">✓</sup></td></tr>
+<tr><td class="n">320</td><td>Fairway Apparel S.A.</td><td>Haiti<sup class="g">✓</sup></td><td>1 Mar 2023<sup class="g">✓</sup></td><td>Cooperation between workers and management<sup class="g">✓</sup></td><td>Art. 439, 442 of the Labour Code<sup class="g">✓</sup></td></tr>
+<tr><td class="n">321</td><td>Hai Duong Garment Stock Co. No.2</td><td>Vietnam<sup class="g">✓</sup></td><td>13 May 2025<sup class="g">✓</sup></td><td>Unlocked emergency exits during working hours<sup class="g">✓</sup></td><td>Decree 144/2021/ND-CP, Art. 40…<sup class="g">✓</sup></td></tr>
+<tr><td class="n">322</td><td>Haianhtex JSC</td><td>Vietnam<sup class="g">✓</sup></td><td>24 Oct 2024<sup class="g">✓</sup></td><td>Payment for ordinary overtime<sup class="g">✓</sup></td><td>Labour Code, Art. 98(1)(a); Decree…<sup class="g">✓</sup></td></tr>
+<tr><td class="n">323</td><td>PT Purnama Asih Sur</td><td>Indonesia<sup class="g">✓</sup></td><td>25 Jun 2019<sup class="g">✓</sup></td><td>Minimum wage for regular workers<sup class="g">✓</sup></td><td>Manpower Act No. 13 of 2003, Arts…<sup class="g">✓</sup></td></tr>
+<tr><td class="n">325</td><td>PT Purnama Asih Sur</td><td>Indonesia<sup class="g">✓</sup></td><td>25 Jun 2019<sup class="g">✓</sup></td><td>Payment for overtime<sup class="g">✓</sup></td><td>Manpower Act No. 13 of 2003, Art. 78…<sup class="g">✓</sup></td></tr>
+<tr class="sel"><td class="n">326</td><td>Teijin Frontier Shonai Co., Ltd.</td><td>Vietnam<sup class="g">✓</sup></td><td>25 Aug 2025<sup class="g">✓</sup></td><td>Fire detection and alarm system<sup class="g">S</sup></td><td class="cell">Law on Fire Prevention and Fire…<sup class="r">≈</sup></td></tr>
+<tr><td class="n">327</td><td>Teijin Frontier Shonai Co., Ltd.</td><td>Vietnam<sup class="g">✓</sup></td><td>25 Aug 2025<sup class="g">✓</sup></td><td>Number of emergency exits<sup class="g">S</sup></td><td>Circular 06/2022/TT-BXD; QCVN…<sup class="g">S</sup></td></tr>
+</tbody><tfoot><tr><td></td><td colspan="4">Footed so far against the source's own count</td><td>312 of 430<sup class="g">F</sup></td></tr></tfoot></table>
+<div class="legend"><span><b class="g">✓</b> traced to the server's response</span><span><b class="g">S</b> agreed to your sample</span><span><b class="r">≈</b> near your sample: see note</span><span><b class="g">F</b> footed to the source's total</span><span><b class="r">✗</b> missing, with the reason</span></div>
+</section>
+<aside class="side">
+<div class="card"><h2>Row 326 · Legal reference</h2>
+<p class="val">Law on Fire Prevention and Fire Fighting (2001); Decree 136/2020/ND-CP, Arts. 5(1)(dd), 20; TCVN 3890:2009 …</p>
+<div class="ticks">
+<div><span class="tk g">✓</span>Traced to POST …/FactoryDetail4TransparencyCompliance, captured 30 Oct 2026 23:56</div>
+<div><span class="tk r">≈</span>Sample B1 writes “5(1) (dd)”; the source writes “5(1)(dd)”. Delivered as the source has it.</div>
+<div><span class="tk g">✓</span>Seal re-checked in your browser: 8ce54a8d…3d84037</div></div></div>
+<div class="card"><h2>The server's own words</h2>
+<pre>{ "IssueName": "Fire detection and alarm system",
+  "LegalReference": <em>"Law on Fire Prevention and
+  Fire Fighting (2001); Decree 136/2020/ND-CP, …"</em> }</pre>
+<p class="small">One response backs rows 326 to 328.</p></div>
+</aside></div>
+</body></html>

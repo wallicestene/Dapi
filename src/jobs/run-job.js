@@ -53,6 +53,7 @@ try {
     samples: spec.samples.map((s) => s.label),
     rules: spec.rules,
     questions: spec.questions,
+    personalData: spec.personalData ?? [],
     problems,
   });
 
@@ -61,7 +62,7 @@ try {
   say('site', { kind: 'start', text: `Investigating ${spec.sourceUrl}: watching what the page loads before reading any of it.` });
   const findings = await investigate(spec, { onEvent: (e) => say('site', e) });
   writeJson(dir, 'findings.json', findings);
-  const refusal = refuse(findings);
+  const refusal = refuse(findings, spec);
   if (refusal) {
     say('site', { kind: 'declined', text: refusal.text, reasons: refusal.reasons });
     updateJob(dir, { status: 'declined', declined: refusal.text });
@@ -111,8 +112,11 @@ try {
 
 // A plain no, before any code is written, when the site can't or shouldn't be
 // extracted with the routes Dapi has.
-function refuse(f) {
+function refuse(f, spec) {
   const reasons = [];
+  if (spec.personalData?.length) {
+    reasons.push(`The spec asks for personal data about private individuals (${spec.personalData.map((p) => `${p.column}: ${p.why}`).join('; ')}). Dapi only extracts public data about organisations, not people.`);
+  }
   if (f.pageStatus >= 400) reasons.push(`The page answered HTTP ${f.pageStatus}: the site refuses automated visitors.`);
   if (!f.list) reasons.push("Neither the site's own data requests nor its embedded data hold the records. Reading the visible page alone is a route Dapi doesn't run yet.");
   if (f.reachability && !f.reachability.recommendation) reasons.push("From Apify's servers, the site refused every way Dapi is allowed to ask (direct, datacenter and residential proxy). Dapi won't solve CAPTCHAs or get around bot walls.");

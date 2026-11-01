@@ -8,3 +8,5 @@ storage/
 .impeccable/questions/
 # Job folders the runner writes (events, rows, pictures)
 /jobs/
+# Design-check output (taste-skill inspector)
+.taste-skill/

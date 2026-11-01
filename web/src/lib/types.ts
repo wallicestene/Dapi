@@ -1,0 +1,97 @@
+// Shapes the runner writes to a job's folder (src/jobs/store.js) and the web app reads.
+
+export type JobStatus = "running" | "waiting" | "done" | "failed" | "declined" | "cancelled" | "stopped";
+export type StepName = "spec" | "site" | "code" | "plan" | "run" | "footed";
+
+export interface Job {
+  id: string;
+  input: string;
+  status: JobStatus;
+  step: StepName;
+  createdAt: string;
+  updatedAt?: string;
+  finishedAt?: string;
+  title?: string;
+  sourceUrl?: string;
+  rowUnit?: string;
+  records?: number;
+  rows?: number;
+  expected?: number | null;
+  failedRequests?: number;
+  runId?: string;
+  runUrl?: string;
+  datasetUrl?: string;
+  runStatus?: string;
+  statusMessage?: string | null;
+  declined?: string;
+  failed?: string;
+}
+
+export interface JobEvent {
+  n: number;
+  at: string;
+  step: StepName;
+  kind: string;
+  text?: string;
+  image?: string;
+  [key: string]: unknown;
+}
+
+// How a delivered value was checked, shown as an auditor's tick beside it.
+export type Tick =
+  | "traced" // read from a response Dapi kept as evidence
+  | "sample" // equals the spec's sample value
+  | "near" // equals the sample apart from spacing
+  | "fail" // differs from the sample
+  | "missing" // could not be fetched; the reason travels with it
+  | "spec" // a constant the spec sets
+  | "blank"; // the source has no value here
+
+export interface Cell {
+  value: string;
+  tick: Tick;
+  evidence?: string;
+  paths?: string[];
+  sample?: { label: string; expected: string };
+  reason?: string;
+}
+
+export interface Row {
+  index: number;
+  cells: Record<string, Cell>;
+}
+
+export interface RowsPage {
+  columns: string[];
+  rows: Row[];
+  total: number; // rows in this scope
+  all: number; // rows delivered
+  exceptions: number;
+  missing: number;
+}
+
+export interface Located {
+  path: string;
+  kind: "json" | "embedded" | "html";
+  record?: unknown;
+  key?: string;
+  value?: unknown;
+  context?: string;
+  rowPath?: string;
+  row?: unknown;
+  cell?: string;
+  selector?: string;
+  all?: boolean;
+  matches?: number;
+}
+
+export interface Receipt {
+  key: string;
+  capturedAt: string;
+  via?: string;
+  request: { method: string; url: string; payload?: string | null };
+  response: { status: number; contentType?: string | null };
+  bodySha256: string;
+  bodyBytes: number;
+  located: Located[];
+}
