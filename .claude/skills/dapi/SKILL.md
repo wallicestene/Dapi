@@ -575,6 +575,41 @@ run in full on Apify with no human edits:
   quiet block): the frame retires the session and retries from a fresh IP. Retries
   go up to 8 for sites behind bot management.
 
+### A spec that names one record's page: Arbeidstilsynet (2026-11-01)
+
+The owner's test spec (Norwegian occupational health services register) failed with
+"a route Dapi doesn't run yet". It wasn't the HTML route: the spec's URL was one
+business's page (`/bhtvirksomhet/971493402`), and the samples were English, read
+through a browser translation of a Norwegian site. What Dapi now does, as a
+freelancer would:
+
+- **Recognise a record page and go up to the list.** When the spec's page holds no
+  list, Muse Spark reads its screenshot, text and links: is this one record, and which
+  link leads to all of them? (Here the breadcrumb "Finn godkjente
+  bedriftshelsetjenester".) The list page loads `POST /api/organisation/GetOrganisations`.
+- **Align the samples with the site.** On the record page, Muse Spark finds the
+  site's own words for each sample value and says how they relate: same, formatted,
+  translated, differs (the site contradicts the sample), absent, constant. Everything
+  after that (column matching, selectors, the reach probe, the tests, the run) uses
+  the site-language samples (`spec.source.json`).
+- **Paging:** page and page-size parameters are detected; a request with the page
+  size set to the source's total is tried, and here returned all 291 in one request.
+- **Record-page addresses** come from the list field whose value is in the record
+  page's URL: `/bhtvirksomhet/{virksomhet.organisasjonsnummer}`.
+- **Translation after the run** (`src/translate.js`): Muse Spark translates the
+  columns the samples translated, each distinct value once, with the samples' own
+  wording as examples; `#original` keeps the site's words for the receipt; the user's
+  own samples are then checked against what they receive. The Apify dataset keeps
+  the site's words; Dapi's download (CSV/JSON) has the translated rows.
+- **Disputes:** the sample's Brønnøysund link (`orgnr=871513732`) contradicts the
+  site (`971493402`); shown in the spec tab and the plan, and the site's value is
+  delivered.
+- First real run: the extraction passed on attempt 2 (attempt 1 read Status from the
+  name; the sample check caught it). The site answered some pages with HTTP 500
+  ("Something Went Wrong") at 8 concurrent requests; every retry succeeded but the run
+  slowed. The frame now halves concurrency on 5xx, 429 or timeouts and climbs back
+  after 30 s without one.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
