@@ -6,3 +6,5 @@ spike/results/
 storage/
 # impeccable decision-page runtime state
 .impeccable/questions/
+# Job folders the runner writes (events, rows, pictures)
+/jobs/

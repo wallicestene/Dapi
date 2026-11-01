@@ -104,41 +104,64 @@ export function verdict(report, findings = null) {
   return { passed: problems.length === 0, problems };
 }
 
-async function main() {
-  const [specPath, findingsPath, outPath] = process.argv.slice(2);
-  if (!specPath || !findingsPath || !outPath) {
-    console.error('Usage: node src/write-site.js <spec.json> <findings.json> <out.js>');
-    process.exit(1);
-  }
-  const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
-  const findings = JSON.parse(fs.readFileSync(findingsPath, 'utf8'));
+// Writes the site part to outPath and tests it, fixing it from the checks' feedback up
+// to MAX_ATTEMPTS times. Each attempt is reported to onEvent as it finishes.
+export async function writeAndTest({ spec, specPath, findings, outPath, onEvent = () => {} }) {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-
   let previous = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const started = Date.now();
     const written = await writeSite({ spec, findings, previous });
     fs.writeFileSync(outPath, written.code.endsWith('\n') ? written.code : `${written.code}\n`);
     const t = written.usage ?? {};
-    console.log(`\nAttempt ${attempt}: wrote ${outPath} (${written.code.split('\n').length} lines, ${t.prompt_tokens} in / ${t.completion_tokens} out tokens, ${Math.round((Date.now() - started) / 1000)} s)`);
-    if (written.notes) console.log(`  notes: ${written.notes}`);
+    onEvent({
+      kind: 'written',
+      attempt,
+      lines: written.code.split('\n').length,
+      notes: written.notes,
+      tokens: { in: t.prompt_tokens ?? 0, out: t.completion_tokens ?? 0 },
+      seconds: Math.round((Date.now() - started) / 1000),
+    });
 
     const run = await runLocally(path.resolve(outPath), path.resolve(specPath));
     const result = verdict(run.report, findings);
-    if (run.report) {
-      console.log(`  rows ${run.report.rows}; ${run.report.completeness.map((c) => `${c.kind} ${c.got}/${c.expected}`).join('; ')}`);
-      console.log(`  samples: ${run.report.samples.map((s) => `${s.label} ${s.status}`).join(', ')}`);
-    }
-    if (result.passed) {
-      console.log(`  PASSED on attempt ${attempt}`);
-      return;
-    }
-    console.log(`  failed:\n    ${result.problems.slice(0, 8).join('\n    ')}`);
+    onEvent({ kind: 'tested', attempt, passed: result.passed, problems: result.problems, report: run.report });
+    if (result.passed) return { passed: true, attempts: attempt, report: run.report };
     const crash = run.report ? '' : `\nThe run crashed. Output:\n${run.output.slice(-3000)}`;
     previous = { code: written.code, feedback: `Problems:\n- ${result.problems.join('\n- ')}${crash}` };
   }
-  console.log(`\nGave up after ${MAX_ATTEMPTS} attempts.`);
-  process.exit(1);
+  return { passed: false, attempts: MAX_ATTEMPTS };
+}
+
+async function main() {
+  const [specPath, findingsPath, outPath] = process.argv.slice(2);
+  if (!specPath || !findingsPath || !outPath) {
+    console.error('Usage: node src/write-site.js <spec.json> <findings.json> <out.js>');
+    process.exit(1);
+  }
+  const result = await writeAndTest({
+    spec: JSON.parse(fs.readFileSync(specPath, 'utf8')),
+    specPath,
+    findings: JSON.parse(fs.readFileSync(findingsPath, 'utf8')),
+    outPath,
+    onEvent(e) {
+      if (e.kind === 'written') {
+        console.log(`\nAttempt ${e.attempt}: wrote ${outPath} (${e.lines} lines, ${e.tokens.in} in / ${e.tokens.out} out tokens, ${e.seconds} s)`);
+        if (e.notes) console.log(`  notes: ${e.notes}`);
+        return;
+      }
+      if (e.report) {
+        console.log(`  rows ${e.report.rows}; ${e.report.completeness.map((c) => `${c.kind} ${c.got}/${c.expected}`).join('; ')}`);
+        console.log(`  samples: ${e.report.samples.map((s) => `${s.label} ${s.status}`).join(', ')}`);
+      }
+      if (e.passed) console.log(`  PASSED on attempt ${e.attempt}`);
+      else console.log(`  failed:\n    ${e.problems.slice(0, 8).join('\n    ')}`);
+    },
+  });
+  if (!result.passed) {
+    console.log(`\nGave up after ${MAX_ATTEMPTS} attempts.`);
+    process.exit(1);
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

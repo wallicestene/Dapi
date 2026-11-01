@@ -4,6 +4,7 @@
 // page, lets Muse Spark pick the control that reveals more (from a screenshot and the
 // numbered controls), and follows it: a click that fires a JSON request, or a link to
 // an HTML detail page. Writes <spec>.findings.json for the code writer.
+// What it finds along the way goes to onEvent, so the user can watch it work.
 // Usage: node src/investigate.js <spec.json>
 
 import fs from 'node:fs';
@@ -16,7 +17,7 @@ import { mapHtmlDetail } from './investigate/html.js';
 import { replay, replayEmbedded, sameContext } from './investigate/replay.js';
 import { extractEmbedded } from './embedded.js';
 
-export async function investigate(spec) {
+export async function investigate(spec, { onEvent = () => {} } = {}) {
   const notes = [];
   const tokens = { in: 0, out: 0 };
   const count = (usage) => {
@@ -41,29 +42,75 @@ export async function investigate(spec) {
     }
   }
   try {
+    const json = jsonCandidates(session.captured);
+    const embedded = embeddedCandidates(session);
+    onEvent({
+      kind: 'page',
+      text: `Opened ${session.finalUrl} (HTTP ${session.status ?? '?'}) and watched its traffic: ${plural(session.captured.length, 'JSON response')}, ${json.length} holding lists of records; ${plural(embedded.length, 'data block')} embedded in the HTML.`,
+      url: session.finalUrl,
+      status: session.status ?? null,
+      jsonResponses: session.captured.length,
+      jsonLists: json.length,
+      embeddedLists: embedded.length,
+      image: await session.page.screenshot().catch(() => null),
+    });
+
     // 1. What the page loads by itself: JSON responses, and data embedded in its HTML.
-    const candidates = [...jsonCandidates(session.captured), ...embeddedCandidates(session)];
+    const candidates = [...json, ...embedded];
     const list = await chooseSource({ columns: wanted, samples: spec.samples, candidates, count });
     if (!list) {
       notes.push("Neither the page's JSON traffic nor its embedded data holds the spec's records: likely the HTML route.");
+      onEvent({ kind: 'no-source', text: "Neither the page's own data requests nor its embedded data hold your records." });
       return report({ spec, session, list: null, detail: null, wanted, notes, tokens });
     }
     if (list.embedded) list.siblings = siblingsOf(list, candidates);
     let missing = wanted.filter((c) => !list.fields[c.name]?.keys.length);
+    const found = Object.keys(list.fields).filter((c) => list.fields[c].keys.length);
+    onEvent({
+      kind: 'source',
+      text: list.embedded
+        ? `The records are embedded in the page itself (${list.records.count} rows${list.siblings?.length ? ` in ${list.siblings.length + 1} tables` : ''}): no need to parse the visible page.`
+        : `Found the site's own data feed: ${list.capture.method} ${list.capture.url.split('?')[0]} returns ${list.records.count} records as JSON. Calling it directly instead of parsing the page.`,
+      route: list.embedded ? 'embedded' : 'feed',
+      request: { method: list.capture.method, url: list.capture.url, payload: list.capture.payload ?? null },
+      recordCount: list.records.count,
+      siblings: (list.siblings ?? []).map((s) => ({ context: s.context.slice(-60), recordCount: s.recordCount })),
+      total: list.total?.value ?? null,
+      columns: found,
+      missing: missing.map((c) => c.name),
+      reason: list.reason,
+    });
 
     // 2. Columns the list doesn't have: reveal them from one record.
     let detail = null;
     if (missing.length) {
-      detail = await revealDetail({ spec, session, list, missing, count, notes });
+      detail = await revealDetail({ spec, session, list, missing, count, notes, onEvent });
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
     }
 
-    await respectRobots(list, notes);
+    await respectRobots(list, notes, onEvent);
     list.replay = list.embedded
       ? await replayEmbedded(list.capture.url, list.embedded.context, list.records.path, list.records.count)
       : await replay(list.capture, list.records.path);
     if (detail?.kind === 'json') detail.replay = await replay(detail.capture, detail.records.path);
+    onEvent({
+      kind: 'replay',
+      text: `Fetched the data again without a browser: ${list.replay?.works ? `works (${list.replay.works})` : 'did not work'}${detail?.replay ? `; detail ${detail.replay.works ? 'works too' : 'did not'}` : ''}.`,
+      works: Boolean(list.replay?.works),
+      timing: list.replay?.timing ?? null,
+    });
     const reachability = await reach({ spec, list, detail, notes });
+    if (reachability) {
+      const how = reachability.recommendation;
+      onEvent({
+        kind: 'reach',
+        text: how
+          ? `Checked from Apify's servers, where the run happens: the site answers ${how === 'direct' ? 'directly, no proxy needed' : `through Apify's ${how} proxy`}.`
+          : "Checked from Apify's servers: the site refused every way Dapi is allowed to ask.",
+        recommendation: how ?? null,
+        results: reachability.results ?? [],
+      });
+    }
     return { ...report({ spec, session, list, detail, wanted, notes, tokens }), reachability };
   } finally {
     await session.close();
@@ -99,15 +146,19 @@ async function reach({ spec, list, detail, notes }) {
 // at allowed URLs. If the list URL is disallowed only because of its query string
 // (GPTW: "Disallow: /*?*"), the same URL without one is used, provided a plain
 // request returns the same data. Otherwise say so plainly.
-async function respectRobots(list, notes) {
+async function respectRobots(list, notes, onEvent) {
   const url = list.capture.url;
   let robots;
   try {
     robots = await RobotsTxtFile.find(url);
   } catch {
+    onEvent({ kind: 'robots', allowed: true, text: 'The site has no robots.txt: nothing is off limits.' });
     return; // no robots.txt: everything is allowed
   }
-  if (robots.isAllowed(url)) return;
+  if (robots.isAllowed(url)) {
+    onEvent({ kind: 'robots', allowed: true, text: "robots.txt allows these requests." });
+    return;
+  }
 
   const bare = url.split('?')[0];
   if (bare !== url && robots.isAllowed(bare) && list.embedded) {
@@ -124,11 +175,13 @@ async function respectRobots(list, notes) {
         s.name = name;
       }
       notes.push(`robots.txt disallows ${url}; ${bare} is allowed and serves the same data, so the findings use it.`);
+      onEvent({ kind: 'robots', allowed: true, text: `robots.txt disallows ${url}, but ${bare} is allowed and serves the same data, so Dapi uses that.` });
       return;
     }
   }
   list.robotsBlocked = true;
   notes.push(`robots.txt disallows ${url}, and no allowed URL with the same data was found. Dapi needs the user's approval to fetch it anyway; without it, the run skips these requests.`);
+  onEvent({ kind: 'robots', allowed: false, url, text: `robots.txt disallows ${url}, and no allowed address serves the same data. You decide whether to fetch it anyway.` });
 }
 
 function jsonCandidates(captures) {
@@ -182,6 +235,8 @@ function siblingsOf(list, candidates) {
     .map((c) => ({ name: c.embedded.name, context: c.embedded.context, recordsPath: tracePath(c), recordCount: c.records.count }));
 }
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 const tracePath = (c) => (c.embedded ? `embedded:${c.embedded.name}${c.records.path.slice(1)}` : c.records.path);
 
 // All list records, including sibling tables, for finding a sample by value.
@@ -193,7 +248,7 @@ function allListRecords(list, session) {
     .flatMap((e) => findRecords(e.value)?.records ?? []);
 }
 
-async function revealDetail({ spec, session, list, missing, count, notes }) {
+async function revealDetail({ spec, session, list, missing, count, notes, onEvent }) {
   // A sample with values for the missing columns, so the record we open has them.
   const samples = spec.samples.filter((s) => missing.some((c) => s.values[c.name]));
   const anchors = Object.entries(list.fields).filter(([, f]) => f.keys.length === 1);
@@ -225,8 +280,21 @@ async function revealDetail({ spec, session, list, missing, count, notes }) {
       const controls = await clickablesIn(row);
       if (!controls.length) continue;
       const recordText = (await row.innerText()).replace(/\s+/g, ' ').slice(0, 300);
-      const pick = await pickControl({ screenshot: await session.page.screenshot(), recordText, missing, controls });
+      const screenshot = await session.page.screenshot();
+      const pick = await pickControl({ screenshot, recordText, missing, controls });
       count(pick.usage);
+      onEvent({
+        kind: 'pick',
+        text:
+          pick.control === null
+            ? `Looked at the page around "${recordText.slice(0, 50)}": no control there reveals ${missing.map((c) => c.name).join(', ')}.`
+            : `Looked at the page around "${recordText.slice(0, 50)}" and chose "${controls[pick.control].text}" to reveal ${missing.map((c) => c.name).join(', ')}: ${pick.reason}`,
+        record: recordText.slice(0, 120),
+        controls: controls.map((c) => c.text),
+        chosen: pick.control,
+        reason: pick.reason,
+        image: screenshot,
+      });
       if (pick.control === null) {
         notes.push(`On "${recordText.slice(0, 40)}", Muse Spark found no control that reveals ${missing.map((c) => c.name).join(', ')}: ${pick.reason}`);
         continue;
@@ -237,7 +305,16 @@ async function revealDetail({ spec, session, list, missing, count, notes }) {
       // A link to another page: the detail is an HTML page, fetched without a browser.
       if (control.href && /^https?:\/\/|^\//.test(control.href)) {
         const html = await htmlDetail({ control, shownRecord, record, missing, sample, count, notes });
-        if (html) return { ...html, trigger };
+        if (html) {
+          onEvent({
+            kind: 'detail',
+            route: 'page',
+            text: `"${control.text}" opens a page per record. Fetched the sample's page and found ${Object.keys(html.fields).join(', ')} on it.`,
+            url: html.sampleUrl,
+            columns: Object.keys(html.fields),
+          });
+          return { ...html, trigger };
+        }
         continue;
       }
 
@@ -248,7 +325,16 @@ async function revealDetail({ spec, session, list, missing, count, notes }) {
         notes.push(`Clicking "${control.text}" brought no JSON holding the missing columns.`);
         continue;
       }
-      return { ...found, kind: 'json', trigger, join: findJoin(found.capture, shownRecord) };
+      const join = findJoin(found.capture, shownRecord);
+      onEvent({
+        kind: 'detail',
+        route: 'feed',
+        text: `Clicking "${control.text}" makes the page call ${found.capture.method} ${found.capture.url.split('?')[0]}${join ? `, keyed by ${join.param}` : ''}. Dapi calls it once per record instead of clicking.`,
+        request: { method: found.capture.method, url: found.capture.url, payload: found.capture.payload ?? null },
+        columns: Object.keys(found.fields).filter((c) => found.fields[c].keys.length),
+        join,
+      });
+      return { ...found, kind: 'json', trigger, join };
     }
   }
   notes.push('Could not reveal the missing columns from any record.');
