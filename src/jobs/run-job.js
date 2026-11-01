@@ -222,7 +222,7 @@ async function runOnApify({ spec, robotsOverride, records }) {
     kind: 'footed',
     text: short.length
       ? `Delivered ${report.rows.toLocaleString('en-US')} rows; short: ${short.map((c) => `${c.kind} ${c.got} of ${c.expected}`).join(', ')}. The missing ones are listed with reasons.`
-      : `Delivered ${report.rows.toLocaleString('en-US')} rows: every row the source's own counts call for, from ${records.toLocaleString('en-US')} records. ${report.failed.length ? `${report.failed.length} request${report.failed.length === 1 ? '' : 's'} failed; their rows came with what the list had and say why.` : 'No request failed.'}`,
+      : `Delivered ${report.rows.toLocaleString('en-US')} rows: every row the source's own counts call for, from ${records.toLocaleString('en-US')} records. ${report.failed.length === 1 ? '1 request failed; its row came with what the list had and says why.' : report.failed.length ? `${report.failed.length} requests failed; their rows came with what the list had and say why.` : 'No request failed.'}`,
     completeness: report.completeness,
     failed: report.failed,
     partial: report.partial.length,

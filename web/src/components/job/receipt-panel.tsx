@@ -97,7 +97,11 @@ export function ReceiptPanel({ job, events, selected }: { job: Job; events: JobE
       {cell.evidence && (
         <section className="rounded-lg border bg-sheet px-5 py-4">
           <h2 className="text-[13px] font-semibold text-ink-2">The server&apos;s own words</h2>
-          {state === "loading" && <div className="mt-3 h-40 rounded-md bg-raised" aria-label="Loading the evidence" />}
+          {state === "loading" && (
+            <div className="mt-3 flex h-40 items-center justify-center rounded-md bg-raised px-4 text-center text-[13px] text-ink-2">
+              Fetching the response Dapi kept when it read this value…
+            </div>
+          )}
           {state === "error" && <p className="mt-2 text-[13px] text-pencil-red">Couldn&apos;t load this receipt. The evidence store may be unreachable; try again.</p>}
           {receipt && (
             <>
