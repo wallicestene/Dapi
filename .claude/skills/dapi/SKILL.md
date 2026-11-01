@@ -677,6 +677,32 @@ Decisions (owner asked me to make the calls, 2026-11-01):
   blocked mid-demo; Meta-model use is a quarter of the score.
 - Order: this, then hosting, spoken specs, submission.
 
+### The playbook and the strategy step (2026-11-01)
+
+Owner's direction: the knowledge from every job belongs to Muse, as a general method,
+so any spec gets a thorough investigation and the best strategy, not just this site.
+
+- `src/prompts/extraction-playbook.md`: Dapi's method for any public source, written
+  as general lessons with real jobs as examples: read the spec for intent (notes are
+  intent, samples are fallible test cases, a sample's blank isn't the column's blank,
+  the given URL is often one record's page); find the data best source first (feed,
+  embedded, the public register behind the site, server-rendered pages, a browser
+  last); map structure (list vs records, joins, paging and the biggest page, splits,
+  robots.txt); map every column (feed key, selector, register field, constant,
+  derived/lookup, shared), verified; fewest requests, then the measured pace; every
+  record with proof. Keep it current with each new lesson.
+- **Strategy step** (`src/strategy.js`): after the investigation, Muse Wonder (Meta's
+  strongest reasoning model) reads the playbook, the spec and every finding, and plans
+  each column's route, how, and evidence, the requests, the pace and way in, the risks
+  and the gaps. The code writer follows it; the Site tab shows it. On Arbeidstilsynet
+  (~36 s, ~12k tokens): 8 requests (list, 6 register batches, 1 shared page),
+  two honest gaps named.
+- **Job 0013** (before the strategy step, with the register route): the run on Apify
+  took 17 s for 291 businesses (vs ~20 min at 8 at a time on pages, and over an hour
+  at 1 at a time); the whole job from PDF to done ~7 min, mostly investigation, code
+  and translation. Every sample column exact except the known Brønnøysund dispute;
+  names consistent across branches; "Belongs to main unit" holds parent names.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
