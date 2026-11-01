@@ -3,7 +3,7 @@
 
 import fs from "node:fs";
 import { jobPath, pipeline, readJson } from "@/lib/server/dapi";
-import type { Cell, Row, RowsPage, Tick } from "@/lib/types";
+import type { Cell, Row, RowsPage, Tick, Why } from "@/lib/types";
 
 interface Item {
   [column: string]: unknown;
@@ -20,7 +20,7 @@ interface SampleResult {
   label: string;
   status: string;
   row: number | null;
-  checks: { column: string; expected: string; status: "exact" | "warn" | "fail" }[];
+  checks: { column: string; expected: string; status: "exact" | "warn" | "fail"; why?: Why; belongsTo?: string }[];
 }
 
 const cache = new Map<string, { size: number; rows: Row[]; columns: string[] }>();
@@ -70,7 +70,7 @@ async function load(id: string) {
       const cell: Cell = { value, tick, evidence: receipt.evidence, paths: receipt.paths, reason };
       const check = sample?.checks.find((c) => c.column === column);
       if (check) {
-        cell.sample = { label: sample!.label, expected: check.expected };
+        cell.sample = { label: sample!.label, expected: check.expected, why: check.why, belongsTo: check.belongsTo };
         if (tick !== "missing") cell.tick = check.status === "exact" ? "sample" : check.status === "warn" ? "near" : "fail";
       }
       cells[column] = cell;

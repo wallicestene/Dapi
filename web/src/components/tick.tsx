@@ -6,7 +6,7 @@ import type { Tick } from "@/lib/types";
 export const TICK_TEXT: Record<Tick, string> = {
   traced: "Traced to the server's response",
   sample: "Agrees with your sample",
-  near: "Near your sample: only the spacing differs",
+  near: "Near your sample: spacing, a slip in the spec, or a value under another column",
   fail: "Differs from your sample",
   missing: "Missing, with the reason",
   spec: "Set by your spec",
@@ -45,7 +45,7 @@ export function TickLegend({ className }: { className?: string }) {
   const items: [Tick | "footed", string][] = [
     ["traced", "traced to the server's response"],
     ["sample", "agrees with your sample"],
-    ["near", "near your sample"],
+    ["near", "near your sample, with the reason"],
     ["footed", "footed to the source's total"],
     ["missing", "missing, with the reason"],
   ];

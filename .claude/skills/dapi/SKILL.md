@@ -552,6 +552,29 @@ run in full on Apify with no human edits:
 - **21st.dev** installs now need a signed-in account: its registry returns 403
   "Authentication required" for components (checked 2026-11-01). Not installed yet.
 
+### Messy specs and the way in (2026-11-01)
+
+- **Specs are typed by people.** The spec reader fixes slips in column names, judged by
+  how the other columns are written and by the source's terms, and records each fix
+  (`corrections`); the dataset uses the corrected names. Sample values stay exactly as
+  typed: the tester decides, against the real row, what a difference is:
+  - `spacing`: equal once whitespace is ignored (PDF line wraps);
+  - `typo`: at most two letter slips in a value of six or more characters, same
+    digits, not just case ("2024" vs "2025" is never a typo);
+  - `column`: the value equals another column of the same row: typed under the
+    wrong column in the spec; the check names where it belongs.
+  All three are warnings, so the test loop never "fixes" good code to match a slip.
+- Tested on `specs/betterwork-messy.md` (our own deliberately messy copy): "Contry",
+  "Assesment Date", "Isue Theme" corrected; Sample A's Country and Modality, typed
+  under each other, both flagged with where they belong; "Manufacure" flagged as a
+  likely typo; extraction passed on attempt 1; full run 430 of 430.
+- **The way in is the code writer's call, from evidence:** `findings.access` (how the
+  investigation got in), the reachability results from Apify, and the site's kind
+  and country. The plan shows the chosen proxy and pace and Muse Spark's reasoning.
+  `ctx.blocked(why)` lets a site part flag a page that loaded without its data (a
+  quiet block): the frame retires the session and retries from a fresh IP. Retries
+  go up to 8 for sites behind bot management.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
@@ -560,6 +583,24 @@ opens: request + body, capture time, SHA-256 re-checked in the browser with
 line marked, embedded row with the cell marked, or the captured page in a sandboxed
 iframe with the element outlined; cheerio-only selectors are marked server-side). The
 captured page's styles come from the live site: GPTW took ~21 s to render.
+
+### Ways in, from the owner's scrapers (read 2026-11-01)
+
+With the owner's go-ahead, the owner's scrapers in `~/proj` were read again for how each
+site's way in was chosen. Lessons only, in our own words; no code comes into Dapi and
+the code writer never sees them (clean-room rule, hard rule 1).
+
+- ~30 public registries and certification bodies in the shared monorepo: none sets a
+  proxy; plain HTTP or Cheerio, a browser where the page needs one.
+- Commercial sites behind bot management want residential IPs in the site's own
+  country: HotPads (PerimeterX) blocks datacenter ranges on sight and runs on US
+  residential, retrying each page on up to 8 fresh IPs because it refuses a share of
+  those too; Boots runs on GB residential.
+- A page that loads but lacks the data it should hold is a block: retire the IP and
+  retry (the HotPads "state script missing" check). Skipping images keeps residential
+  traffic down.
+- Not carried over: apartments.com goes through a third-party unblocker that solves
+  challenges, which is past the owner's line.
 
 ### What the owner's earlier scrapers teach (read 2026-10-28)
 

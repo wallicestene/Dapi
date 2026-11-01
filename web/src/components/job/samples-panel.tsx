@@ -41,7 +41,14 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
                   <tr key={c.column} className="border-b border-rule align-top last:border-0">
                     <td className="px-5 py-2 font-medium">{c.column}</td>
                     <td className="px-3 py-2 break-words text-ink-2">{c.expected || <span className="text-ink-3">blank</span>}</td>
-                    <td className="px-3 py-2 break-words">{String(c.actual) || <span className="text-ink-3">blank</span>}</td>
+                    <td className="px-3 py-2 break-words">
+                      {String(c.actual) || <span className="text-ink-3">blank</span>}
+                      {c.why && (
+                        <span className="mt-0.5 block text-[12px] text-pencil-red">
+                          {c.why === "spacing" ? "spacing differs" : c.why === "typo" ? "likely a typo in your spec" : `your value is this record's ${c.belongsTo}`}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <TickMark tick={TICK[c.status]} />
                     </td>

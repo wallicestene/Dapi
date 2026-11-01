@@ -46,7 +46,8 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const tuning = {
     maxConcurrency: clamp(maxConcurrency ?? proposed.maxConcurrency, 1, 20, 4),
     maxRequestsPerMinute: clamp(proposed.maxRequestsPerMinute, 30, 1200, 600),
-    maxRetries: clamp(proposed.maxRetries, 1, 6, 3),
+    // Up to 8: sites behind bot management refuse a share of fresh residential IPs too.
+    maxRetries: clamp(proposed.maxRetries, 1, 8, 3),
   };
   console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries`);
 
@@ -328,6 +329,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       // already in, so it emits and counts nothing.
       const requestKey = keyOf(request);
       const again = delivered.has(requestKey);
+      try {
       await site.handle({
         request,
         json,
@@ -348,7 +350,16 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
           state.expected[kind] = (state.expected[kind] ?? 0) + count;
           expectedChanged = true;
         },
+        // The site part saw a page that loaded but lacks the data it must hold: a
+        // quiet block. Retried from a fresh session, so a fresh IP.
+        blocked: (why) => {
+          throw new Error(`blocked: ${why}`);
+        },
       });
+      } catch (err) {
+        if (/^blocked\b/.test(err.message)) session?.retire();
+        throw err;
+      }
       if (stopping) await flush();
       else flushIfFull();
       // The source's totals are saved at once: after a resurrect, the list page that

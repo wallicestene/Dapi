@@ -41,18 +41,22 @@ export interface JobEvent {
 export type Tick =
   | "traced" // read from a response Dapi kept as evidence
   | "sample" // equals the spec's sample value
-  | "near" // equals the sample apart from spacing
+  | "near" // differs from the sample only by spacing, a slip, or the sample's column
   | "fail" // differs from the sample
   | "missing" // could not be fetched; the reason travels with it
   | "spec" // a constant the spec sets
   | "blank"; // the source has no value here
+
+// Why a delivered value differs from the spec's sample without failing: spacing, a
+// slip in the spec, or a sample value typed under another column.
+export type Why = "spacing" | "typo" | "column";
 
 export interface Cell {
   value: string;
   tick: Tick;
   evidence?: string;
   paths?: string[];
-  sample?: { label: string; expected: string };
+  sample?: { label: string; expected: string; why?: Why; belongsTo?: string };
   reason?: string;
 }
 

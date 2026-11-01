@@ -13,6 +13,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createJob, jobDir, readJson, writeJson, updateJob, emit } from './store.js';
 import { readSpec } from '../read-spec.js';
 import { investigate } from '../investigate.js';
@@ -54,6 +55,7 @@ try {
     rules: spec.rules,
     questions: spec.questions,
     personalData: spec.personalData ?? [],
+    corrections: spec.corrections ?? [],
     problems,
   });
 
@@ -72,12 +74,16 @@ try {
   // 3. The extraction: written by Muse Spark, tested against the spec's samples.
   step('code');
   say('code', { kind: 'start', text: 'Writing the extraction and testing it against your sample rows.' });
+  let writerNotes = '';
   const written = await writeAndTest({
     spec,
     specPath: path.join(dir, 'spec.json'),
     findings,
     outPath: path.join(dir, 'site.js'),
-    onEvent: (e) => say('code', { ...e, text: describeAttempt(e) }),
+    onEvent: (e) => {
+      if (e.kind === 'written') writerNotes = e.notes;
+      say('code', { ...e, text: describeAttempt(e) });
+    },
   });
   if (!written.passed) {
     say('code', { kind: 'failed', text: `The extraction still failed its checks after ${written.attempts} attempts, so Dapi stopped before running it.` });
@@ -87,7 +93,9 @@ try {
 
   // 4. The plan, and the user's Go.
   step('plan');
-  const plan = makePlan(findings, fs.readFileSync(path.join(dir, 'site.js'), 'utf8'), spec);
+  // The extraction's own settings: the way in and the pace Muse Spark chose for this site.
+  const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
+  const plan = makePlan(findings, config, writerNotes, spec);
   say('plan', { kind: 'plan', text: plan.text, ...plan });
   updateJob(dir, { status: 'waiting', records: plan.records });
   if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
@@ -140,19 +148,23 @@ function describeAttempt(e) {
   if (!e.report) return `Attempt ${e.attempt}: the test run crashed.`;
   const samples = e.report.samples;
   const pass = samples.filter((s) => s.status === 'pass').length;
-  const warn = samples.filter((s) => s.status === 'warn').length;
-  const sampleText = `${pass} of ${samples.length} samples match${warn ? `, ${warn} nearly (spacing)` : ''}`;
+  const whys = samples.flatMap((s) => s.checks.filter((c) => c.status === 'warn').map((c) => c.why ?? 'spacing'));
+  const words = { spacing: 'spacing differs', typo: 'a likely typo in the spec', column: 'a value typed under another column' };
+  const notes = Object.keys(words).filter((w) => whys.includes(w)).map((w) => `${whys.filter((x) => x === w).length}× ${words[w]}`);
+  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(', ')}` : ''}`;
   return e.passed
     ? `Attempt ${e.attempt} passed: ${e.report.rows} rows in the test run, ${sampleText}.`
     : `Attempt ${e.attempt} failed: ${e.problems[0]}${e.problems.length > 1 ? ` (and ${e.problems.length - 1} more)` : ''}. Fixing it.`;
 }
 
 // What the run will do, from the findings and the extraction's own settings.
-function makePlan(f, siteCode, spec) {
+function makePlan(f, config, notes, spec) {
   const records = Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0));
   const details = f.detail ? records : 0;
   const requests = 1 + details;
-  const rpm = Math.min(1200, Math.max(30, Number(siteCode.match(/maxRequestsPerMinute:\s*(\d+)/)?.[1] ?? 600)));
+  const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
+  const groups = (config.proxy?.groups ?? []).map((g) => g.toLowerCase());
+  const proxy = groups.length ? `${groups.join(' + ')}${config.proxy.countryCode ? ` (${config.proxy.countryCode})` : ''}` : 'direct';
   const minutes = Math.max(1, Math.ceil(requests / rpm));
   const route = f.list.embedded ? 'embedded' : 'feed';
   const how = {
@@ -166,10 +178,12 @@ function makePlan(f, siteCode, spec) {
     minutes,
     route,
     detail: f.detail?.kind ?? null,
-    proxy: f.reachability?.recommendation ?? 'direct',
+    proxy,
+    pace: { concurrency: config.maxConcurrency ?? null, perMinute: rpm, retries: config.maxRetries ?? null },
+    reasoning: notes,
     robotsQuestion: f.list.robotsBlocked ? `robots.txt disallows ${f.list.request.url}. Fetch it anyway?` : null,
     personalData: spec.personalData ?? [],
-    text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify.`,
+    text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }
 

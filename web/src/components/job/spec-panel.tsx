@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import type { Job, JobEvent } from "@/lib/types";
 import { Panel, Waiting } from "./panel";
 
@@ -14,6 +15,7 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
   const questions = read.questions as string[];
   const problems = read.problems as string[];
   const personal = (read.personalData as { column: string; why: string }[] | undefined) ?? [];
+  const corrections = (read.corrections as { original: string; corrected: string; why: string }[] | undefined) ?? [];
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <Panel title={`Columns (${columns.length})`} action={<a href={`/api/jobs/${job.id}/files/${job.input}`} target="_blank" rel="noreferrer" className="text-[13px] font-medium underline">Open the spec you gave</a>}>
@@ -40,6 +42,21 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
               : "None. Without sample rows there is nothing to test the extraction against."}
           </p>
         </Panel>
+        {corrections.length > 0 && (
+          <Panel title="Column names tidied">
+            <ul className="space-y-1.5 px-5 py-3 text-[14px]">
+              {corrections.map((c) => (
+                <li key={c.original}>
+                  <span className="text-ink-2 line-through decoration-pencil-red">{c.original}</span>
+                  <ArrowRight aria-hidden className="mx-1.5 inline size-3.5 text-ink-3" />
+                  <span className="sr-only">became</span>
+                  <span className="font-medium">{c.corrected}</span>
+                  <span className="block text-[13px] text-ink-2">{c.why}</span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
         {personal.length > 0 && (
           <Panel title="Columns about people">
             <ul className="space-y-1 px-5 pt-3 text-[14px]">

@@ -8,14 +8,17 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chat, pdfPart, SPARK } from './meta.js';
 
-const PROMPT = `You read data extraction specs. A spec names a public web source, the columns the output table must have, sample rows showing expected values, and rules in plain English (often in a notes or comment column). Samples may be laid out one per column or one per row.
+const PROMPT = `You read data extraction specs the way an experienced freelance data extractor does. A spec names a web source, the columns the output table must have, sample rows showing expected values, and rules in plain English (often in a notes or comment column). Samples may be laid out one per column or one per row.
+
+Specs are written by people, quickly. They carry typos, inconsistent capitals and spacing, and values typed under the wrong column. Read for what the writer meant, and keep a record of every fix so the user can check it.
 
 Return:
 - title, and sourceUrl: the URL to extract from.
 - rowUnit: what one output row represents, in a few words, e.g. "one compliance issue".
-- columns: every output column, in the spec's order. instructions: where or how to get the value, taken from the spec's notes ("" if it says nothing). constant: the value if the spec fixes it for every row, e.g. "set the country as India"; otherwise null.
+- columns: every output column, in the spec's order. name: the column's name with obvious slips fixed: a missing, doubled or swapped letter ("Organizaton name"), stray spaces or punctuation, capitals that break the pattern the other columns follow. Judge by how the spec writes its other columns and by the source's own terms; leave unusual but deliberate names alone. instructions: where or how to get the value, taken from the spec's notes ("" if it says nothing). constant: the value if the spec fixes it for every row, e.g. "set the country as India"; otherwise null.
+- corrections: every column name you changed, as {original, corrected, why}. Empty if none.
 - rules: every instruction about the table as a whole, e.g. how rows split or how to write dates.
-- samples: every sample row, labelled as in the spec. Copy each value exactly as the spec shows it, character for character, including typos, capitals and punctuation, because these values are used as test cases. When a value wraps across lines, rejoin it the way the page shows it, keeping hyphens that belong to the value. When a sample leaves a column blank, give it as an empty string: blank is an expected value too.
+- samples: every sample row, labelled as in the spec, its values keyed by the corrected column names. Copy each value exactly as the spec shows it, character for character, including typos, capitals and punctuation, because these values are used as test cases: Dapi compares them with the source tolerantly, and reports a value that looks mistyped or typed under the wrong column rather than failing on it. When a value wraps across lines, rejoin it the way the page shows it, keeping hyphens that belong to the value. When a sample leaves a column blank, give it as an empty string: blank is an expected value too.
 - questions: anything the spec leaves unclear that would change the output, phrased as a question to the person who wrote it. Empty if nothing is unclear.
 - personalData: every column that names or contacts a person: a named individual (such as a legal representative, owner or contact), or their phone number, email or home address. Give the column and, in a few words, why. Data about companies and organisations (their name, business phone, office address, website) doesn't count. Empty if no column does. This is for the user's information only: public data the site shows any visitor is collected either way.
 
@@ -63,6 +66,15 @@ const SPEC_SCHEMA = {
       },
     },
     questions: { type: 'array', items: { type: 'string' } },
+    corrections: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { original: { type: 'string' }, corrected: { type: 'string' }, why: { type: 'string' } },
+        required: ['original', 'corrected', 'why'],
+        additionalProperties: false,
+      },
+    },
     personalData: {
       type: 'array',
       items: {
@@ -73,7 +85,7 @@ const SPEC_SCHEMA = {
       },
     },
   },
-  required: ['title', 'sourceUrl', 'rowUnit', 'columns', 'rules', 'samples', 'questions', 'personalData'],
+  required: ['title', 'sourceUrl', 'rowUnit', 'columns', 'rules', 'samples', 'questions', 'corrections', 'personalData'],
   additionalProperties: false,
 };
 

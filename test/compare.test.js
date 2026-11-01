@@ -57,3 +57,23 @@ test('a blank sample value must be blank in the row', () => {
   assert.equal(compareSamples(rows, [sample({ Factory: 'PT Bintang', Issue: '' })])[0].status, 'pass');
   assert.equal(compareSamples([{ Factory: 'PT Bintang', Issue: 'Fire' }], [sample({ Factory: 'PT Bintang', Issue: '' })])[0].status, 'fail');
 });
+
+test('a slip in the sample is a warning that says typo', () => {
+  const [r] = compareSamples([{ Name: 'Teijin', Type: 'Manufacture of wearing apparel' }], [sample({ Name: 'Teijin', Type: 'Manufacure of wearing apparel' })]);
+  assert.equal(r.status, 'warn');
+  assert.equal(r.checks.find((c) => c.column === 'Type').why, 'typo');
+});
+
+test('a different number or date is never a typo', () => {
+  const [r] = compareSamples([{ Name: 'Teijin Frontier', Date: '25 Aug 2025' }], [sample({ Name: 'Teijin Frontier', Date: '25 Aug 2024' })]);
+  assert.equal(r.status, 'fail');
+});
+
+test('a value typed under the wrong column is a warning naming where it belongs', () => {
+  const rows = [{ Factory: 'Teijin', Country: 'Vietnam', Modality: 'Hybrid', Cycle: '4' }];
+  const [r] = compareSamples(rows, [sample({ Factory: 'Teijin', Country: 'Hybrid', Modality: 'Vietnam', Cycle: '4' })]);
+  assert.equal(r.status, 'warn');
+  const c = r.checks.find((check) => check.column === 'Country');
+  assert.equal(c.why, 'column');
+  assert.equal(c.belongsTo, 'Modality');
+});

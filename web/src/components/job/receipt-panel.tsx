@@ -84,7 +84,7 @@ export function ReceiptPanel({ job, events, selected }: { job: Job; events: JobE
               {cell.tick === "sample"
                 ? `Agrees with ${cell.sample.label} in your spec.`
                 : (
-                  <Difference label={cell.sample.label} expected={cell.sample.expected} actual={cell.value} near={cell.tick === "near"} />
+                  <Difference label={cell.sample.label} expected={cell.sample.expected} actual={cell.value} why={cell.tick === "near" ? cell.sample.why ?? "spacing" : null} belongsTo={cell.sample.belongsTo} />
                 )}
             </Line>
           )}
@@ -123,7 +123,14 @@ export function ReceiptPanel({ job, events, selected }: { job: Job; events: JobE
 
 // Where a delivered value parts from the spec's sample: the same short stretch of each,
 // so a one-space difference in a 300-character legal reference is visible at once.
-function Difference({ label, expected, actual, near }: { label: string; expected: string; actual: string; near: boolean }) {
+function Difference({ label, expected, actual, why, belongsTo }: { label: string; expected: string; actual: string; why: "spacing" | "typo" | "column" | null; belongsTo?: string }) {
+  if (why === "column") {
+    return (
+      <>
+        {label} in your spec has <q>{expected}</q> under this column, but on the site that value is the record&apos;s {belongsTo}: it was typed under the wrong column. Dapi delivers each column as the site has it.
+      </>
+    );
+  }
   let i = 0;
   while (i < expected.length && i < actual.length && expected[i] === actual[i]) i++;
   const from = Math.max(0, i - 18);
@@ -131,7 +138,7 @@ function Difference({ label, expected, actual, near }: { label: string; expected
   return (
     <>
       {label} in your spec writes <q className="font-mono text-[12px]">{clip(expected)}</q>; the source has <q className="font-mono text-[12px]">{clip(actual)}</q>.{" "}
-      {near ? "Only the spacing differs, so the value is delivered as the source has it." : "Delivered as the source has it."}
+      {why === "spacing" ? "Only the spacing differs, so the value is delivered as the source has it." : why === "typo" ? "That looks like a slip in the spec, so the value is delivered as the source spells it." : "Delivered as the source has it."}
     </>
   );
 }

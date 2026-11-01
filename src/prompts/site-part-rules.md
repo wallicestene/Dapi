@@ -70,6 +70,10 @@ label (to tell responses apart), note, userData, fallback }`.
 - `ctx.expect(kind, count)` — how many rows of that kind the **source** says exist,
   from its own numbers (a total, per-record counts, the number of rows in a table).
 - `ctx.enqueue(request, ...)` — more requests. Synchronous; don't await it.
+- `ctx.blocked(why)` — call it when a response loaded but lacks what it must hold (the
+  embedded table, the JSON key, the profile section): sites often answer a bot with a
+  normal-looking page. The frame retries it from a fresh IP. Call it before emitting
+  anything from that response.
 
 ## Rules
 
@@ -125,19 +129,53 @@ not a needlessly slow one either: the user is waiting.
 
 The frame clamps these to safe limits. Say in `notes` how you got the numbers.
 
-**Getting through: use what Apify provides.** Collect whatever the spec asks for that
-the site shows, people's names and contacts included. Crawlee already sends
-browser-like headers and TLS fingerprints and keeps sessions; when a response is
-blocked (401, 403, 429, or a bot-check page) the frame retires the session and retries
-from a fresh one, so a fresh IP. Set `config.proxy` from the evidence:
-`findings.access.via` (how the investigation got in) and
-`findings.reachability.recommendation` (what worked from Apify's servers).
+**Getting through: choose this site's way in, like someone who knows Apify.** Collect
+whatever the spec asks for that the site shows, people's names and contacts included.
+Work out the way in for this site from the evidence, not by habit:
 
-- `'datacenter'` → `{ groups: ['DATACENTER'] }`; `'residential'` →
-  `{ groups: ['RESIDENTIAL'] }`; add `countryCode` (e.g. `'IN'`) when content
-  depends on location.
-- With a proxy, set `maxRetries` to 5, so a blocked request gets several fresh IPs.
-- `'direct'` → leave `proxy` out: proxy traffic costs money, residential most.
+- `findings.access`: how the investigation got in (`via`: `'direct'`, `'datacenter'`
+  or `'residential'`) and what stopped it on the ways before (`attempts`).
+- `findings.reachability.results`: each way tried from Apify's servers, where the run
+  happens, with its status, time, size, whether it was blocked, and whether the
+  sample's value came back. `recommendation` is the cheapest way that worked.
+- The site itself: whose site it is, which country serves it, how many requests the
+  job needs (one list or thousands of detail pages).
+
+What Apify gives you, and when each fits:
+
+- **No proxy** (Apify's own servers): when the site answered directly. Cheapest and
+  fastest; leave `proxy` out.
+- **Datacenter proxy** `{ groups: ['DATACENTER'] }`: a large pool of shared server
+  IPs, cheap and fast. For sites that block or rate-limit Apify's own IPs but accept
+  servers in general, and for spreading many requests across IPs.
+- **Residential proxy** `{ groups: ['RESIDENTIAL'] }`: IPs of real home connections,
+  billed by traffic, so the dearest. For sites that refuse server IPs altogether
+  (datacenter blocked in the evidence). Keep the traffic lean: prefer JSON endpoints
+  and small pages, and say in `notes` roughly how much the run will fetch.
+- **`countryCode`** (e.g. `'IN'`, `'KE'`): with a proxy, when the site serves a
+  country's visitors differently or only (national registries, geo-blocks, local
+  prices). Use the site's own country.
+- **Sessions and IP rotation** are the frame's job: Crawlee sends browser-like headers
+  and TLS fingerprints, and when a response is blocked (401, 403, 429, or a bot-check
+  page) the frame retires that session and retries from a fresh one, so a fresh IP.
+  With a proxy, set `maxRetries` to 5 (6–8 behind bot management) so a blocked
+  request gets several fresh IPs.
+- **Rate limits** (429s, or a site that slowed down in the measurements): lower
+  `maxRequestsPerMinute` and `maxConcurrency` first; more IPs come second.
+- **What experience says:** public registries, certification bodies and government
+  sites nearly always answer directly; don't add a proxy they don't need. Commercial
+  sites behind bot management (PerimeterX, DataDome, Akamai: real-estate, retail,
+  travel) usually refuse datacenter IPs on sight and want residential IPs in the
+  site's own country, and even then refuse a share of fresh IPs: use `maxRetries`
+  6–8 there, a moderate `maxConcurrency` (4–8), and `ctx.blocked` for pages that load
+  without their data. Dapi fetches only HTML and JSON, never images, which keeps
+  residential traffic small.
+
+Choose the cheapest way the evidence says will finish the whole run, not just the
+first page: a site that let one request through directly can still block the
+thousandth from the same IP, so when the measurements show blocks or 429s on any way,
+step up to the next way and say why. In `notes`, name the way you chose and the
+evidence behind it, in a sentence the user can read in the plan.
 
 The frame records in each receipt how its response was fetched. Never: CAPTCHA or
 challenge-solving services, Apify's `UNBLOCKER` group, logins or paywalls. A check

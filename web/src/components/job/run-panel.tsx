@@ -57,6 +57,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
     ["Time on Apify", `roughly ${plan.minutes} min`],
     ["How it's fetched", plan.proxy === "direct" ? "directly, no proxy" : `Apify ${plan.proxy} proxy`],
   ];
+  const reasoning = typeof plan.reasoning === "string" ? plan.reasoning.trim() : "";
   return (
     <section className="max-w-[760px] rounded-lg border bg-sheet">
       <div className="px-5 pt-4 pb-3">
@@ -71,6 +72,12 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
           </div>
         ))}
       </dl>
+      {reasoning && (
+        <details className="mx-5 mt-4 rounded-md border border-rule bg-white px-4 py-2.5 text-[14px]">
+          <summary className="cursor-pointer font-medium">Why this way in and this pace</summary>
+          <p className="mt-2 leading-relaxed whitespace-pre-line text-ink-2">{reasoning}</p>
+        </details>
+      )}
       {(plan.personalData as { column: string }[] | undefined)?.length ? (
         <p className="mx-5 mt-4 text-[14px] text-ink-2">
           {(plan.personalData as { column: string }[]).map((p) => p.column).join(", ")} name or contact people. They&apos;re collected as the site shows them to any visitor, nothing more.
