@@ -62,7 +62,7 @@ try {
   say('site', { kind: 'start', text: `Investigating ${spec.sourceUrl}: watching what the page loads before reading any of it.` });
   const findings = await investigate(spec, { onEvent: (e) => say('site', e) });
   writeJson(dir, 'findings.json', findings);
-  const refusal = refuse(findings, spec);
+  const refusal = refuse(findings);
   if (refusal) {
     say('site', { kind: 'declined', text: refusal.text, reasons: refusal.reasons });
     updateJob(dir, { status: 'declined', declined: refusal.text });
@@ -87,7 +87,7 @@ try {
 
   // 4. The plan, and the user's Go.
   step('plan');
-  const plan = makePlan(findings, fs.readFileSync(path.join(dir, 'site.js'), 'utf8'));
+  const plan = makePlan(findings, fs.readFileSync(path.join(dir, 'site.js'), 'utf8'), spec);
   say('plan', { kind: 'plan', text: plan.text, ...plan });
   updateJob(dir, { status: 'waiting', records: plan.records });
   if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
@@ -110,14 +110,13 @@ try {
   process.exit(1);
 }
 
-// A plain no, before any code is written, when the site can't or shouldn't be
-// extracted with the routes Dapi has.
-function refuse(f, spec) {
+// A plain no, before any code is written, when the site can't be extracted with the
+// routes Dapi has, or only by getting past a bot check, which Dapi never does. Public
+// data is fine, people's published names and contacts included (owner's call,
+// 2026-11-01); a check built to stop bots is where Dapi stops.
+function refuse(f) {
   const reasons = [];
-  if (spec.personalData?.length) {
-    reasons.push(`The spec asks for personal data about private individuals (${spec.personalData.map((p) => `${p.column}: ${p.why}`).join('; ')}). Dapi only extracts public data about organisations, not people.`);
-  }
-  if (f.pageStatus >= 400) reasons.push(`The page answered HTTP ${f.pageStatus}: the site refuses automated visitors.`);
+  if (f.pageStatus >= 400) reasons.push(`The page answered HTTP ${f.pageStatus}: the site puts automated visitors through a bot check, and Dapi doesn't get past those.`);
   if (!f.list) reasons.push("Neither the site's own data requests nor its embedded data hold the records. Reading the visible page alone is a route Dapi doesn't run yet.");
   if (f.reachability && !f.reachability.recommendation) reasons.push("From Apify's servers, the site refused every way Dapi is allowed to ask (direct, datacenter and residential proxy). Dapi won't solve CAPTCHAs or get around bot walls.");
   if (!reasons.length) return null;
@@ -137,7 +136,7 @@ function describeAttempt(e) {
 }
 
 // What the run will do, from the findings and the extraction's own settings.
-function makePlan(f, siteCode) {
+function makePlan(f, siteCode, spec) {
   const records = Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0));
   const details = f.detail ? records : 0;
   const requests = 1 + details;
@@ -157,6 +156,7 @@ function makePlan(f, siteCode) {
     detail: f.detail?.kind ?? null,
     proxy: f.reachability?.recommendation ?? 'direct',
     robotsQuestion: f.list.robotsBlocked ? `robots.txt disallows ${f.list.request.url}. Fetch it anyway?` : null,
+    personalData: spec.personalData ?? [],
     text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify.`,
   };
 }

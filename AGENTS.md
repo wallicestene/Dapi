@@ -87,9 +87,13 @@ must never quietly hand over a short dataset.
 
 ### Scope rules
 
-Public sources only — data any visitor can see without authentication. No logins,
-no paywalls, no terms-of-service violations, no personal data. This is both the
-hackathon rule on rights and the honest position for the product.
+Public sources only — data any visitor can see without authentication. That
+includes people's names, emails or websites when the site itself publishes them to
+every visitor (owner's call, Nov 1). No logins, no paywalls, no terms-of-service
+violations, and **never getting past a bot check**: no Cloudflare or Turnstile
+challenges, no CAPTCHAs, nothing built to stop automated visitors. A site that puts
+Dapi through one gets a plain no. This is both the hackathon rule on rights and the
+honest position for the product.
 
 ### Demo beats, in order
 

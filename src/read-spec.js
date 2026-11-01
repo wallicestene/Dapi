@@ -17,7 +17,7 @@ Return:
 - rules: every instruction about the table as a whole, e.g. how rows split or how to write dates.
 - samples: every sample row, labelled as in the spec. Copy each value exactly as the spec shows it, character for character, including typos, capitals and punctuation, because these values are used as test cases. When a value wraps across lines, rejoin it the way the page shows it, keeping hyphens that belong to the value. When a sample leaves a column blank, give it as an empty string: blank is an expected value too.
 - questions: anything the spec leaves unclear that would change the output, phrased as a question to the person who wrote it. Empty if nothing is unclear.
-- personalData: every column that holds personal data about a private individual: a named person (such as a legal representative, owner or contact), or their phone number, email or home address. Give the column and, in a few words, why. Data about companies and organisations (their name, business phone, office address, website) is not personal data. Empty if no column is.
+- personalData: every column that names or contacts a person: a named individual (such as a legal representative, owner or contact), or their phone number, email or home address. Give the column and, in a few words, why. Data about companies and organisations (their name, business phone, office address, website) doesn't count. Empty if no column does. This is for the user's information only: public data the site shows any visitor is collected either way.
 
 Don't invent columns, samples or rules that aren't in the spec.`;
 

@@ -41,17 +41,16 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
           </p>
         </Panel>
         {personal.length > 0 && (
-          <section className="rounded-lg border border-pencil-red/40 bg-red-wash px-5 py-3 text-[14px] text-red-ink">
-            <h2 className="font-semibold">Personal data in the spec</h2>
-            <ul className="mt-1.5 space-y-1">
+          <Panel title="Columns about people">
+            <ul className="space-y-1 px-5 pt-3 text-[14px]">
               {personal.map((p) => (
                 <li key={p.column}>
-                  {p.column}: {p.why}
+                  <span className="font-medium">{p.column}</span> <span className="text-ink-2">({p.why})</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-2">Dapi extracts public data about organisations, not people.</p>
-          </section>
+            <p className="px-5 pt-2 pb-3 text-[13px] text-ink-2">Collected only as the site shows them to any visitor. Dapi never gets past a bot check to reach them.</p>
+          </Panel>
         )}
         {(questions.length > 0 || problems.length > 0) && (
           <Panel title="Unclear in the spec">

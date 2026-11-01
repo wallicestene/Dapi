@@ -48,7 +48,7 @@ Dapi investigates the way a professional does, and shows its work.
 - **Input:** specs in the format clients send (a table of columns, sample values and
   comments). Real cases: Better Work factory compliance (one row per issue, detail behind
   a "View" button), Great Place to Work India (5,158 certified companies in four embedded
-  tables, a profile page each), CnVerify (refused: bot wall on every path, personal data).
+  tables, a profile page each), CnVerify (refused: a Cloudflare bot check on every path).
   Demo specs in `specs/` are written by us; clients' documents are never shown.
 - **The agent's steps the user can watch:** reading the spec; loading the page and its
   network traffic; Muse Spark looking at a screenshot and choosing what to click; finding
@@ -68,7 +68,8 @@ Dapi investigates the way a professional does, and shows its work.
 
 - Routes built: a JSON endpoint (API), data embedded in HTML, HTML detail pages. Browser
   (Playwright) and hybrid routes are not built.
-- Public data only: no logins, paywalls or CAPTCHA solving. Apify Proxy (datacenter or
+- Public data only, meaning what the site shows any visitor, people's published names and
+  contacts included; no logins, paywalls, CAPTCHA solving or getting past any bot check. Apify Proxy (datacenter or
   residential) only when the investigation shows a site needs it, recorded in every receipt.
   robots.txt is obeyed by default; fetching despite it needs the user's approval per job and
   is recorded.

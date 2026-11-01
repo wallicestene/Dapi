@@ -71,6 +71,11 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
           </div>
         ))}
       </dl>
+      {(plan.personalData as { column: string }[] | undefined)?.length ? (
+        <p className="mx-5 mt-4 text-[14px] text-ink-2">
+          {(plan.personalData as { column: string }[]).map((p) => p.column).join(", ")} name or contact people. They&apos;re collected as the site shows them to any visitor, nothing more.
+        </p>
+      ) : null}
       {robotsQuestion && (
         <div className="mx-5 mt-4 rounded-md border border-pencil-red/30 bg-red-wash px-4 py-3 text-[14px] text-red-ink">
           {robotsQuestion} Dapi follows robots.txt unless you say otherwise; if you do, every request it skips today is fetched and marked in its receipt.

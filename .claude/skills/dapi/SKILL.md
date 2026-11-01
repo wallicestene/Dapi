@@ -53,7 +53,7 @@ The owner wants this updated as we go, one step at a time.
   Spark reads it; the sample rows become the test cases.
 - **2026-10-27** Demo targets: Better Work compliance (API route) and Great Place to
   Work India (embedded data + HTML pages), using specs we write ourselves, never the
-  clients' documents. CnVerify is the "honest no" moment (bot wall, personal data).
+  clients' documents. CnVerify is the "honest no" moment (bot wall).
 - **2026-10-28** Clean-room rule: **the code writer never sees a hand-written site
   part**, neither the owner's earlier actors nor `sites/betterwork.js`. It gets the
   spec, the investigator's findings and the frame's contract. The real test is Dapi
@@ -89,8 +89,12 @@ The owner wants this updated as we go, one step at a time.
   footed, missing); the dataset is footed against the source's own count on a double
   rule. Pale green-grey paper, graphite, two pencil colours on data only. DESIGN.md
   records the system.
-- **2026-11-01** The spec reader flags personal-data columns; a job asking for any is
-  refused, alongside bot walls and sources with no data route.
+- **2026-11-01** (owner's call, replacing the same-day rule that refused personal data)
+  Public data is fine to collect, including people's names, emails or websites when
+  the site shows them to every visitor. The line is bot checks: Dapi never gets past a
+  Cloudflare/Turnstile challenge, a CAPTCHA or anything built to stop bots; it says no.
+  Muse Spark still marks columns that name or contact people, as information in the
+  spec and the plan, never as a reason to refuse.
 
 ## Findings
 
@@ -290,11 +294,12 @@ industry class, address, province and city.
   search page, `robots.txt` and the terms pages alike; the headless browser gets 403.
   The operator has chosen to block automated access. Per the scope rules and the
   `retryOnBlocked` decision, Dapi stops here.
-- **Personal data too:** the legal representative is a named person, and the spec
-  asks for phone and email. Even unblocked, that conflicts with AGENTS.md scope.
-- What Dapi should do with a spec like this: say it's blocked and why, name the
-  personal-data columns, and point to legitimate routes (ask the provider about an API
-  or data licence, or go to the official registry).
+- The spec also asks for a named legal representative, phone and email. If the site
+  showed them to any visitor, Dapi could collect them (owner's call, 2026-11-01); the
+  block is the bot check alone.
+- What Dapi should do with a spec like this: say it's blocked and why, and point to
+  legitimate routes (ask the provider about an API or data licence, or go to the
+  official registry).
 - Across three client specs: two buildable without a browser after ~10 minutes of
   investigation each, one correctly refused.
 
@@ -520,12 +525,11 @@ run in full on Apify with no human edits:
 - First full jobs through it: **Better Work** spec PDF → 430 of 430 rows in ~3 min
   end to end, the extraction passed on attempt 1. **GPTW** passed on attempt 1 too
   (the source lists 5,161 companies today, up from 5,158). **CnVerify** refused in 33 s
-  with three reasons: HTTP 403 (Cloudflare check, screenshot kept), no data source,
-  and personal data in the spec.
-- **Personal data:** the spec reader now asks Muse Spark for `personalData` columns
-  (a named private person, their phone, email, home address; company data is not
-  personal). A job that asks for any is refused, per the scope rules. On CnVerify it
-  flagged "Legal representative" and not the company phone and email.
+  (HTTP 403 from a Cloudflare check, screenshot kept; no data source behind it).
+- **Personal data:** the spec reader asks Muse Spark for `personalData` columns (a
+  named person, their phone, email, home address). They are shown as information on
+  the spec tab and in the plan, not a reason to refuse (owner's call, 2026-11-01). On
+  CnVerify it marked "Legal representative" and not the company phone and email.
 - **Front door** (`web/`, Next.js 16, shadcn/ui on Radix + Tailwind): jobs list, new
   job (spec file or pasted text), and the job screen: six-step strip, the ticked data
   sheet with scope filters and the footing line, the receipt rail (request, the
