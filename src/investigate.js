@@ -109,12 +109,25 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
 
     // 2. Columns the list doesn't have: from the record page the spec named, when it
     // did, else revealed from one record on the list page.
+    // A column the sample leaves blank but the matching tied to a yes/no flag in the list
+    // ("Belongs to main unit" <- is-main-unit) is probably text shown on some records'
+    // pages: look for it there too, and prefer the page's text when it's found.
+    const first = list.records.records[0];
+    const weak = recordPage
+      ? wanted.filter((c) => !source.samples[0]?.values[c.name] && list.fields[c.name]?.keys.length === 1 && typeof at(first, list.fields[c.name].keys[0]) === 'boolean')
+      : [];
     let detail = null;
-    if (missing.length) {
+    if (missing.length || weak.length) {
       detail = recordPage
-        ? await recordPageDetail({ recordPage, list, missing, sample: source.samples[0], count, notes, onEvent })
+        ? await recordPageDetail({ recordPage, list, missing: [...missing, ...weak], sample: source.samples[0], count, notes, onEvent })
         : await revealDetail({ spec: source, session, list, missing, count, notes, onEvent });
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
+      for (const c of weak) {
+        if (!detail?.fields[c.name]?.foundOn) continue;
+        const key = list.fields[c.name].keys[0];
+        list.fields[c.name] = { keys: [], how: `the list only holds a yes/no flag (${key}); the value itself is on the record page` };
+        notes.push(`${c.name}: the list only has the flag ${key}; the record page shows the value itself (e.g. "${detail.fields[c.name].example}").`);
+      }
     }
 
     await respectRobots(list, notes, onEvent);

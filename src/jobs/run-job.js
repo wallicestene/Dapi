@@ -21,6 +21,12 @@ import { writeAndTest } from '../write-site.js';
 import { translateValues } from '../translate.js';
 import { compareSamples } from '../compare.js';
 
+// The run watch (see runOnApify). Declared up here: the job runs at the top level,
+// before declarations further down the file are initialised.
+const REPAIRS = 2;
+const CODE_ERROR = /TypeError|ReferenceError|SyntaxError|RangeError|is not a function|Cannot read propert|is not defined|Unexpected token/;
+const STALL_MS = 5 * 60_000;
+
 const language = (code) => {
   try {
     return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) ?? code;
@@ -130,6 +136,12 @@ try {
   await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? null, robotsOverride: Boolean(approval.robotsOverride), records: plan.records, findings, specPath: runSpecPath });
 } catch (err) {
   console.error(err);
+  // A run left going on Apify with nothing watching it is stopped (its rows stay).
+  const { runId, runStatus } = readJson(dir, 'job.json') ?? {};
+  if (runId && !['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(runStatus)) {
+    const { apify } = await import('../apify/client.js');
+    await apify.run(runId).abort({ gracefully: true }).catch(() => {});
+  }
   say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${err.message.split('\n')[0]}` });
   updateJob(dir, { status: 'failed', failed: err.message.split('\n')[0] });
   process.exit(1);
@@ -213,8 +225,6 @@ function makePlan(f, config, notes, spec) {
 // requests fail, nothing moves, rows miss columns) is stopped at once rather than left
 // to finish badly; Muse Spark gets the reason and the run's own log, fixes the code or
 // its settings, the fix is tested again, and a fresh run starts. Up to two repairs.
-const REPAIRS = 2;
-
 async function runOnApify({ spec, userSpec, translate, robotsOverride, records, findings, specPath }) {
   const { apify, RUNNER } = await import('../apify/client.js');
   const { username } = await apify.user('me').get();
@@ -251,9 +261,6 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records, 
     say('run', { kind: 'restarting', text: 'The repaired extraction passed its tests. Starting a fresh run.' });
   }
 }
-
-const CODE_ERROR = /TypeError|ReferenceError|SyntaxError|RangeError|is not a function|Cannot read propert|is not defined|Unexpected token/;
-const STALL_MS = 5 * 60_000;
 
 async function runOnce({ apify, actor, spec, robotsOverride, attempt }) {
   const run = await apify.actor(actor).start(
