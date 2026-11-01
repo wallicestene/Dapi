@@ -189,7 +189,16 @@ function describeAttempt(e) {
 // What the run will do, from the findings and the extraction's own settings.
 function makePlan(f, config, notes, spec) {
   const records = Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0));
-  const details = f.detail ? records : 0;
+  // With a register behind the record pages, its batches replace most page loads; pages
+  // are still needed for columns it doesn't hold, once per record or once per shared value.
+  const up = f.detail?.upstream;
+  const pageColumns = Object.keys(f.detail?.fields ?? {}).filter((c) => f.detail.fields[c].keys?.length && !up?.columns.includes(c));
+  const perRecordPages = pageColumns.some((c) => !f.detail.fields[c].sameOnAllPages);
+  const details = !f.detail
+    ? 0
+    : up
+      ? up.apis.reduce((n, a) => n + (a.batch ? Math.ceil(records / a.batch.maxIds) : records), 0) + (perRecordPages ? records : pageColumns.length ? 3 : 0)
+      : records;
   const requests = 1 + details;
   const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
   // The time estimate follows the measured pace at the chosen concurrency, when there is one.
@@ -203,7 +212,13 @@ function makePlan(f, config, notes, spec) {
     feed: "the site's own data feed (JSON)",
     embedded: 'data embedded in the page',
   }[route];
-  const detailHow = f.detail ? (f.detail.kind === 'html' ? ', then one page per record' : ', then one data request per record') : '';
+  const detailHow = !f.detail
+    ? ''
+    : up
+      ? `, then ${up.apis[0].name}'s own API${up.apis.some((a) => a.batch) ? ' in batches' : ''}${perRecordPages ? ', and each record page' : pageColumns.length ? ', and a page per shared value' : ''}`
+      : f.detail.kind === 'html'
+        ? ', then one page per record'
+        : ', then one data request per record';
   return {
     records,
     requests,

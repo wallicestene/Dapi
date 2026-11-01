@@ -18,6 +18,9 @@ import { replay, replayEmbedded, sameContext } from './investigate/replay.js';
 import { extractEmbedded } from './embedded.js';
 import { request, useProxy, currentProxy } from './investigate/http.js';
 import { outline, findListLink, alignSamples, urlTemplate } from './investigate/record-page.js';
+import { findUpstream, sameOnAllPages } from './investigate/upstream.js';
+import * as cheerio from 'cheerio';
+import { select } from './select.js';
 
 export async function investigate(spec, { onEvent = () => {} } = {}) {
   const notes = [];
@@ -265,17 +268,66 @@ async function recordPageDetail({ recordPage, list, missing, sample, count, note
   // preferring records that differ from the sample's in a yes/no field, and map those
   // columns by their labels there.
   let blank = missing.filter((c) => !sample.values[c.name] && !fields[c.name]?.foundOn);
-  for (const url of otherRecordUrls(list, tmpl, 3)) {
-    if (!blank.length) break;
-    const other = await request(url).catch(() => null);
+  const others = otherRecordUrls(list, tmpl, 3);
+  const otherPages = [];
+  for (const { id, url } of others) {
+    const other = await request(url, { timeoutMs: 120_000 }).catch(() => null);
     if (!other?.ok) continue;
-    const mapped = await mapHtmlDetail({ html: await other.text(), missing: blank, sample: { label: 'another record', values: {} }, count });
+    const otherHtml = await other.text();
+    otherPages.push({ id, $: cheerio.load(otherHtml) });
+    if (!blank.length) continue;
+    const mapped = await mapHtmlDetail({ html: otherHtml, missing: blank, sample: { label: 'another record', values: {} }, count });
     for (const c of blank) {
       const f = mapped.fields[c.name];
       if (f?.keys.length && f.got && !/^[-–—\s,]*$/.test(f.got)) fields[c.name] = { ...f, verified: true, sampleValue: '', foundOn: url, example: f.got };
     }
     blank = blank.filter((c) => !fields[c.name]?.foundOn);
   }
+  // Values identical on every page opened likely depend on a list field (a status):
+  // one page per distinct value is enough for those.
+  const shared = sameOnAllPages(fields, [cheerio.load(html), ...otherPages.map((p) => p.$)], select);
+  for (const c of shared) fields[c].sameOnAllPages = true;
+  if (shared.length) onEvent({ kind: 'shared', text: `${shared.join(', ')} read the same on every record page Dapi opened: likely set by the record's status or kind, so one page per distinct value is enough.`, columns: shared });
+
+  // The source behind the source: a public register the page takes its values from,
+  // checked against the sample's values and against other records' pages.
+  const pageColumns = Object.keys(fields).filter((c) => fields[c].keys.length && !fields[c].sameOnAllPages);
+  const read = ($, c) => {
+    try {
+      const v = select($, fields[c].keys[0]);
+      return Array.isArray(v) ? v.join(' ') : v;
+    } catch {
+      return '';
+    }
+  };
+  const allRecords = await everyRecord(list);
+  const nameField = Object.entries(list.fields).find(([, f]) => f.keys.length === 1 && /navn|name|title/i.test(f.keys[0]))?.[1].keys[0];
+  const upstream = await findUpstream({
+    id: tmpl.sampleValue,
+    links: outline(html, recordPage.url).links,
+    columns: pageColumns.map((c) => ({ name: c, value: sample.values[c] ?? fields[c].example ?? '' })),
+    record: list.records.records.find((r) => String(at(r, tmpl.field)) === tmpl.sampleValue) ?? null,
+    examples: [
+      { id: tmpl.sampleValue, values: Object.fromEntries(pageColumns.map((c) => [c, sample.values[c] ?? ''])) },
+      ...otherPages.map((p) => ({ id: p.id, values: Object.fromEntries(pageColumns.map((c) => [c, read(p.$, c)])) })),
+    ],
+    names: new Map(nameField ? allRecords.map((r) => [String(at(r, tmpl.field)), String(at(r, nameField) ?? '')]) : []),
+    count,
+  }).catch((err) => {
+    notes.push(`Looking for the register behind the record pages failed: ${err.message.split('\n')[0]}`);
+    return null;
+  });
+  if (upstream) {
+    upstream.idField = tmpl.field;
+    const batch = upstream.apis.find((a) => a.batch);
+    onEvent({
+      kind: 'upstream',
+      text: `The record pages take ${upstream.columns.join(', ')} from ${upstream.apis[0].name}, and its open API returned your sample's own values${batch ? `, up to ${batch.batch.maxIds} records per request` : ''}. Reading it directly ${batch ? `takes about ${Math.ceil(list.records.count > 0 ? (list.total?.value ?? list.records.count) / batch.batch.maxIds : 1) * upstream.apis.filter((a) => a.batch).length} requests instead of one page load per record` : 'avoids loading every page'}.`,
+      apis: upstream.apis.map(({ name, single, batch: b }) => ({ name, single, batch: b?.url ?? null, maxIds: b?.maxIds ?? null })),
+      columns: upstream.columns,
+    });
+  }
+
   const learned = missing.filter((c) => fields[c.name]?.foundOn);
   if (learned.length) {
     onEvent({
@@ -293,6 +345,7 @@ async function recordPageDetail({ recordPage, list, missing, sample, count, note
   });
   return {
     kind: 'html',
+    ...(upstream && { upstream }),
     urlFrom: { listField: tmpl.field, how: `put the list field's value into the URL template` },
     urlTemplate: tmpl.template,
     sampleUrl: recordPage.url,
@@ -307,6 +360,9 @@ async function recordPageDetail({ recordPage, list, missing, sample, count, note
 // yes/no fields differ from the sample record's (a sub-unit when the sample is a main
 // unit) are likeliest to fill what the sample leaves blank.
 function otherRecordUrls(list, tmpl, n) {
+  return otherRecords(list, tmpl, n);
+}
+function otherRecords(list, tmpl, n) {
   const records = list.records.records;
   const own = records.find((r) => String(at(r, tmpl.field)) === tmpl.sampleValue);
   const flags = (r) =>
@@ -318,7 +374,17 @@ function otherRecordUrls(list, tmpl, n) {
     .filter((r) => r !== own && at(r, tmpl.field) !== undefined)
     .sort((a, b) => Number(flags(b) !== ownFlags) - Number(flags(a) !== ownFlags))
     .slice(0, n)
-    .map((r) => tmpl.template.replace(`{${tmpl.field}}`, encodeURIComponent(String(at(r, tmpl.field)))));
+    .map((r) => ({ id: String(at(r, tmpl.field)), url: tmpl.template.replace(`{${tmpl.field}}`, encodeURIComponent(String(at(r, tmpl.field)))) }));
+}
+
+// Every list record, through the one big page when the list has one (a single request),
+// else the records already in hand.
+async function everyRecord(list) {
+  const big = list.paging?.bigPage?.request;
+  if (!big) return list.records.records;
+  const res = await request(big.url, { method: big.method, body: big.payload ?? undefined, timeoutMs: 120_000 }).catch(() => null);
+  const json = res?.ok ? parseJsonSafe(await res.text()) : null;
+  return (json && findRecords(json)?.records) ?? list.records.records;
 }
 
 // A paged list: which parameter picks the page and which sets its size, and whether one

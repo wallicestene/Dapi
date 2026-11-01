@@ -22,7 +22,7 @@ allows, and never hand over a short or wrong dataset quietly.
 ## The module
 
 ```js
-export const config = { maxConcurrency, maxRequestsPerMinute, maxRetries, proxy }; // see "Speed", "Getting through"
+export const config = { maxConcurrency, maxRequestsPerMinute, maxRetries, timeoutSecs, retryPauseSecs, proxy }; // see "Speed", "Getting through"
 export const start = [ request, ... ];   // the first requests
 export async function handle(ctx) { ... } // called once per response
 ```
@@ -93,6 +93,22 @@ data embedded in a page beats fetching each record; one detail request per recor
 beats anything that needs a browser. The fewer and smaller the requests, the faster
 and gentler the run.
 
+**Go to the source's source.** When `findings.detail.upstream` is set, the record pages
+take those columns (`upstream.columns`) from a public register, whose open API Dapi
+called and found your sample's own values in. Read those columns from that API: in
+batches when it has one (`batch.url` with up to `batch.maxIds` IDs, joined by commas,
+from the list field `upstream.idField`), one request per record otherwise. Load the
+site's own record pages only for columns the register doesn't hold. When a register
+keeps different kinds of records in different endpoints (`apis`, e.g. main units and
+sub-units), ask each for every ID: an endpoint simply leaves out the IDs it doesn't
+hold. Format the register's fields the way the record page shows them (the sample
+says how: e.g. address lines joined by ", ", then postcode and town).
+
+**Shared values once.** A detail column marked `sameOnAllPages` read the same on every
+record page Dapi opened: it depends on something the list already says (a status, a
+kind). Fetch one page per distinct value of that list field and reuse it for every
+record with that value, instead of one page per record.
+
 **Emit each row the moment you have all its values.** Never collect rows to emit at
 the end: the user is watching the dataset fill. Rows that wait for a detail page
 travel in that request's `userData` and are emitted from its response.
@@ -155,7 +171,14 @@ finished fastest one at a time).
 - **Fewest requests first.** A list that can come in one big page (`paging.bigPage`)
   beats twenty small ones; a detail shared by several records is fetched once.
 - `maxRetries` — 3 on a site that answered cleanly; 5 when the measurements showed
-  errors or timeouts; 6–8 behind bot management or on a server that errors under load.
+  errors or timeouts; 6–8 behind bot management.
+- **A server that stalls** (timeouts or 5xx even one at a time in the pace test):
+  patience beats speed. `maxConcurrency` 1, `maxRetries` 15–20, `timeoutSecs` 120,
+  `retryPauseSecs` 30, so a stalled server gets time to recover instead of being asked
+  again at once. And make as few requests to it as you can (see "Fewest requests").
+- `timeoutSecs` — how long one request may take: about ten times the slowest measured
+  answer, at least 30, 120 for big pages or slow servers. `retryPauseSecs` — 0 unless
+  the server stalls.
 
 Dapi watches the run: the frame eases off a site that starts answering with errors,
 and a run that breaks is stopped and comes back to you with its log to fix.

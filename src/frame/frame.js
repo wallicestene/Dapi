@@ -46,10 +46,13 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const tuning = {
     maxConcurrency: clamp(maxConcurrency ?? proposed.maxConcurrency, 1, 20, 4),
     maxRequestsPerMinute: clamp(proposed.maxRequestsPerMinute, 30, 1200, 600),
-    // Up to 8: sites behind bot management refuse a share of fresh residential IPs too.
-    maxRetries: clamp(proposed.maxRetries, 1, 8, 3),
+    // Up to 20: a server that stalls for minutes at a time needs patience, not speed.
+    maxRetries: clamp(proposed.maxRetries, 1, 20, 3),
+    // How long one request may take, and how long to wait before retrying a failed one.
+    timeoutSecs: clamp(proposed.timeoutSecs, 15, 300, 120),
+    retryPauseSecs: clamp(proposed.retryPauseSecs, 0, 60, 0),
   };
-  console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries`);
+  console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries, ${tuning.timeoutSecs} s timeout${tuning.retryPauseSecs ? `, ${tuning.retryPauseSecs} s pause before a retry` : ''}`);
 
   // Apify Proxy, when the site part asks for it (the investigation showed the site
   // blocks cloud IPs or serves content by country). Recorded in every receipt.
@@ -291,8 +294,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     maxConcurrency: tuning.maxConcurrency,
     maxRequestsPerMinute: tuning.maxRequestsPerMinute,
     maxRequestRetries: tuning.maxRetries,
-    // Slow government servers: a 2 MB page can take minutes.
-    navigationTimeoutSecs: 300,
+    navigationTimeoutSecs: tuning.timeoutSecs,
     requestHandlerTimeoutSecs: 120,
     respectRobotsTxtFile: !robotsOverride,
     onSkippedRequest: ({ url, reason }) => {
@@ -373,8 +375,9 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     // missing columns blank and marked unavailable in their receipts.
     // Every failed attempt, before its retry: a site answering 5xx, 429 or timing out
     // is struggling, so ease off (see backOff below).
-    errorHandler(_context, error) {
+    async errorHandler(_context, error) {
       if (/\b(5\d\d|429)\b|timed? ?out|ETIMEDOUT|ECONNRESET/i.test(error.message)) backOff();
+      if (tuning.retryPauseSecs) await new Promise((r) => setTimeout(r, tuning.retryPauseSecs * 1000));
     },
     async failedRequestHandler({ request }, error) {
       const reason = error.message.split('\n')[0];
