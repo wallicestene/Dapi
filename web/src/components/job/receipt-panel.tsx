@@ -60,7 +60,7 @@ export function ReceiptPanel({ job, events, selected }: { job: Job; events: JobE
   }
 
   return (
-    <aside aria-label="Receipt" className="flex flex-col gap-3 lg:sticky lg:top-4">
+    <aside aria-label="Receipt" className="flex flex-col gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-15rem)] lg:overflow-y-auto">
       <section className="rounded-lg border bg-sheet px-5 py-4">
         <h2 className="text-[13px] font-semibold text-ink-2">
           Row {selected.row + 1} · {selected.column}

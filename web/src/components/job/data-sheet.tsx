@@ -20,7 +20,7 @@ const PAGE = 50;
 // The identity column stays in view while the rest scroll sideways.
 const STICKY = "sticky left-12 z-[1] shadow-[1px_0_0_var(--rule)]";
 // Numbers and dates line up on their right edge, like figures on a working paper.
-const numeric = (v: string) => /^-?[\d,.]+$/.test(v.trim()) || /^\d{1,2} [A-Z][a-z]{2} \d{4}$/.test(v.trim()) || /^\d{4}-\d{2}-\d{2}/.test(v.trim());
+const numeric = (v: string) => /^-?[\d,.]+$/.test(v.trim()) || /^(\d{1,2} )?[A-Z][a-z]{2} \d{4}$/.test(v.trim()) || /^\d{4}-\d{2}-\d{2}/.test(v.trim());
 
 export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Selection | null; onSelect: (s: Selection) => void }) {
   const live = job.status === "running";
@@ -118,7 +118,7 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
         )}
       </div>
 
-      <div className="max-h-[calc(100vh-330px)] min-h-[260px] overflow-auto">
+      <div className={cn("max-h-[calc(100vh-330px)] overflow-auto", (!page || page.rows.length >= 6) && "min-h-[260px]")}>
         <table className="w-max min-w-full border-collapse text-[13px]">
           <thead className="sticky top-0 z-10 bg-sheet">
             <tr className="border-b">

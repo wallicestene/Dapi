@@ -17,9 +17,10 @@ Hackathon, run by Meta and Cerebral Valley. Built Oct 26 – Nov 4, 2026.
 
 Goal: top 5 in the indie track, plus bonus prizes.
 
-**Current status (Oct 27):** architecture not finalised. Running throwaway spikes
-under `spike/` to test two assumptions before committing — see Open decisions at
-the end of this file. Nothing under `spike/` is production code.
+**Current status (Nov 1):** the pipeline runs end to end from a spec to a delivered
+dataset on Apify (`src/`, driven per job by `src/jobs/run-job.js`), and the front door
+(`web/`, Next.js) shows each job live with receipts. Design system in `DESIGN.md`,
+product context in `PRODUCT.md`. Nothing under `spike/` is production code.
 
 ---
 

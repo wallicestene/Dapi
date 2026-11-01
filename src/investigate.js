@@ -69,7 +69,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
     onEvent({
       kind: 'source',
       text: list.embedded
-        ? `The records are embedded in the page itself (${list.records.count} rows${list.siblings?.length ? ` in ${list.siblings.length + 1} tables` : ''}): no need to parse the visible page.`
+        ? `The records are embedded in the page itself (${list.records.count + (list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)} rows${list.siblings?.length ? ` in ${list.siblings.length + 1} tables` : ''}): no need to parse the visible page.`
         : `Found the site's own data feed: ${list.capture.method} ${list.capture.url.split('?')[0]} returns ${list.records.count} records as JSON. Calling it directly instead of parsing the page.`,
       route: list.embedded ? 'embedded' : 'feed',
       request: { method: list.capture.method, url: list.capture.url, payload: list.capture.payload ?? null },

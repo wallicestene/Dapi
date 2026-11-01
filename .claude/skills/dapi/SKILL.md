@@ -84,6 +84,13 @@ The owner wants this updated as we go, one step at a time.
   finished jobs anyone can explore; live new jobs are shown in the video (credits
   are limited). Design must avoid the generic AI-SaaS look: the visual direction is
   chosen on impeccable's decision page, product context is in `PRODUCT.md`.
+- **2026-10-31** Visual direction (owner's pick on the decision page): **Audit Working
+  Papers**. Every value carries an auditor's tick (traced, agreed to sample, near,
+  footed, missing); the dataset is footed against the source's own count on a double
+  rule. Pale green-grey paper, graphite, two pencil colours on data only. DESIGN.md
+  records the system.
+- **2026-11-01** The spec reader flags personal-data columns; a job asking for any is
+  refused, alongside bot walls and sources with no data route.
 
 ## Findings
 
@@ -501,6 +508,39 @@ run in full on Apify with no human edits:
 - The GPTW run **resumed once by itself** (an Apify migration, no one pressed
   anything) and finished with no rows read twice: the streaming and saved-state work
   held under a real interruption, not only the staged abort.
+
+### Job runner and front door (2026-11-01)
+
+- **Job runner** (`src/jobs/run-job.js`): one process per job, spec → site → code →
+  plan (waits for Go) → run → footed. Every step writes events to
+  `jobs/<id>/events.jsonl`; `job.json` holds the summary; rows are copied from the
+  Apify dataset into `rows.jsonl` every 3 s; the live "rows the source says exist"
+  comes from the frame's saved state (`DAPI_FRAME_STATE`). The web app only reads the
+  folder, so a job survives the web server restarting.
+- First full jobs through it: **Better Work** spec PDF → 430 of 430 rows in ~3 min
+  end to end, the extraction passed on attempt 1. **GPTW** passed on attempt 1 too
+  (the source lists 5,161 companies today, up from 5,158). **CnVerify** refused in 33 s
+  with three reasons: HTTP 403 (Cloudflare check, screenshot kept), no data source,
+  and personal data in the spec.
+- **Personal data:** the spec reader now asks Muse Spark for `personalData` columns
+  (a named private person, their phone, email, home address; company data is not
+  personal). A job that asks for any is refused, per the scope rules. On CnVerify it
+  flagged "Legal representative" and not the company phone and email.
+- **Front door** (`web/`, Next.js 16, shadcn/ui on Radix + Tailwind): jobs list, new
+  job (spec file or pasted text), and the job screen: six-step strip, the ticked data
+  sheet with scope filters and the footing line, the receipt rail (request, the
+  server's own words with the value's line marked, SHA-256 re-checked in the browser
+  with `crypto.subtle`), site tab with the screenshot Muse Spark read, code attempts,
+  sample checks, footing. Live over server-sent events.
+- Visual direction chosen by the owner on impeccable's decision page: **Audit Working
+  Papers** (DESIGN.md). Checks: taste lint and inspector 0 FAIL, impeccable detector
+  clean, finish review "ship" after three fixes.
+- Next.js 16 gotchas: create-next-app turns on Cache Components, which would
+  prerender pages that read job folders; it's off. The web app loads `../src` modules
+  at run time (`import(/* turbopackIgnore */ fileURL)`) so Turbopack's root stays
+  `web/` and never watches `jobs/` or `storage/`.
+- **21st.dev** installs now need a signed-in account: its registry returns 403
+  "Authentication required" for components (checked 2026-11-01). Not installed yet.
 
 ### Receipt view (2026-10-30)
 

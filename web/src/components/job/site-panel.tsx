@@ -48,7 +48,7 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
             req={source.route === "embedded" ? undefined : (source.request as Req)}
             lines={[
               source.route === "embedded"
-                ? `${n(source.recordCount as number)} rows sit in data embedded in the HTML${(source.siblings as unknown[]).length ? `, split across ${(source.siblings as unknown[]).length + 1} tables` : ""}. Dapi reads them directly instead of parsing the visible page.`
+                ? `${n((source.recordCount as number) + (source.siblings as { recordCount: number }[]).reduce((t, s) => t + s.recordCount, 0))} rows sit in data embedded in the HTML${(source.siblings as unknown[]).length ? `, split across ${(source.siblings as unknown[]).length + 1} tables` : ""}. Dapi reads them directly instead of parsing the visible page.`
                 : `Returns ${n(source.recordCount as number)} records as JSON: the list the page shows, at the source. Dapi calls it directly instead of parsing the page.`,
               `Holds ${(source.columns as string[]).join(", ")}.`,
             ]}
