@@ -97,7 +97,7 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
     {
       tab: "samples",
       label: label("samples", "Samples", "Checking your samples", "Samples agreed"),
-      line: samples.length ? [`${exact} exact`, near && nearLine(samples), bad && `${bad} differ`].filter(Boolean).join(", ") : notRun ?? "against your rows",
+      line: samples.length ? sampleLine(samples) : notRun ?? "against your rows",
       tick: !samples.length ? null : bad ? "fail" : near ? "near" : "sample",
       state: state("samples"),
     },
@@ -122,6 +122,22 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
     },
   ];
   return steps;
+}
+
+// The samples' values: how many came out exactly, and what the rest are.
+function sampleLine(samples: SampleCheck[]) {
+  const checks = samples.flatMap((s) => s.checks);
+  const exactValues = checks.filter((c) => c.status === "exact").length;
+  const failing = checks.filter((c) => c.status === "fail").length;
+  const missingSamples = samples.filter((s) => s.status === "not found").length;
+  return [
+    `${exactValues} of ${checks.length} values exact`,
+    nearLine(samples),
+    failing && `${failing} differ`,
+    missingSamples && `${missingSamples} sample${missingSamples === 1 ? "" : "s"} not found`,
+  ]
+    .filter(Boolean)
+    .join(", ");
 }
 
 // What the near matches are, in the user's terms: "1 spacing", "1 typo in the spec".
