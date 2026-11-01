@@ -125,15 +125,25 @@ not a needlessly slow one either: the user is waiting.
 
 The frame clamps these to safe limits. Say in `notes` how you got the numbers.
 
-**Getting through: use what Apify provides, when the evidence says so.** Crawlee
-already sends browser-like headers and TLS fingerprints and rotates sessions. When
-the findings show the site blocks or rate-limits cloud IPs, or serves different
-content by country, set `config.proxy`:
-`{ groups: ['RESIDENTIAL'] }` or `{ groups: ['DATACENTER'] }`, with `countryCode`
-(e.g. `'KE'`) when content depends on location. Leave it out otherwise: residential
-traffic costs money. The frame records in each receipt how its response was fetched.
-Never: CAPTCHA or challenge-solving services, logins or paywalls. If the site still
-refuses, let the request fail so the frame reports it. Public data only.
+**Getting through: use what Apify provides.** Collect whatever the spec asks for that
+the site shows, people's names and contacts included. Crawlee already sends
+browser-like headers and TLS fingerprints and keeps sessions; when a response is
+blocked (401, 403, 429, or a bot-check page) the frame retires the session and retries
+from a fresh one, so a fresh IP. Set `config.proxy` from the evidence:
+`findings.access.via` (how the investigation got in) and
+`findings.reachability.recommendation` (what worked from Apify's servers).
+
+- `'datacenter'` → `{ groups: ['DATACENTER'] }`; `'residential'` →
+  `{ groups: ['RESIDENTIAL'] }`; add `countryCode` (e.g. `'IN'`) when content
+  depends on location.
+- With a proxy, set `maxRetries` to 5, so a blocked request gets several fresh IPs.
+- `'direct'` → leave `proxy` out: proxy traffic costs money, residential most.
+
+The frame records in each receipt how its response was fetched. Never: CAPTCHA or
+challenge-solving services, Apify's `UNBLOCKER` group, logins or paywalls. A check
+that wants a person (a CAPTCHA, "verify you are human", press and hold) is set aside:
+the frame fails that request at once and reports it, and its rows come with their
+`fallback`.
 
 **robots.txt is the frame's job.** Use the URLs the findings give: the investigator
 already chose allowed ones where an equivalent exists. Don't rewrite URLs to dodge a

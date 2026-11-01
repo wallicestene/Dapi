@@ -68,9 +68,10 @@ Dapi investigates the way a professional does, and shows its work.
 
 - Routes built: a JSON endpoint (API), data embedded in HTML, HTML detail pages. Browser
   (Playwright) and hybrid routes are not built.
-- Public data only, meaning what the site shows any visitor, people's published names and
-  contacts included; no logins, paywalls, CAPTCHA solving or getting past any bot check. Apify Proxy (datacenter or
-  residential) only when the investigation shows a site needs it, recorded in every receipt.
+- Whatever the spec asks for and the site shows any visitor, people's names and contacts
+  included. Blocks are worked through with Apify's fresh IPs and datacenter and residential
+  proxies; a check that wants a person to act (a CAPTCHA, "verify you are human") is set
+  aside. No logins or paywalls. Proxies only when the investigation shows a site needs them, recorded in every receipt.
   robots.txt is obeyed by default; fetching despite it needs the user's approval per job and
   is recorded.
 - Meta models in use: Muse Spark reads spec PDFs, matches columns to fields, looks at page

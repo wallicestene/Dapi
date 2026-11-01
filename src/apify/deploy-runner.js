@@ -22,6 +22,7 @@ const FILES = {
   'src/compare.js': 'src/compare.js',
   'src/embedded.js': 'src/embedded.js',
   'src/select.js': 'src/select.js',
+  'src/blocks.js': 'src/blocks.js',
 };
 
 const sourceFiles = Object.entries(FILES).map(([name, from]) => ({

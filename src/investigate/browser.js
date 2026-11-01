@@ -4,9 +4,11 @@
 
 import { chromium } from 'playwright';
 import { parseJson } from './data.js';
+import { classifyBlock } from '../blocks.js';
 
-export async function openPage(url) {
-  const browser = await chromium.launch({ headless: true });
+// proxy: Playwright's { server, username, password } for Apify Proxy, or none.
+export async function openPage(url, { proxy } = {}) {
+  const browser = await chromium.launch({ headless: true, ...(proxy && { proxy }) });
   // Service workers can answer requests from cache and hide the real network call.
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 1000 } });
   const page = await context.newPage();
@@ -76,10 +78,33 @@ export async function openPage(url) {
   }
   await quiet(1500, 20_000);
 
+  // A bot check that clears itself in a real browser (Cloudflare's "Just a moment",
+  // "Verifying you are human"): wait it out, then read the page it lets through.
+  let check = classifyBlock({ status, body: html ?? '' });
+  if (check?.kind === 'blocked') {
+    const cleared = await page
+      .waitForFunction(
+        () => !/just a moment|verifying you are human|checking your browser|one more step/i.test(`${document.title} ${document.body?.innerText.slice(0, 600) ?? ''}`),
+        null,
+        { timeout: 25_000 }
+      )
+      .then(() => true)
+      .catch(() => false);
+    if (cleared) {
+      await page.waitForLoadState('domcontentloaded').catch(() => {});
+      await quiet(1500, 20_000);
+      html = await page.content();
+      status = 200;
+    }
+  }
+  // Widgets that ask for a person arrive by script, so the rendered page decides.
+  check = classifyBlock({ status, body: html ?? '' }) && classifyBlock({ status, body: await page.content().catch(() => html ?? '') });
+
   return {
     page,
     status,
     html,
+    check,
     finalUrl: page.url(),
     captured,
     // Runs an action (a click) and returns the JSON captured because of it.

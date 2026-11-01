@@ -16,6 +16,7 @@ import { matchColumns, pickControl } from './investigate/spark.js';
 import { mapHtmlDetail } from './investigate/html.js';
 import { replay, replayEmbedded, sameContext } from './investigate/replay.js';
 import { extractEmbedded } from './embedded.js';
+import { request, useProxy, currentProxy } from './investigate/http.js';
 
 export async function investigate(spec, { onEvent = () => {} } = {}) {
   const notes = [];
@@ -26,12 +27,15 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
   };
   const wanted = spec.columns.filter((c) => c.constant === null);
 
-  const session = await openPage(spec.sourceUrl);
+  const session = await openByWays(spec.sourceUrl, { onEvent, notes });
+  if (!session.page) {
+    return { ...report({ spec, session, list: null, detail: null, wanted, notes, tokens }), access: session.access };
+  }
   if (!session.html) {
     // The browser gave up before the document arrived; the embedded data is still
     // worth a plain request.
     try {
-      const res = await fetch(spec.sourceUrl, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(300_000) });
+      const res = await request(spec.sourceUrl, { timeoutMs: 300_000 });
       if (res.ok) {
         session.html = await res.text();
         session.status ??= res.status;
@@ -111,10 +115,69 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
         results: reachability.results ?? [],
       });
     }
-    return { ...report({ spec, session, list, detail, wanted, notes, tokens }), reachability };
+    return { ...report({ spec, session, list, detail, wanted, notes, tokens }), reachability, access: session.access };
   } finally {
     await session.close();
+    useProxy(undefined);
   }
+}
+
+// The ways in, cheapest first. A site that blocks the first visit is tried again
+// through Apify Proxy, datacenter then residential, each with a fresh IP. A check that
+// wants a person to click or solve something is set aside (owner's call, 2026-11-01);
+// so is a site that still blocks every way. Apify's UNBLOCKER group is never used: it
+// solves challenges.
+const WAYS = ['direct', 'datacenter', 'residential'];
+
+async function openByWays(url, { onEvent, notes }) {
+  const attempts = [];
+  for (const way of WAYS) {
+    const proxy = way === 'direct' ? null : await apifyProxy(way, notes);
+    if (way !== 'direct' && !proxy) break;
+    const session = await openPage(url, { proxy });
+    if (!session.check) {
+      if (proxy) {
+        useProxy(`http://${proxy.username}:${proxy.password}@proxy.apify.com:8000`);
+        notes.push(`The site blocked ${attempts.map((a) => a.way).join(' and ')}; the investigation went through Apify's ${way} proxy.`);
+      }
+      session.access = { via: way, attempts };
+      return session;
+    }
+    attempts.push({ way, kind: session.check.kind, what: session.check.what, status: session.status ?? null });
+    const next = WAYS[WAYS.indexOf(way) + 1];
+    onEvent({
+      kind: 'blocked',
+      way,
+      check: session.check,
+      text:
+        session.check.kind === 'human'
+          ? `${wayName(way)} the site asked for ${session.check.what}: something only a person can do. Dapi sets those aside${next ? `, and tries Apify's ${next} proxy in case it isn't asked there.` : '.'}`
+          : `${wayName(way)} the site blocked the visit (${session.check.what}).${next ? ` Trying again through Apify's ${next} proxy, from a fresh IP.` : ''}`,
+      image: await session.page.screenshot().catch(() => null),
+    });
+    await session.close();
+  }
+  return { page: null, status: attempts.at(-1)?.status ?? null, captured: [], close: async () => {}, access: { via: null, attempts } };
+}
+
+const wayName = (way) => (way === 'direct' ? 'Visiting directly,' : `Through Apify's ${way} proxy,`);
+
+// Apify Proxy for Playwright, from the account's own proxy password (never logged).
+let proxyPassword;
+async function apifyProxy(way, notes) {
+  try {
+    if (!proxyPassword) {
+      const { apify } = await import('./apify/client.js');
+      proxyPassword = (await apify.user('me').get()).proxy?.password;
+    }
+  } catch {
+    // no Apify token: only the direct way
+  }
+  if (!proxyPassword) {
+    notes.push('Apify Proxy is not available to the investigation, so only the direct way was tried.');
+    return null;
+  }
+  return { server: 'http://proxy.apify.com:8000', username: way === 'residential' ? 'groups-RESIDENTIAL' : 'auto', password: proxyPassword };
 }
 
 // How the site answers Apify's servers, where the extraction will run: the probe
@@ -150,7 +213,7 @@ async function respectRobots(list, notes, onEvent) {
   const url = list.capture.url;
   let robots;
   try {
-    robots = await RobotsTxtFile.find(url);
+    robots = await RobotsTxtFile.find(url, currentProxy());
   } catch {
     onEvent({ kind: 'robots', allowed: true, text: 'The site has no robots.txt: nothing is off limits.' });
     return; // no robots.txt: everything is allowed
@@ -358,7 +421,7 @@ async function htmlDetail({ control, shownRecord, record, missing, sample, count
   if (!url) return null;
 
   const started = Date.now();
-  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(60_000) });
+  const res = await request(url);
   if (!res.ok) {
     notes.push(`The sample's detail page ${url} returned HTTP ${res.status} to a plain request.`);
     return null;

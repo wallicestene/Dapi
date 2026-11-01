@@ -110,15 +110,27 @@ try {
   process.exit(1);
 }
 
-// A plain no, before any code is written, when the site can't be extracted with the
-// routes Dapi has, or only by getting past a bot check, which Dapi never does. Public
-// data is fine, people's published names and contacts included (owner's call,
-// 2026-11-01); a check built to stop bots is where Dapi stops.
+// A plain no, before any code is written. Owner's line (2026-11-01): whatever the spec
+// asks for and the site shows, Dapi collects, people's names and contacts included;
+// blocks are worked through with fresh IPs and Apify's datacenter and residential
+// proxies; a check that wants a person to click, solve or hold something is set aside.
 function refuse(f) {
   const reasons = [];
-  if (f.pageStatus >= 400) reasons.push(`The page answered HTTP ${f.pageStatus}: the site puts automated visitors through a bot check, and Dapi doesn't get past those.`);
-  if (!f.list) reasons.push("Neither the site's own data requests nor its embedded data hold the records. Reading the visible page alone is a route Dapi doesn't run yet.");
-  if (f.reachability && !f.reachability.recommendation) reasons.push("From Apify's servers, the site refused every way Dapi is allowed to ask (direct, datacenter and residential proxy). Dapi won't solve CAPTCHAs or get around bot walls.");
+  const tried = f.access?.attempts ?? [];
+  if (!f.access?.via && tried.length) {
+    const human = tried.find((a) => a.kind === 'human');
+    reasons.push(
+      human
+        ? `Every way Dapi may use (${tried.map((a) => a.way).join(', ')}) met ${human.what}: a check only a person can pass. Dapi sets those aside.`
+        : `The site blocked every way Dapi tried (${tried.map((a) => a.way).join(', ')}), each from a fresh IP.`
+    );
+  } else if (!f.list) {
+    reasons.push("Neither the site's own data requests nor its embedded data hold the records. Reading the visible page alone is a route Dapi doesn't run yet.");
+  }
+  if (f.reachability && !f.reachability.recommendation) {
+    const human = f.reachability.results?.some((r) => r.human);
+    reasons.push(`From Apify's servers, where the run happens, the site refused every way: direct, datacenter and residential proxy${human ? ', with a check only a person can pass' : ''}.`);
+  }
   if (!reasons.length) return null;
   return { text: "Dapi can't extract this source.", reasons };
 }

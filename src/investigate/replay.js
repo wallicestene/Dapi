@@ -3,6 +3,7 @@
 // Ported from spike/network-probe.js.
 
 import { parseJson, findRecords } from './data.js';
+import { request } from './http.js';
 import { extractEmbedded } from '../embedded.js';
 
 // Embedded data replays if a plain GET of the page holds the same literal, at the same
@@ -14,7 +15,7 @@ export async function replayEmbedded(url, context, recordsPath, count) {
   try {
     // Pages with embedded data can be megabytes from a slow server (GPTW: 2.4 MB, ~30 s).
     const started = Date.now();
-    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(300_000) });
+    const res = await request(url, { timeoutMs: 300_000 });
     if (!res.ok) return { works: null, needsSession: null, tried: [`plain GET: HTTP ${res.status}`] };
     const html = await res.text();
     const timing = { ms: Date.now() - started, bytes: Buffer.byteLength(html) };
@@ -72,14 +73,14 @@ export async function replay(capture, recordsPath) {
 // Counts only if the same records come back: a block page can return 200 too.
 async function tryOnce(capture, headers, recordsPath) {
   try {
-    const res = await fetch(capture.url, {
+    const res = await request(capture.url, {
       method: capture.method,
       headers,
       body: capture.method === 'GET' ? undefined : (capture.payload ?? undefined),
-      signal: AbortSignal.timeout(15_000),
+      timeoutMs: 15_000,
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    const bytes = Buffer.from(await res.arrayBuffer());
+    const bytes = await res.buffer();
     if (findRecords(parseJson(bytes))?.path !== recordsPath) return { ok: false, error: `HTTP ${res.status} but different content` };
     return { ok: true, bytes: bytes.length };
   } catch (err) {

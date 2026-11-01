@@ -87,13 +87,16 @@ must never quietly hand over a short dataset.
 
 ### Scope rules
 
-Public sources only — data any visitor can see without authentication. That
-includes people's names, emails or websites when the site itself publishes them to
-every visitor (owner's call, Nov 1). No logins, no paywalls, no terms-of-service
-violations, and **never getting past a bot check**: no Cloudflare or Turnstile
-challenges, no CAPTCHAs, nothing built to stop automated visitors. A site that puts
-Dapi through one gets a plain no. This is both the hackathon rule on rights and the
-honest position for the product.
+Public sources only — data any visitor can see without authentication. If the spec
+asks for it and the site shows it, Dapi collects it, people's names, emails and
+websites included (owner's call, Nov 1). No logins, no paywalls, no terms-of-service
+violations.
+
+Blocks are worked through with what Apify provides: fresh IPs, datacenter and
+residential proxies, sessions and fingerprints, and waiting out a check that clears
+itself. **The one line: a check that wants a person to act** (a CAPTCHA, a "verify
+you are human" box, press and hold). Dapi sets those aside and never uses a
+challenge-solving service or Apify's `UNBLOCKER` group. Shared check: `src/blocks.js`.
 
 ### Demo beats, in order
 
@@ -304,8 +307,10 @@ By pipeline stage:
 - **Completeness** — `failedRequestHandler` fires once per page that failed all
   retries. That list is the "which pages" in the missing-records report.
 
-Scope settings: leave `retryOnBlocked` off — it tries to get past Cloudflare bot
-protection, which breaks the scope rules. Turn `respectRobotsTxtFile` on.
+Scope settings: `retryOnBlocked` stays off; the frame does its own block handling
+with `src/blocks.js` (a blocked response retires the session and retries from a fresh
+IP; a check that wants a person fails the request at once). Turn
+`respectRobotsTxtFile` on.
 
 Dataset item count, verified Oct 28: `dataset.get().itemCount` lags a few seconds
 after a run (it read 0 for a 427-item dataset); `listItems({ limit: 1 }).total` is

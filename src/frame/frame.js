@@ -9,10 +9,11 @@
 import { createHash } from 'node:crypto';
 import { Actor } from 'apify';
 import * as cheerio from 'cheerio';
-import { HttpCrawler, RobotsTxtFile, log, LogLevel } from 'crawlee';
+import { HttpCrawler, NonRetryableError, RobotsTxtFile, log, LogLevel } from 'crawlee';
 import { compareSamples, formatReport } from '../compare.js';
 import { extractEmbedded } from '../embedded.js';
 import { select } from '../select.js';
+import { classifyBlock } from '../blocks.js';
 
 // Saved in the run's default key-value store with every push. Apify keeps that store
 // when a run is resurrected or migrated, so the run reloads it and carries on.
@@ -296,9 +297,18 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     onSkippedRequest: ({ url, reason }) => {
       state.skipped.push({ url, reason });
     },
-    async requestHandler({ request, response, body, json }) {
-      const evidence = await capture(request, response, body);
+    async requestHandler({ request, response, body, json, session }) {
       const text = Buffer.isBuffer(body) ? body.toString('utf8') : body;
+      // A bot check behind a 200 (blocked statuses never reach here: Crawlee retires
+      // the session and retries them). One that wants a person fails at once and is
+      // reported; any other is retried from a fresh session, so a fresh IP.
+      const check = classifyBlock({ status: response.statusCode, body: text });
+      if (check?.kind === 'human') throw new NonRetryableError(`the site asked for ${check.what}, which only a person can pass; Dapi sets those aside`);
+      if (check) {
+        session?.retire();
+        throw new Error(`blocked by ${check.what}; retrying from a fresh IP`);
+      }
+      const evidence = await capture(request, response, body);
       // Parsed only if the site part asks: most responses need one or the other.
       let $;
       let embedded;

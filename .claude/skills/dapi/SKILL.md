@@ -89,12 +89,17 @@ The owner wants this updated as we go, one step at a time.
   footed, missing); the dataset is footed against the source's own count on a double
   rule. Pale green-grey paper, graphite, two pencil colours on data only. DESIGN.md
   records the system.
-- **2026-11-01** (owner's call, replacing the same-day rule that refused personal data)
-  Public data is fine to collect, including people's names, emails or websites when
-  the site shows them to every visitor. The line is bot checks: Dapi never gets past a
-  Cloudflare/Turnstile challenge, a CAPTCHA or anything built to stop bots; it says no.
-  Muse Spark still marks columns that name or contact people, as information in the
-  spec and the plan, never as a reason to refuse.
+- **2026-11-01** (owner's call, replacing the same-day rule that refused personal data,
+  and widening the 2026-10-30 proxy rule) If the spec asks for it and the site shows
+  it, Dapi collects it, people's names, emails and websites included. Muse Spark marks
+  columns that name or contact people, as information only. Blocks are worked
+  through with what Apify provides: fresh IPs, datacenter then residential proxy,
+  sessions, fingerprints, waiting out a check that clears itself. The one line is a
+  check that wants a person to act (CAPTCHA, "verify you are human", press and hold):
+  set aside, never solved, no challenge-solving services, no `UNBLOCKER` group. When
+  one way in meets such a check, the next way is still tried (a fresh IP may not be
+  asked); if every way is asked, Dapi says no. Implemented in `src/blocks.js`, the
+  investigator's ways in, the probe and the frame.
 
 ## Findings
 
@@ -292,8 +297,9 @@ industry class, address, province and city.
 
 - **Blocked on every path.** A Cloudflare managed challenge (Turnstile) answers the
   search page, `robots.txt` and the terms pages alike; the headless browser gets 403.
-  The operator has chosen to block automated access. Per the scope rules and the
-  `retryOnBlocked` decision, Dapi stops here.
+  Re-checked 2026-11-01 through all three ways (direct, Apify datacenter, Apify
+  residential): every one shows "Verify you are human" with a checkbox, so Dapi sets
+  it aside, with a screenshot of each.
 - The spec also asks for a named legal representative, phone and email. If the site
   showed them to any visitor, Dapi could collect them (owner's call, 2026-11-01); the
   block is the bot check alone.

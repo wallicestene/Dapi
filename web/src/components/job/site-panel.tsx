@@ -125,6 +125,16 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
           />
         )}
         {page?.image && <Shot job={job} image={page.image} caption={`The page as Dapi first opened it, HTTP ${page.status}.`} />}
+        {site
+          .filter((e) => e.kind === "blocked" && e.image)
+          .map((e) => (
+            <Shot
+              key={e.n}
+              job={job}
+              image={e.image!}
+              caption={`What the site showed ${e.way === "direct" ? "on a direct visit" : `through Apify's ${e.way} proxy`}: ${(e.check as { what: string }).what}.`}
+            />
+          ))}
       </div>
     </div>
   );

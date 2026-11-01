@@ -6,12 +6,11 @@
 
 import { Actor } from 'apify';
 import { gotScraping } from 'crawlee';
+import { classifyBlock } from '../blocks.js';
 
 // Cheapest first: residential traffic costs money, so it's tried last.
 const MODES = ['direct', 'datacenter', 'residential'];
 
-// Signs that the site refused, even behind a 200.
-const BLOCK_SIGNS = /just a moment|cf-chl|captcha|access denied|attention required|are you a robot|request blocked/i;
 
 // requests: [{ label, url, method, payload, headers, expect }], where expect is a
 // value that must be in the body for the response to count (a sample's name).
@@ -52,7 +51,9 @@ async function fetchOnce(r, mode, proxyConfiguration) {
       throwHttpErrors: false,
     });
     const body = String(res.body ?? '');
-    const blocked = [401, 403, 407, 429, 503].includes(res.statusCode) || BLOCK_SIGNS.test(body.slice(0, 5000));
+    // A refusal even behind a 200; one that wants a person is noted as such.
+    const check = classifyBlock({ status: res.statusCode, body });
+    const blocked = Boolean(check);
     const hasData = !r.expect || body.includes(r.expect);
     return {
       mode,
@@ -61,6 +62,7 @@ async function fetchOnce(r, mode, proxyConfiguration) {
       ms: Date.now() - started,
       bytes: Buffer.byteLength(body),
       blocked,
+      ...(check?.kind === 'human' && { human: check.what }),
       hasData,
       works: res.statusCode < 400 && !blocked && hasData,
     };
