@@ -251,10 +251,13 @@ async function recordPageDetail({ recordPage, list, missing, sample, count, note
     notes.push(`No field of the list records appears in ${recordPage.url}, so the record pages can't be addressed per record.`);
     return null;
   }
+  // Fetched again without a browser, to confirm the run can; the browser's copy of the
+  // page stands in when the site is too slow to answer just now.
   const started = Date.now();
-  const res = await request(recordPage.url);
+  const res = await request(recordPage.url, { timeoutMs: 120_000 }).catch((err) => ({ ok: false, status: err.code ?? err.name }));
   const html = res.ok ? await res.text() : recordPage.html;
   const timing = { ms: Date.now() - started, bytes: Buffer.byteLength(html) };
+  if (!res.ok) notes.push(`A plain request for ${recordPage.url} didn't answer in time (${res.status}); the browser's copy of the page was used to map it.`);
   const { fields, jsonLd } = await mapHtmlDetail({ html, missing, sample, count });
 
   // Columns the sample's record leaves blank are often filled on other records' pages
@@ -717,7 +720,7 @@ async function htmlDetail({ control, shownRecord, record, missing, sample, count
   if (!url) return null;
 
   const started = Date.now();
-  const res = await request(url);
+  const res = await request(url, { timeoutMs: 120_000 }).catch((err) => ({ ok: false, status: err.code ?? err.name }));
   if (!res.ok) {
     notes.push(`The sample's detail page ${url} returned HTTP ${res.status} to a plain request.`);
     return null;
