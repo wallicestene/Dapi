@@ -18,6 +18,16 @@ import { createJob, jobDir, readJson, writeJson, updateJob, emit } from './store
 import { readSpec } from '../read-spec.js';
 import { investigate } from '../investigate.js';
 import { writeAndTest } from '../write-site.js';
+import { translateValues } from '../translate.js';
+import { compareSamples } from '../compare.js';
+
+const language = (code) => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
 
 const args = process.argv.slice(2);
 let id = args[0];
@@ -71,13 +81,20 @@ try {
     process.exit(0);
   }
 
+  // The samples in the site's own words, when the investigation aligned them with a
+  // record page: the extraction is written, tested and run against these; the user's
+  // own samples are checked again after any translation.
+  const runSpec = findings.sourceSamples ? { ...spec, samples: findings.sourceSamples } : spec;
+  if (findings.sourceSamples) writeJson(dir, 'spec.source.json', runSpec);
+  const runSpecPath = path.join(dir, findings.sourceSamples ? 'spec.source.json' : 'spec.json');
+
   // 3. The extraction: written by Muse Spark, tested against the spec's samples.
   step('code');
   say('code', { kind: 'start', text: 'Writing the extraction and testing it against your sample rows.' });
   let writerNotes = '';
   const written = await writeAndTest({
-    spec,
-    specPath: path.join(dir, 'spec.json'),
+    spec: runSpec,
+    specPath: runSpecPath,
     findings,
     outPath: path.join(dir, 'site.js'),
     onEvent: (e) => {
@@ -110,7 +127,7 @@ try {
 
   // 5. The run.
   step('run');
-  await runOnApify({ spec, robotsOverride: Boolean(approval.robotsOverride), records: plan.records });
+  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? null, robotsOverride: Boolean(approval.robotsOverride), records: plan.records });
 } catch (err) {
   console.error(err);
   say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${err.message.split('\n')[0]}` });
@@ -183,11 +200,13 @@ function makePlan(f, config, notes, spec) {
     reasoning: notes,
     robotsQuestion: f.list.robotsBlocked ? `robots.txt disallows ${f.list.request.url}. Fetch it anyway?` : null,
     personalData: spec.personalData ?? [],
+    translate: f.samples?.translate ? { from: language(f.samples.translate.from), to: language(f.samples.translate.to), columns: f.samples.translate.columns } : null,
+    disputes: f.samples?.disputes ?? [],
     text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }
 
-async function runOnApify({ spec, robotsOverride, records }) {
+async function runOnApify({ spec, userSpec, translate, robotsOverride, records }) {
   const { apify, RUNNER } = await import('../apify/client.js');
   const { username } = await apify.user('me').get();
   const run = await apify.actor(`${username}/${RUNNER}`).start(
@@ -241,6 +260,7 @@ async function runOnApify({ spec, robotsOverride, records }) {
     await copy();
     if (copied < (report?.rows ?? 0)) await sleep(2000);
   }
+  if (translate) await translateRows({ translate, userSpec, report });
   writeJson(dir, 'report.json', report);
   step('footed');
   const short = report.completeness.filter((c) => c.expected !== null && c.got < c.expected);
@@ -258,6 +278,33 @@ async function runOnApify({ spec, robotsOverride, records }) {
   });
   const expected = report.completeness.reduce((n, c) => n + (c.expected ?? 0), 0);
   updateJob(dir, { status: 'done', rows: copied, expected, failedRequests: report.failed.length, finishedAt: new Date().toISOString() });
+}
+
+// Translates the columns the client's samples translated, each distinct value once,
+// keeping the site's own words in every row's "#original" for its receipt. Then the
+// client's own samples are checked against what they'll actually receive.
+async function translateRows({ translate, userSpec, report }) {
+  const rowsPath = path.join(dir, 'rows.jsonl');
+  const rows = fs.readFileSync(rowsPath, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const distinct = [...new Set(rows.flatMap((r) => translate.columns.map((c) => String(r[c] ?? ''))))].filter((v) => v.trim());
+  say('run', { kind: 'translating', text: `Your samples are in ${language(translate.to)}; the site is in ${language(translate.from)}. Muse Spark is translating ${distinct.length.toLocaleString('en-US')} distinct values in ${translate.columns.join(', ')}, following your samples' wording.` });
+  const { map } = await translateValues({ values: distinct, from: translate.from, to: translate.to, examples: translate.examples });
+  for (const row of rows) {
+    const original = {};
+    for (const c of translate.columns) {
+      const v = String(row[c] ?? '');
+      if (!v || !map.has(v) || map.get(v) === v) continue;
+      original[c] = v;
+      row[c] = map.get(v);
+    }
+    if (Object.keys(original).length) row['#original'] = original;
+  }
+  fs.writeFileSync(rowsPath, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const columns = userSpec.columns.map((c) => c.name);
+  report.sourceSamples = report.samples;
+  report.samples = compareSamples(rows.map((r) => Object.fromEntries(columns.map((c) => [c, r[c] ?? '']))), userSpec.samples);
+  report.translated = { from: translate.from, to: translate.to, columns: translate.columns, values: map.size };
+  say('run', { kind: 'translated', text: `Translated ${map.size.toLocaleString('en-US')} values into ${language(translate.to)}. Every receipt keeps the site's own words; the Apify dataset holds them as the site has them.` });
 }
 
 function sleep(ms) {

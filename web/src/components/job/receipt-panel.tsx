@@ -5,7 +5,7 @@ import { TICK_TEXT, TickMark } from "@/components/tick";
 import type { Job, JobEvent, Located, Receipt } from "@/lib/types";
 import type { Selection } from "./data-sheet";
 
-export function ReceiptPanel({ job, events, selected }: { job: Job; events: JobEvent[]; selected: Selection | null }) {
+export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: Job; events: JobEvent[]; selected: Selection | null; translatedFrom?: string | null }) {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const cell = selected?.cell;
@@ -78,6 +78,14 @@ export function ReceiptPanel({ job, events, selected }: { job: Job; events: JobE
                 TICK_TEXT.traced
               )}
             </Line>
+          )}
+          {cell.original && (
+            <li className="flex gap-2.5 py-2">
+              <span className="mt-0.5 w-3 shrink-0" />
+              <span>
+                Translated by Muse Spark{translatedFrom ? ` from ${translatedFrom}` : ""}, the way your samples are written. The site says <q>{cell.original}</q>, and that&apos;s what the evidence below holds.
+              </span>
+            </li>
           )}
           {cell.sample && (cell.tick === "sample" || cell.tick === "near" || cell.tick === "fail") && (
             <Line tick={cell.tick}>

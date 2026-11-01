@@ -371,6 +371,11 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     // A detail request that failed every retry still owes its rows: the site part can
     // attach them as `fallback` (list columns only), and they come out with the
     // missing columns blank and marked unavailable in their receipts.
+    // Every failed attempt, before its retry: a site answering 5xx, 429 or timing out
+    // is struggling, so ease off (see backOff below).
+    errorHandler(_context, error) {
+      if (/\b(5\d\d|429)\b|timed? ?out|ETIMEDOUT|ECONNRESET/i.test(error.message)) backOff();
+    },
     async failedRequestHandler({ request }, error) {
       const reason = error.message.split('\n')[0];
       const what = request.userData.note ?? request.url;
@@ -383,11 +388,33 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     },
   });
 
+  // Ease off a struggling site: halve the concurrency on server errors (at most every
+  // 20 s), then climb back one step after each 30 s without one, up to the setting.
+  let lastStruggle = 0;
+  let lastChange = 0;
+  function backOff() {
+    const pool = crawler.autoscaledPool;
+    const now = Date.now();
+    lastStruggle = now;
+    if (!pool || now - lastChange < 20_000 || pool.maxConcurrency <= 1) return;
+    pool.maxConcurrency = Math.max(1, Math.floor(pool.maxConcurrency / 2));
+    lastChange = now;
+    console.log(`The site is answering with errors: easing off to ${pool.maxConcurrency} at a time`);
+  }
+  const recover = setInterval(() => {
+    const pool = crawler.autoscaledPool;
+    if (!pool || pool.maxConcurrency >= tuning.maxConcurrency) return;
+    if (Date.now() - lastStruggle < 30_000 || Date.now() - lastChange < 30_000) return;
+    pool.maxConcurrency += 1;
+    lastChange = Date.now();
+  }, 5000);
+
   status(true);
   // On a resurrected run Crawlee's request queue already knows which requests are
   // done, so the start requests are skipped and the queue carries on.
   await crawler.run(site.start.map(toRequest));
   clearInterval(timer);
+  clearInterval(recover);
   await flush();
 
   // The checks read the dataset back, so they cover rows delivered before a resurrect.

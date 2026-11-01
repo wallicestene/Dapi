@@ -58,6 +58,7 @@ export interface Cell {
   paths?: string[];
   sample?: { label: string; expected: string; why?: Why; belongsTo?: string };
   reason?: string;
+  original?: string; // the site's own words, when the value was translated after the run
 }
 
 export interface Row {
@@ -72,6 +73,7 @@ export interface RowsPage {
   all: number; // rows delivered
   exceptions: number;
   missing: number;
+  translated: { from: string; to: string } | null;
 }
 
 export interface Located {

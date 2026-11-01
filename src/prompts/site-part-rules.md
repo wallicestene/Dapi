@@ -105,6 +105,23 @@ split into several tables with the same rows: read them all. A column saying whi
 table or filter a row is under comes from that table's context, written the way the
 spec's samples write it.
 
+**Read every page of a paged list.** When `list.paging` is set, the list comes in
+pages. If `paging.bigPage` is set, the investigation found that one request with a
+larger page size returns every record: use exactly that request, and the source's
+total for `expect`. Otherwise request every page (`pageParam`, up to the total), and
+call `expect` once with the source's total, not once per page.
+
+**Record pages by address.** When `detail.urlTemplate` is set, each record's page is
+that template with the record's list field (`detail.urlFrom.listField`) filled in,
+e.g. `https://example.org/registry/{org.number}` with the record's `org.number`.
+
+**The site's own words.** When `findings.samples.translate` is set, the client read the
+site through a translation and wrote the spec in that language. Extract every value in
+the site's own language, exactly as the site shows it: Dapi translates the delivered
+rows after the run, and the samples you are tested against are the site-language ones.
+`findings.samples.disputes` lists sample values the site itself contradicts (another
+record's link, a mistyped number): extract what the site shows.
+
 **Format like the samples.** Dates in .NET form `/Date(ms)/` are UTC milliseconds;
 `/Date(-62135596800000)/` means no date. Decode HTML entities (`&amp;`). Date ranges
 may be split by `-`, `–`, `—` or "to". Fix protocol-relative links (`//…`).

@@ -9,6 +9,7 @@ interface Item {
   [column: string]: unknown;
   "#receipt"?: Record<string, { evidence?: string; paths?: string[]; constant?: boolean; unavailable?: string }>;
   "#partial"?: string;
+  "#original"?: Record<string, string>;
 }
 
 interface Spec {
@@ -23,7 +24,7 @@ interface SampleResult {
   checks: { column: string; expected: string; status: "exact" | "warn" | "fail"; why?: Why; belongsTo?: string }[];
 }
 
-const cache = new Map<string, { size: number; rows: Row[]; columns: string[] }>();
+const cache = new Map<string, { size: number; rows: Row[]; columns: string[]; translated: { from: string; to: string } | null }>();
 
 async function load(id: string) {
   const file = jobPath(id, "rows.jsonl");
@@ -67,7 +68,7 @@ async function load(id: string) {
       } else {
         tick = "blank";
       }
-      const cell: Cell = { value, tick, evidence: receipt.evidence, paths: receipt.paths, reason };
+      const cell: Cell = { value, tick, evidence: receipt.evidence, paths: receipt.paths, reason, original: item["#original"]?.[column] };
       const check = sample?.checks.find((c) => c.column === column);
       if (check) {
         cell.sample = { label: sample!.label, expected: check.expected, why: check.why, belongsTo: check.belongsTo };
@@ -78,7 +79,8 @@ async function load(id: string) {
     return { index, cells };
   });
 
-  const entry = { size, rows, columns };
+  const translated = readJson<{ translated?: { from: string; to: string } }>(jobPath(id, "report.json"))?.translated ?? null;
+  const entry = { size, rows, columns, translated };
   cache.set(id, entry);
   return entry;
 }
@@ -90,7 +92,7 @@ export async function rowsPage(
   id: string,
   { offset = 0, limit = 50, scope = "all", q = "" }: { offset?: number; limit?: number; scope?: string; q?: string }
 ): Promise<RowsPage> {
-  const { rows, columns } = await load(id);
+  const { rows, columns, translated } = await load(id);
   let view = scope === "exceptions" ? rows.filter(isException) : scope === "missing" ? rows.filter(isMissing) : rows;
   const needle = q.trim().toLowerCase();
   if (needle) view = view.filter((r) => Object.values(r.cells).some((c) => c.value.toLowerCase().includes(needle)));
@@ -101,5 +103,6 @@ export async function rowsPage(
     all: rows.length,
     exceptions: rows.filter(isException).length,
     missing: rows.filter(isMissing).length,
+    translated: translated ? { from: translated.from, to: translated.to } : null,
   };
 }

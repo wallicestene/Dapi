@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -17,6 +17,13 @@ export interface Selection {
 }
 
 const PAGE = 50;
+const languageName = (code: string) => {
+  try {
+    return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
 // The identity column stays in view while the rest scroll sideways.
 const STICKY = "sticky left-12 z-[1] shadow-[1px_0_0_var(--rule)]";
 // Numbers and dates line up on their right edge, like figures on a working paper.
@@ -110,6 +117,15 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+        {job.status === "done" && (
+          <a
+            href={`/api/jobs/${job.id}/download`}
+            className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border border-control bg-white px-2.5 text-[12px] font-medium hover:bg-raised"
+          >
+            <Download aria-hidden className="size-3.5" />
+            Download CSV{page?.translated ? ` (${languageName(page.translated.to)})` : ""}
+          </a>
+        )}
         {live && (
           <label className="ml-auto flex items-center gap-2 text-[12px] text-ink-2">
             <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="accent-ink" />

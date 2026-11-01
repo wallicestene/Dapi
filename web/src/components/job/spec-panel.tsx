@@ -16,6 +16,7 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
   const problems = read.problems as string[];
   const personal = (read.personalData as { column: string; why: string }[] | undefined) ?? [];
   const corrections = (read.corrections as { original: string; corrected: string; why: string }[] | undefined) ?? [];
+  const aligned = events.find((e) => e.kind === "record-page");
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <Panel title={`Columns (${columns.length})`} action={<a href={`/api/jobs/${job.id}/files/${job.input}`} target="_blank" rel="noreferrer" className="text-[13px] font-medium underline">Open the spec you gave</a>}>
@@ -42,6 +43,7 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
               : "None. Without sample rows there is nothing to test the extraction against."}
           </p>
         </Panel>
+        {aligned && <SamplesAgainstSite event={aligned} />}
         {corrections.length > 0 && (
           <Panel title="Column names tidied">
             <ul className="space-y-1.5 px-5 py-3 text-[14px]">
@@ -80,5 +82,42 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
         )}
       </div>
     </div>
+  );
+}
+
+const RELATION: Record<string, string> = {
+  formatted: "written differently on the site",
+  translated: "translated from the site",
+  differs: "the site disagrees",
+  absent: "not on this record's page",
+};
+
+// How the spec's sample stands against the record page it came from.
+function SamplesAgainstSite({ event }: { event: JobEvent }) {
+  const columns = (event.alignment as { column: string; onPage: string; relation: string }[]).filter((c) => RELATION[c.relation]);
+  const lang = (code: unknown) => {
+    try {
+      return new Intl.DisplayNames(["en"], { type: "language" }).of(String(code)) ?? String(code);
+    } catch {
+      return String(code);
+    }
+  };
+  return (
+    <Panel title="Your sample against the site">
+      <p className="px-5 pt-3 text-[14px] text-ink-2">
+        {event.pageLanguage !== event.sampleLanguage
+          ? `Your sample is in ${lang(event.sampleLanguage)}; the site is in ${lang(event.pageLanguage)}. Dapi extracts the site's own words and translates after the run.`
+          : "Compared with the record's own page on the site."}
+      </p>
+      <ul className="divide-y divide-rule px-5 pb-2 text-[14px] [overflow-wrap:anywhere]">
+        {columns.map((c) => (
+          <li key={c.column} className="py-2">
+            <span className="font-medium">{c.column}</span>
+            <span className={c.relation === "differs" ? " text-pencil-red" : " text-ink-2"}>: {RELATION[c.relation]}</span>
+            {c.onPage && <span className="block text-[13px] text-ink-2">The site: {c.onPage}</span>}
+          </li>
+        ))}
+      </ul>
+    </Panel>
   );
 }

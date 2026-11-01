@@ -17,6 +17,7 @@ import { mapHtmlDetail } from './investigate/html.js';
 import { replay, replayEmbedded, sameContext } from './investigate/replay.js';
 import { extractEmbedded } from './embedded.js';
 import { request, useProxy, currentProxy } from './investigate/http.js';
+import { outline, findListLink, alignSamples, urlTemplate } from './investigate/record-page.js';
 
 export async function investigate(spec, { onEvent = () => {} } = {}) {
   const notes = [];
@@ -27,7 +28,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
   };
   const wanted = spec.columns.filter((c) => c.constant === null);
 
-  const session = await openByWays(spec.sourceUrl, { onEvent, notes });
+  let session = await openByWays(spec.sourceUrl, { onEvent, notes });
   if (!session.page) {
     return { ...report({ spec, session, list: null, detail: null, wanted, notes, tokens }), access: session.access };
   }
@@ -45,23 +46,42 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       notes.push(`The page didn't load in the browser or by plain request (${err.name}).`);
     }
   }
+  // The spec as the site writes it: once the samples are aligned with a record's own
+  // page, their values are in the site's words (language, formatting).
+  let source = spec;
+  let alignment = null;
+  let recordPage = null;
   try {
-    const json = jsonCandidates(session.captured);
-    const embedded = embeddedCandidates(session);
-    onEvent({
-      kind: 'page',
-      text: `Opened ${session.finalUrl} (HTTP ${session.status ?? '?'}) and watched its traffic: ${plural(session.captured.length, 'JSON response')}, ${json.length} holding lists of records; ${plural(embedded.length, 'data block')} embedded in the HTML.`,
-      url: session.finalUrl,
-      status: session.status ?? null,
-      jsonResponses: session.captured.length,
-      jsonLists: json.length,
-      embeddedLists: embedded.length,
-      image: await session.page.screenshot().catch(() => null),
-    });
+    const firstShot = await session.page.screenshot().catch(() => null);
+    let candidates = pageCandidates(session, firstShot, onEvent);
 
     // 1. What the page loads by itself: JSON responses, and data embedded in its HTML.
-    const candidates = [...json, ...embedded];
-    const list = await chooseSource({ columns: wanted, samples: spec.samples, candidates, count });
+    let list = await chooseSource({ columns: wanted, samples: spec.samples, candidates, count });
+
+    // A spec often names one record's page (the one its sample came from) rather than
+    // the list. Then: learn the sample's values in the site's own words from this page,
+    // and go up to the list the way a person would.
+    if (!list && session.html) {
+      const page = outline(session.html, session.finalUrl);
+      const up = await findListLink({ screenshot: firstShot, page, spec });
+      count(up.usage);
+      if (up.recordPage) {
+        alignment = await alignSamples({ page, spec });
+        count(alignment.usage);
+        source = alignedSpec(spec, alignment, notes);
+        recordPage = { url: session.finalUrl, html: session.html };
+        onEvent({ kind: 'record-page', text: describeAlignment(spec, alignment), alignment: alignment.columns, pageLanguage: alignment.pageLanguage, sampleLanguage: alignment.sampleLanguage });
+        if (up.url) {
+          onEvent({ kind: 'up', text: `This page shows one record, so Dapi went up to the list: ${up.url}. ${up.reason}`, url: up.url });
+          await session.close();
+          session = await openByWays(up.url, { onEvent, notes });
+          if (session.page) {
+            candidates = pageCandidates(session, await session.page.screenshot().catch(() => null), onEvent);
+            list = await chooseSource({ columns: wanted, samples: source.samples, candidates, count });
+          }
+        }
+      }
+    }
     if (!list) {
       notes.push("Neither the page's JSON traffic nor its embedded data holds the spec's records: likely the HTML route.");
       onEvent({ kind: 'no-source', text: "Neither the page's own data requests nor its embedded data hold your records." });
@@ -85,10 +105,15 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       reason: list.reason,
     });
 
-    // 2. Columns the list doesn't have: reveal them from one record.
+    if (!list.embedded) list.paging = await paging(list, onEvent);
+
+    // 2. Columns the list doesn't have: from the record page the spec named, when it
+    // did, else revealed from one record on the list page.
     let detail = null;
     if (missing.length) {
-      detail = await revealDetail({ spec, session, list, missing, count, notes, onEvent });
+      detail = recordPage
+        ? await recordPageDetail({ recordPage, list, missing, sample: source.samples[0], count, notes, onEvent })
+        : await revealDetail({ spec: source, session, list, missing, count, notes, onEvent });
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
     }
 
@@ -103,7 +128,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       works: Boolean(list.replay?.works),
       timing: list.replay?.timing ?? null,
     });
-    const reachability = await reach({ spec, list, detail, notes });
+    const reachability = await reach({ spec: source, list, detail, notes });
     if (reachability) {
       const how = reachability.recommendation;
       onEvent({
@@ -115,12 +140,175 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
         results: reachability.results ?? [],
       });
     }
-    return { ...report({ spec, session, list, detail, wanted, notes, tokens }), reachability, access: session.access };
+    return {
+      ...report({ spec, session, list, detail, wanted, notes, tokens }),
+      reachability,
+      access: session.access,
+      ...(alignment && { samples: sampleFindings(spec, alignment), sourceSamples: source.samples }),
+    };
   } finally {
     await session.close();
     useProxy(undefined);
   }
 }
+
+// What a page loads by itself, reported as it's found: JSON lists and embedded data.
+function pageCandidates(session, image, onEvent) {
+  const json = jsonCandidates(session.captured);
+  const embedded = embeddedCandidates(session);
+  onEvent({
+    kind: 'page',
+    text: `Opened ${session.finalUrl} (HTTP ${session.status ?? '?'}) and watched its traffic: ${plural(session.captured.length, 'JSON response')}, ${json.length} holding lists of records; ${plural(embedded.length, 'data block')} embedded in the HTML.`,
+    url: session.finalUrl,
+    status: session.status ?? null,
+    jsonResponses: session.captured.length,
+    jsonLists: json.length,
+    embeddedLists: embedded.length,
+    image,
+  });
+  return [...json, ...embedded];
+}
+
+// The spec with its samples in the site's own words, for everything that compares
+// against the site: column matching, selectors, the reach probe, the tests. Columns the
+// record page doesn't show are left out of the sample rather than guessed. Samples for
+// other records stay only if they're written in the site's language.
+function alignedSpec(spec, a, notes) {
+  const values = {};
+  for (const c of a.columns) {
+    if (c.relation === 'absent') continue;
+    values[c.column] = c.relation === 'constant' ? spec.samples[a.sample]?.values[c.column] ?? '' : c.onPage;
+  }
+  const others = spec.samples.filter((_, i) => i !== a.sample);
+  const sameLanguage = a.pageLanguage === a.sampleLanguage;
+  if (others.length && !sameLanguage) notes.push(`${others.length} other sample(s) are in ${a.sampleLanguage} and can't be found on a ${a.pageLanguage} site as written; they're checked after translation.`);
+  return { ...spec, samples: [{ label: a.label, values }, ...(sameLanguage ? others : [])] };
+}
+
+const languageName = (code) => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+
+function describeAlignment(spec, a) {
+  const by = (r) => a.columns.filter((c) => c.relation === r).map((c) => c.column);
+  const parts = [];
+  if (a.pageLanguage !== a.sampleLanguage) parts.push(`your samples are in ${languageName(a.sampleLanguage)}, the site in ${languageName(a.pageLanguage)}: Dapi reads the site as it is and translates after the run`);
+  if (by('formatted').length) parts.push(`${by('formatted').join(', ')} written differently on the site`);
+  if (by('differs').length) parts.push(`the site disagrees with your sample on ${by('differs').join(', ')}`);
+  return `This page is the record ${a.label ?? 'your sample'} came from. Compared with your sample: ${parts.length ? parts.join('; ') : 'it matches'}.`;
+}
+
+// For the job and the screen: how each sample value stands against the site, and what
+// to translate after the run (the columns the sample translated, with the sample's
+// own wording as examples, so the deliverable reads the way the client wrote it).
+function sampleFindings(spec, a) {
+  const sample = spec.samples[a.sample] ?? spec.samples[0];
+  const columns = a.columns.map((c) => ({ ...c, sample: sample?.values[c.column] ?? '' }));
+  const translated = columns.filter((c) => c.relation === 'translated');
+  return {
+    label: a.label,
+    pageLanguage: a.pageLanguage,
+    sampleLanguage: a.sampleLanguage,
+    columns,
+    disputes: columns.filter((c) => c.relation === 'differs').map((c) => ({ column: c.column, sample: c.sample, site: c.onPage, note: c.note })),
+    translate:
+      a.pageLanguage !== a.sampleLanguage && translated.length
+        ? { from: a.pageLanguage, to: a.sampleLanguage, columns: translated.map((c) => c.column), examples: translated.map((c) => ({ column: c.column, source: c.onPage, target: c.sample })) }
+        : null,
+  };
+}
+
+// The record page the spec named is one of many with the same layout: map the missing
+// columns on it, and find how its address is built from a list record.
+async function recordPageDetail({ recordPage, list, missing, sample, count, notes, onEvent }) {
+  const tmpl = urlTemplate(recordPage.url, list.records.records);
+  if (!tmpl) {
+    notes.push(`No field of the list records appears in ${recordPage.url}, so the record pages can't be addressed per record.`);
+    return null;
+  }
+  const started = Date.now();
+  const res = await request(recordPage.url);
+  const html = res.ok ? await res.text() : recordPage.html;
+  const timing = { ms: Date.now() - started, bytes: Buffer.byteLength(html) };
+  const { fields, jsonLd } = await mapHtmlDetail({ html, missing, sample, count });
+  onEvent({
+    kind: 'detail',
+    route: 'page',
+    text: `Each record has a page like the one your spec names, at ${tmpl.template}. Dapi fetches it without a browser and reads ${Object.keys(fields).filter((c) => fields[c].keys.length).join(', ')} from it.`,
+    url: recordPage.url,
+    columns: Object.keys(fields),
+  });
+  return {
+    kind: 'html',
+    urlFrom: { listField: tmpl.field, how: `put the list field's value into the URL template` },
+    urlTemplate: tmpl.template,
+    sampleUrl: recordPage.url,
+    replay: { works: res.ok ? 'plain request' : null, needsSession: false, tried: res.ok ? [] : [`plain GET: HTTP ${res.status}`], timing },
+    fields,
+    jsonLd,
+    trigger: { record: sample.label, control: 'the page your spec names', reason: 'Every record has a page with the same layout.' },
+  };
+}
+
+// A paged list: which parameter picks the page and which sets its size, and whether one
+// big page holds every record (one request instead of twenty, gentler on the site).
+const PAGE_PARAM = /^(page|pagenumber|page_number|pageindex|pageno|p|offset|skip|start|from)$/i;
+const SIZE_PARAM = /^(pagesize|page_size|pagelength|limit|size|per_page|perpage|rows|take|max|hitsperpage)$/i;
+
+async function paging(list, onEvent) {
+  const cap = list.capture;
+  const url = new URL(cap.url);
+  let form = null;
+  let body = null;
+  try {
+    body = cap.payload ? JSON.parse(cap.payload) : null;
+  } catch {
+    form = new URLSearchParams(cap.payload ?? '');
+  }
+  const names = [...url.searchParams.keys(), ...(form ? [...form.keys()] : []), ...(body && typeof body === 'object' ? Object.keys(body) : [])];
+  const pageParam = names.find((n) => PAGE_PARAM.test(n)) ?? null;
+  const sizeParam = names.find((n) => SIZE_PARAM.test(n)) ?? null;
+  if (!pageParam && !sizeParam) return null;
+  const total = list.total?.value ?? null;
+  const out = { pageParam, sizeParam, pageSize: list.records.count, total, bigPage: null };
+  if (sizeParam && total && total > list.records.count && total <= 5000) {
+    const size = String(total);
+    const u = new URL(cap.url);
+    if (u.searchParams.has(sizeParam)) u.searchParams.set(sizeParam, size);
+    let payload = cap.payload;
+    if (form?.has(sizeParam)) {
+      form.set(sizeParam, size);
+      payload = form.toString();
+    } else if (body && sizeParam in body) payload = JSON.stringify({ ...body, [sizeParam]: Number(size) });
+    try {
+      const res = await request(u.href, { method: cap.method, body: payload, headers: cap.headers?.['content-type'] ? { 'content-type': cap.headers['content-type'] } : {}, timeoutMs: 120_000 });
+      const got = findRecords(parseJsonSafe(await res.text()))?.count ?? 0;
+      if (got >= total) out.bigPage = { size: Number(size), records: got, request: { method: cap.method, url: u.href, payload } };
+    } catch {
+      // keep the paged route
+    }
+  }
+  onEvent({
+    kind: 'paging',
+    text: out.bigPage
+      ? `The list comes ${list.records.count} per page (${pageParam ?? 'page'}, ${sizeParam}), but asking for ${out.bigPage.size} per page returns all ${total} records in one request.`
+      : `The list comes in pages (${[pageParam, sizeParam].filter(Boolean).join(', ')})${total ? ` of ${total} records` : ''}: the extraction reads every page.`,
+    ...out,
+  });
+  return out;
+}
+
+const parseJsonSafe = (text) => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
 
 // The ways in, cheapest first. A site that blocks the first visit is tried again
 // through Apify Proxy, datacenter then residential, each with a fresh IP. A check that
@@ -483,6 +671,7 @@ function describe(source) {
     recordCount: source.records.count,
     recordShape: source.records.tabular ? `arrays of ${source.records.records[0].length} cells` : 'objects',
     ...(source.siblings?.length && { siblings: source.siblings }),
+    ...(source.paging && { paging: source.paging }),
     ...(source.robotsBlocked && { robotsBlocked: true }),
     total: source.total,
     fields: source.fields,

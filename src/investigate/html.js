@@ -39,7 +39,7 @@ function locate($, value) {
 
 const PROMPT = `You write CSS selectors for a data extraction tool. You get the columns to extract from a detail page, the value each column has on one sample page, and where those values were found on it (element path, nearby label).
 For each column, write one selector in this syntax: "css:<selector>" for an element's text, "css:<selector>@<attribute>" for an attribute such as href, "css*:..." when every match is needed. It must work on every record's page, not just this one: prefer classes and nearby labels (e.g. an h6 saying "HQ LOCATION" followed by a p: "css:h6:contains('HQ LOCATION') + p") over positions, and for links of a known kind match the href (e.g. "css:.socialicon a[href*='facebook.com']@href").
-If a column needs logic a selector can't express (e.g. the one link that isn't a social network), give the closest css* selector and explain the rule in "how". Give an empty selector if the value isn't on the page.`;
+If a column needs logic a selector can't express (e.g. the one link that isn't a social network), give the closest css* selector and explain the rule in "how". Give an empty selector if the value isn't on the page. A column whose sample is blank may still have its place on the page, empty or a placeholder (e.g. "---") for this record and filled for others: find it by its label in "pageText" and write the selector anyway.`;
 
 const SCHEMA = {
   type: 'object',
@@ -69,11 +69,13 @@ export async function mapHtmlDetail({ html, missing, sample, count }) {
     foundAt: sample.values[c.name] ? locate($, sample.values[c.name]) : [],
   }));
 
+  // For columns this sample leaves blank: the page's text, to find their labels by.
+  const pageText = columns.some((c) => !c.sampleValue) ? ($('main').length ? $('main') : $('body')).text().replace(/\s+/g, ' ').trim().slice(0, 4000) : undefined;
   const { content, usage } = await chat({
     reasoningEffort: 'low',
     messages: [
       { role: 'system', content: PROMPT },
-      { role: 'user', content: JSON.stringify({ columns }) },
+      { role: 'user', content: JSON.stringify({ columns, pageText }) },
     ],
     schema: { name: 'html_selectors', schema: SCHEMA },
   });
