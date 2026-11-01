@@ -81,6 +81,11 @@ label (to tell responses apart), note, userData, fallback }`.
 contexts and verified selectors come from Dapi's investigation of the live site. Use
 them; don't invent endpoints or selectors.
 
+**Follow the strategy.** `findings.strategy` is the plan Muse Wonder made from every
+finding: each column's route and how, the requests, the pace and the way in. Build
+it as planned. Depart from it only where a finding contradicts it, and say so in
+`notes`; set `config` from `strategy.pace` unless the measurements disagree.
+
 **Notes are intent, not procedure.** A client writes the spec's notes from what they
 see on the page: "click View under Additional Information", "extract this from the
 main page overview". Read each note for the value it asks for, then get that value

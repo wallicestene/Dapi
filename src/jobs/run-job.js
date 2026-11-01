@@ -20,6 +20,7 @@ import { investigate } from '../investigate.js';
 import { writeAndTest } from '../write-site.js';
 import { translateValues } from '../translate.js';
 import { compareSamples } from '../compare.js';
+import { planStrategy } from '../strategy.js';
 
 // The run watch (see runOnApify). Declared up here: the job runs at the top level,
 // before declarations further down the file are initialised.
@@ -93,6 +94,27 @@ try {
   const runSpec = findings.sourceSamples ? { ...spec, samples: findings.sourceSamples } : spec;
   if (findings.sourceSamples) writeJson(dir, 'spec.source.json', runSpec);
   const runSpecPath = path.join(dir, findings.sourceSamples ? 'spec.source.json' : 'spec.json');
+
+  // The strategy: Muse Wonder reads every finding with the extraction playbook and
+  // plans each column's route and the run's pace before any code is written.
+  say('site', { kind: 'strategizing', text: 'Muse Wonder is reading everything the investigation found and planning the extraction column by column.' });
+  try {
+    const strategy = await planStrategy({ spec, sourceSpec: runSpec, findings });
+    findings.strategy = strategy;
+    writeJson(dir, 'findings.json', findings);
+    say('site', {
+      kind: 'strategy',
+      text: strategy.summary,
+      columns: strategy.columns,
+      requests: strategy.requests,
+      pace: strategy.pace,
+      risks: strategy.risks,
+      gaps: strategy.gaps,
+      model: strategy.model,
+    });
+  } catch (err) {
+    say('site', { kind: 'strategy-skipped', text: `Planning the strategy failed (${err.message.split('\n')[0]}); the code writer works from the findings directly.` });
+  }
 
   // 3. The extraction: written by Muse Spark, tested against the spec's samples.
   step('code');

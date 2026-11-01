@@ -24,11 +24,13 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
   const page = site.find((e) => e.kind === "page");
   const declined = site.find((e) => e.kind === "declined");
   const reach = site.find((e) => e.kind === "reach");
+  const strategy = [...site].reverse().find((e) => e.kind === "strategy");
   const live = job.status === "running" && job.step === "site";
 
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
       <div className="flex flex-col gap-4">
+        {strategy && <Strategy event={strategy} />}
         {declined && (
           <section className="rounded-lg border border-pencil-red/40 bg-red-wash px-5 py-4 text-red-ink">
             <h2 className="flex items-center gap-2 text-[16px] font-semibold">
@@ -174,5 +176,70 @@ function Shot({ job, image, caption }: { job: Job; image: string; caption: strin
       <img src={`/api/jobs/${job.id}/files/${image}`} alt={caption} className="block w-full border-b" />
       <figcaption className="px-4 py-2.5 text-[13px] text-ink-2">{caption}</figcaption>
     </figure>
+  );
+}
+
+const ROUTE: Record<string, string> = {
+  feed: "the site's data feed",
+  embedded: "data embedded in the page",
+  page: "the record's page",
+  register: "the public register behind it",
+  "shared-page": "one page per shared value",
+  constant: "set by your spec",
+  derived: "worked out from other fields",
+  none: "no verified route",
+};
+
+interface StrategyColumn {
+  column: string;
+  renderedAt: string;
+  route: string;
+  how: string;
+  evidence: string;
+}
+
+// The plan Muse Wonder made from every finding: each column's route, and the run's shape.
+function Strategy({ event }: { event: JobEvent }) {
+  const columns = event.columns as StrategyColumn[];
+  const requests = event.requests as { list: number; register: number; pages: number; total: number };
+  const pace = event.pace as { concurrency: number; perMinute: number; proxy: string; why: string };
+  const gaps = (event.gaps as string[]) ?? [];
+  return (
+    <Panel title="The strategy" action={<span className="text-[12px] text-ink-2">planned by {String(event.model ?? "Muse Wonder")}</span>}>
+      <p className="px-5 pt-3 text-[14px] leading-relaxed">{event.text}</p>
+      <p className="px-5 pt-2 text-[13px] text-ink-2">
+        {requests.total.toLocaleString("en-US")} requests ({[requests.list && `${requests.list} list`, requests.register && `${requests.register} register`, requests.pages && `${requests.pages} pages`].filter(Boolean).join(", ")}), {pace.concurrency} at a time, about {pace.perMinute} a minute, {pace.proxy}. {pace.why}
+      </p>
+      <div className="mt-3 overflow-x-auto border-t">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="border-b text-left text-[12px] text-ink-2">
+              <th className="px-5 py-2 font-normal">Column</th>
+              <th className="px-3 py-2 font-normal">Where the site shows it</th>
+              <th className="px-3 py-2 font-normal">How Dapi gets it</th>
+              <th className="w-8 px-3 py-2 font-normal">
+                <span className="sr-only">Evidence</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {columns.map((c) => (
+              <tr key={c.column} className="border-b border-rule align-top last:border-0">
+                <td className="px-5 py-2 font-medium">{c.column}</td>
+                <td className="px-3 py-2 text-ink-2">{c.renderedAt}</td>
+                <td className="px-3 py-2">
+                  {ROUTE[c.route] ?? c.route}
+                  <span className="block text-[12px] text-ink-2 [overflow-wrap:anywhere]">{c.how}</span>
+                </td>
+                <td className="px-3 py-2" title={c.evidence}>
+                  <TickMark tick={c.route === "none" ? "missing" : /not verified/i.test(c.evidence) ? "near" : "traced"} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {gaps.length > 0 && <p className="border-t px-5 py-2.5 text-[13px] text-pencil-red">Gaps: {gaps.join("; ")}</p>}
+    </Panel>
   );
 }
