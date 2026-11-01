@@ -26,8 +26,19 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
     );
   }
 
+  // What the watch saw during the run: easing off, a break and its repair, translation.
+  const notes = events.filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated"].includes(e.kind)).slice(-3);
   return (
     <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      {notes.length > 0 && (
+        <ul className="rounded-lg border bg-sheet px-5 py-2 text-[13px] lg:col-span-2" aria-label="During the run">
+          {notes.map((e) => (
+            <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
+              {e.text}
+            </li>
+          ))}
+        </ul>
+      )}
       <DataSheet job={job} selected={selected} onSelect={setSelected} />
       <ReceiptPanel job={job} events={events} selected={selected} translatedFrom={(plan?.translate as { from: string } | null)?.from ?? null} />
     </div>

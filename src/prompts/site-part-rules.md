@@ -81,6 +81,13 @@ label (to tell responses apart), note, userData, fallback }`.
 contexts and verified selectors come from Dapi's investigation of the live site. Use
 them; don't invent endpoints or selectors.
 
+**Notes are intent, not procedure.** A client writes the spec's notes from what they
+see on the page: "click View under Additional Information", "extract this from the
+main page overview". Read each note for the value it asks for, then get that value
+the best way the findings allow: the feed the click calls, the list field that holds
+the same status. Follow a note's route only where it picks out a different value
+(the overview's status when the detail page shows another).
+
 **Pick the cheapest route the findings allow.** A JSON endpoint beats parsing HTML;
 data embedded in a page beats fetching each record; one detail request per record
 beats anything that needs a browser. The fewer and smaller the requests, the faster
@@ -128,21 +135,30 @@ may be split by `-`, `–`, `—` or "to". Fix protocol-relative links (`//…`)
 
 **Speed: set `config` from the measurements.** The goal is the fastest run that
 finishes cleanly without the site pushing back, not the fastest possible burst, and
-not a needlessly slow one either: the user is waiting.
+not a needlessly slow one either: the user is waiting. More requests at once is not
+always faster: past its sweet spot a site's server slows down and starts failing,
+and every retry costs time (one registry answered HTTP 500 at eight at a time and
+finished fastest one at a time).
 
-- **Trust the measurements from Apify's servers** (`findings.reachability.results`):
-  that's where the run happens. Timings from the investigation's own connection
-  (`replay.timing`) can be far slower or faster.
+- **The pace test decides concurrency** (`findings.reachability.pace`): from Apify's
+  servers, other records' detail requests were fetched 1, 3 and 6 at a time, with the
+  median time and any errors at each level. Use `pace.recommended.concurrency` as
+  `maxConcurrency` and `pace.recommended.perMinute` as `maxRequestsPerMinute`. Never
+  go above the highest level that ran without errors (`pace.erroredAt` is the level
+  where errors began). If even one at a time errored, use 1 and `maxRetries` 8.
+- **Without a pace test** (no detail requests): trust the timings from Apify's
+  servers (`findings.reachability.results`), not the investigation's own connection
+  (`replay.timing`). Detail responses under ~500 ms: 6–10 at a time; over ~1.5 s or
+  ~1 MB: 2–4; between: 4–6.
 - **Pace by the bulk of the requests.** A job is usually one or a few list requests
-  and then many detail requests: set the pace for the detail requests. One large list
-  page must not slow down thousands of small detail pages.
-- `maxConcurrency` — detail responses under ~500 ms and ~500 KB: 8–12. Over ~1.5 s
-  or over ~1 MB each: 2–4. Between: 4–8.
-- `maxRequestsPerMinute` — work it out from the job's size. Estimate the requests
-  (list pages + one per detail) and aim for a run of minutes, not hours: e.g. 5,000
-  quick detail pages at 480/min ≈ 10 minutes. 300–600 suits most public sites that
-  answered quickly; go lower only if the measurements show the site is slow.
-- `maxRetries` — 3. Use 5 only if the measurements showed errors or timeouts.
+  and then many detail requests: set the pace for the detail requests.
+- **Fewest requests first.** A list that can come in one big page (`paging.bigPage`)
+  beats twenty small ones; a detail shared by several records is fetched once.
+- `maxRetries` — 3 on a site that answered cleanly; 5 when the measurements showed
+  errors or timeouts; 6–8 behind bot management or on a server that errors under load.
+
+Dapi watches the run: the frame eases off a site that starts answering with errors,
+and a run that breaks is stopped and comes back to you with its log to fix.
 
 The frame clamps these to safe limits. Say in `notes` how you got the numbers.
 

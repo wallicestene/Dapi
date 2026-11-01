@@ -127,7 +127,7 @@ try {
 
   // 5. The run.
   step('run');
-  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? null, robotsOverride: Boolean(approval.robotsOverride), records: plan.records });
+  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? null, robotsOverride: Boolean(approval.robotsOverride), records: plan.records, findings, specPath: runSpecPath });
 } catch (err) {
   console.error(err);
   say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${err.message.split('\n')[0]}` });
@@ -180,9 +180,12 @@ function makePlan(f, config, notes, spec) {
   const details = f.detail ? records : 0;
   const requests = 1 + details;
   const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
+  // The time estimate follows the measured pace at the chosen concurrency, when there is one.
+  const level = (f.reachability?.pace?.levels ?? []).filter((l) => !l.errors && l.medianMs && l.concurrency <= (config.maxConcurrency ?? 4)).at(-1);
+  const perMinute = Math.min(rpm, level ? (level.concurrency * 60_000) / level.medianMs : rpm);
   const groups = (config.proxy?.groups ?? []).map((g) => g.toLowerCase());
   const proxy = groups.length ? `${groups.join(' + ')}${config.proxy.countryCode ? ` (${config.proxy.countryCode})` : ''}` : 'direct';
-  const minutes = Math.max(1, Math.ceil(requests / rpm));
+  const minutes = Math.max(1, Math.ceil(requests / perMinute));
   const route = f.list.embedded ? 'embedded' : 'feed';
   const how = {
     feed: "the site's own data feed (JSON)",
@@ -206,10 +209,54 @@ function makePlan(f, config, notes, spec) {
   };
 }
 
-async function runOnApify({ spec, userSpec, translate, robotsOverride, records }) {
+// Runs the extraction on Apify and watches it. A run that breaks (the code throws, many
+// requests fail, nothing moves, rows miss columns) is stopped at once rather than left
+// to finish badly; Muse Spark gets the reason and the run's own log, fixes the code or
+// its settings, the fix is tested again, and a fresh run starts. Up to two repairs.
+const REPAIRS = 2;
+
+async function runOnApify({ spec, userSpec, translate, robotsOverride, records, findings, specPath }) {
   const { apify, RUNNER } = await import('../apify/client.js');
   const { username } = await apify.user('me').get();
-  const run = await apify.actor(`${username}/${RUNNER}`).start(
+  for (let attempt = 1; ; attempt++) {
+    const outcome = await runOnce({ apify, actor: `${username}/${RUNNER}`, spec, robotsOverride, attempt });
+    if (outcome.status === 'succeeded') return finish({ apify, ...outcome, userSpec, translate, records, disputes: findings.samples?.disputes ?? [] });
+    if (outcome.status === 'stopped') {
+      say('run', { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${outcome.copied.toLocaleString('en-US')} rows. Resurrect it on Apify to continue where it stopped.` });
+      updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus });
+      return;
+    }
+    // Broken. Some breaks aren't the code's to fix: a site that asks for a person.
+    if (outcome.noRepair || attempt > REPAIRS) {
+      say('run', { kind: 'broken', text: `${outcome.reason} ${outcome.noRepair ? 'Dapi sets this site aside.' : `Stopped after ${REPAIRS} repairs; the log is in the run on Apify.`}`, log: outcome.log });
+      updateJob(dir, { status: 'failed', failed: outcome.reason });
+      return;
+    }
+    say('run', { kind: 'repairing', text: `${outcome.reason} Dapi stopped the run (the rows so far stay in its dataset) and gave Muse Spark the run's log to fix it.`, log: outcome.log });
+    const fixed = await writeAndTest({
+      spec,
+      specPath,
+      findings,
+      outPath: path.join(dir, 'site.js'),
+      previous: { code: fs.readFileSync(path.join(dir, 'site.js'), 'utf8'), feedback: outcome.feedback },
+      attempts: 2,
+      onEvent: (e) => say('code', { ...e, repair: attempt, text: `Repair ${attempt}: ${describeAttempt(e)}` }),
+    });
+    if (!fixed.passed) {
+      say('run', { kind: 'broken', text: "Muse Spark's repair didn't pass the tests, so Dapi stopped here rather than run broken code." });
+      updateJob(dir, { status: 'failed', failed: outcome.reason });
+      return;
+    }
+    fs.rmSync(path.join(dir, 'rows.jsonl'), { force: true });
+    say('run', { kind: 'restarting', text: 'The repaired extraction passed its tests. Starting a fresh run.' });
+  }
+}
+
+const CODE_ERROR = /TypeError|ReferenceError|SyntaxError|RangeError|is not a function|Cannot read propert|is not defined|Unexpected token/;
+const STALL_MS = 5 * 60_000;
+
+async function runOnce({ apify, actor, spec, robotsOverride, attempt }) {
+  const run = await apify.actor(actor).start(
     { siteCode: fs.readFileSync(path.join(dir, 'site.js'), 'utf8'), spec, robotsOverride },
     { memory: 2048, timeout: 3600 }
   );
@@ -217,8 +264,22 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records }
     runUrl: `https://console.apify.com/actors/runs/${run.id}`,
     datasetUrl: `https://console.apify.com/storage/datasets/${run.defaultDatasetId}`,
   };
-  updateJob(dir, { runId: run.id, datasetId: run.defaultDatasetId, storeId: run.defaultKeyValueStoreId, ...links, rows: 0 });
-  say('run', { kind: 'started', text: 'Running on Apify now. Rows appear in your dataset as they are found.', runId: run.id, ...links });
+  updateJob(dir, { runId: run.id, datasetId: run.defaultDatasetId, storeId: run.defaultKeyValueStoreId, ...links, rows: 0, runAttempt: attempt });
+  say('run', { kind: 'started', text: `${attempt > 1 ? `Run ${attempt}: ` : ''}Running on Apify now. Rows appear in your dataset as they are found.`, runId: run.id, attempt, ...links });
+
+  // The run's own log, line by line as Apify writes it.
+  const log = [];
+  const stream = await apify.run(run.id).log().stream().catch(() => null);
+  if (stream) {
+    let rest = '';
+    stream.on('data', (chunk) => {
+      const lines = (rest + chunk.toString()).split('\n');
+      rest = lines.pop();
+      log.push(...lines.filter((l) => l.trim()));
+      if (log.length > 5000) log.splice(0, log.length - 5000);
+    });
+    stream.on('error', () => {});
+  }
 
   // Copy rows as they land, so the screen shows them without waiting for the end.
   const rowsPath = path.join(dir, 'rows.jsonl');
@@ -234,33 +295,103 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records }
 
   let current = run;
   let firstRows = false;
-  while (!['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(current.status)) {
-    await sleep(3000);
-    current = await apify.run(run.id).get();
-    await copy();
-    // The frame's saved state holds the rows the source says exist (it learns them as
-    // it reads), the footing figure the screen shows against the rows delivered.
-    const state = (await apify.keyValueStore(run.defaultKeyValueStoreId).getRecord('DAPI_FRAME_STATE').catch(() => null))?.value;
-    const expected = state ? Object.values(state.expected ?? {}).reduce((a, b) => a + b, 0) : null;
-    updateJob(dir, { rows: copied, expected, failedRequests: state?.failed?.length ?? 0, runStatus: current.status, statusMessage: current.statusMessage ?? null });
-    if (copied && !firstRows) {
-      firstRows = true;
-      say('run', { kind: 'rows', text: `First rows delivered: ${copied.toLocaleString('en-US')} so far.` });
-    }
-  }
-  if (current.status !== 'SUCCEEDED') {
-    say('run', { kind: 'stopped', text: `The run ended ${current.status.toLowerCase()} with ${copied.toLocaleString('en-US')} rows. Resurrect it on Apify to continue where it stopped.` });
-    updateJob(dir, { status: 'stopped', runStatus: current.status });
-    return;
-  }
+  let lastProgress = Date.now();
+  let lastMark = '';
+  let easedNoted = 0;
+  try {
+    while (!['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(current.status)) {
+      await sleep(3000);
+      current = await apify.run(run.id).get();
+      await copy();
+      // The frame's saved state holds the rows the source says exist (it learns them as
+      // it reads), the footing figure the screen shows against the rows delivered.
+      const state = (await apify.keyValueStore(run.defaultKeyValueStoreId).getRecord('DAPI_FRAME_STATE').catch(() => null))?.value;
+      const expected = state ? Object.values(state.expected ?? {}).reduce((a, b) => a + b, 0) : null;
+      updateJob(dir, { rows: copied, expected, failedRequests: state?.failed?.length ?? 0, runStatus: current.status, statusMessage: current.statusMessage ?? null });
+      if (copied && !firstRows) {
+        firstRows = true;
+        say('run', { kind: 'rows', text: `First rows delivered: ${copied.toLocaleString('en-US')} so far.` });
+      }
+      // What the frame said about the site's health, passed on as it happens.
+      const eased = log.filter((l) => /easing off to \d+/.test(l));
+      if (eased.length > easedNoted) {
+        easedNoted = eased.length;
+        say('run', { kind: 'watch', text: `The site started answering with errors, so the run eased off: ${eased.at(-1).match(/easing off to \d+ at a time/)[0]}.` });
+      }
 
+      const broken = assess({ state, current, log, copied, lastProgress });
+      const mark = `${copied}|${current.statusMessage}|${log.length}`;
+      if (mark !== lastMark) {
+        lastMark = mark;
+        lastProgress = Date.now();
+      }
+      if (broken) {
+        await apify.run(run.id).abort({ gracefully: true }).catch(() => {});
+        for (let i = 0; i < 40 && !['ABORTED', 'SUCCEEDED', 'FAILED', 'TIMED-OUT'].includes(current.status); i++) {
+          await sleep(3000);
+          current = await apify.run(run.id).get();
+        }
+        return { status: 'broken', ...broken, ...evidence(log, state, broken.reason) };
+      }
+    }
+  } finally {
+    stream?.destroy();
+  }
+  if (current.status === 'FAILED' || current.status === 'TIMED-OUT') {
+    const reason = current.status === 'FAILED' ? 'The run crashed on Apify.' : 'The run hit its time limit on Apify.';
+    return { status: 'broken', reason, ...evidence(log, null, reason) };
+  }
+  if (current.status !== 'SUCCEEDED') return { status: 'stopped', runStatus: current.status, copied };
+  return { status: 'succeeded', run, copied, copy };
+}
+
+// Whether a running extraction is broken, from its saved state and its log.
+function assess({ state, current, log, copied, lastProgress }) {
+  const crawled = Number(current.statusMessage?.match(/Crawled (\d+)\//)?.[1] ?? 0);
+  const failed = state?.failed ?? [];
+  if (state?.columnProblems?.length) return { reason: `Rows don't match the spec's columns: ${state.columnProblems[0]}.` };
+  const human = failed.filter((f) => /human check|only a person/i.test(f.error));
+  if (human.length >= 5 && human.length > crawled * 0.3) return { reason: `The site asks for a check only a person can pass on ${human.length} pages.`, noRepair: true };
+  const codeErrors = log.filter((l) => CODE_ERROR.test(l));
+  if (codeErrors.length >= 5) return { reason: `The extraction code is throwing errors (${codeErrors.length} so far).` };
+  if (failed.length >= 10 && failed.length > Math.max(1, crawled) * 0.2) return { reason: `${failed.length} requests failed every retry out of ${crawled} done.` };
+  if (Date.now() - lastProgress > STALL_MS) return { reason: `Nothing has moved for ${Math.round(STALL_MS / 60_000)} minutes (${copied} rows).` };
+  return null;
+}
+
+// What Muse Spark gets to fix a broken run: the reason, the run's warnings and errors
+// (repeats counted once), and the frame's own record of what failed.
+function evidence(log, state, reason) {
+  const seen = new Map();
+  for (const line of log) {
+    if (!/WARN|ERROR|Error|error|easing off|blocked|failed/.test(line)) continue;
+    const key = line.replace(/^\S+\s+/, '').replace(/\d+/g, '#').slice(0, 160);
+    seen.set(key, { line: line.slice(0, 400), times: (seen.get(key)?.times ?? 0) + 1 });
+  }
+  const lines = [...seen.values()].slice(-40).map((e) => (e.times > 1 ? `${e.line}   (×${e.times})` : e.line));
+  const failed = (state?.failed ?? []).slice(0, 15).map((f) => `${f.what}: ${f.error}`);
+  const feedback = [
+    `The full run on Apify broke: ${reason}`,
+    failed.length ? `Requests that failed every retry:\n- ${failed.join('\n- ')}` : '',
+    lines.length ? `The run's warnings and errors:\n${lines.join('\n')}` : '',
+    'Fix the cause: the code, or its config (pace, retries, proxy) if the site was struggling or refusing. Return the full module.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+  return { feedback, log: lines.slice(-12) };
+}
+
+async function finish({ apify, run, copied: copiedSoFar, copy, userSpec, translate, records, disputes }) {
+  let copied = copiedSoFar;
   // Dataset counts lag a few seconds after a run; copy until the report's count is in.
   const report = (await apify.keyValueStore(run.defaultKeyValueStoreId).getRecord('REPORT'))?.value;
-  for (let i = 0; i < 30 && copied < (report?.rows ?? 0); i++) {
+  const count = () => (fs.existsSync(path.join(dir, 'rows.jsonl')) ? fs.readFileSync(path.join(dir, 'rows.jsonl'), 'utf8').split('\n').filter(Boolean).length : 0);
+  for (let i = 0; i < 30 && count() < (report?.rows ?? 0); i++) {
     await copy();
-    if (copied < (report?.rows ?? 0)) await sleep(2000);
+    if (count() < (report?.rows ?? 0)) await sleep(2000);
   }
-  if (translate) await translateRows({ translate, userSpec, report });
+  copied = count();
+  if (translate) await translateRows({ translate, userSpec, report, disputes });
   writeJson(dir, 'report.json', report);
   step('footed');
   const short = report.completeness.filter((c) => c.expected !== null && c.got < c.expected);
@@ -283,7 +414,7 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records }
 // Translates the columns the client's samples translated, each distinct value once,
 // keeping the site's own words in every row's "#original" for its receipt. Then the
 // client's own samples are checked against what they'll actually receive.
-async function translateRows({ translate, userSpec, report }) {
+async function translateRows({ translate, userSpec, report, disputes }) {
   const rowsPath = path.join(dir, 'rows.jsonl');
   const rows = fs.readFileSync(rowsPath, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
   const distinct = [...new Set(rows.flatMap((r) => translate.columns.map((c) => String(r[c] ?? ''))))].filter((v) => v.trim());
@@ -303,6 +434,15 @@ async function translateRows({ translate, userSpec, report }) {
   const columns = userSpec.columns.map((c) => c.name);
   report.sourceSamples = report.samples;
   report.samples = compareSamples(rows.map((r) => Object.fromEntries(columns.map((c) => [c, r[c] ?? '']))), userSpec.samples);
+  // Where the investigation found the site itself contradicts the sample, the site's
+  // value is what's delivered: a known disagreement, not a failure.
+  for (const s of report.samples) {
+    for (const c of s.checks) {
+      const d = disputes.find((x) => x.column === c.column);
+      if (c.status === 'fail' && d && String(c.actual) === d.site) Object.assign(c, { status: 'warn', why: 'site' });
+    }
+    if (s.status === 'fail' && !s.checks.some((c) => c.status === 'fail')) s.status = 'warn';
+  }
   report.translated = { from: translate.from, to: translate.to, columns: translate.columns, values: map.size };
   say('run', { kind: 'translated', text: `Translated ${map.size.toLocaleString('en-US')} values into ${language(translate.to)}. Every receipt keeps the site's own words; the Apify dataset holds them as the site has them.` });
 }

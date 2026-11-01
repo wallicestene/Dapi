@@ -7,7 +7,8 @@ import { chat, SPARK } from './meta.js';
 
 const PROMPT = `You translate values in a dataset extracted from a website, for a client who wrote their spec in another language.
 Translate each value from the source language into the target language, the way the client's examples do: keep their wording, punctuation and style for the same phrases, and translate names of organisations only as far as the examples do.
-Never change numbers, postcodes, dates, codes, URLs or email addresses, and never add or drop information. A value that needs no translation (a proper name, an address line) comes back unchanged.`;
+Never change numbers, postcodes, dates, codes, URLs or email addresses, and never add or drop information. A value that needs no translation (a proper name, an address line) comes back unchanged.
+Be consistent across the whole dataset: a word gets the same treatment in every value (if "AVD" becomes "DEPT" in one name, it does in all; if a company's name stays as it is, so do its branches). "decided" holds translations already made for other values in this dataset: follow them.`;
 
 const SCHEMA = {
   type: 'object',
@@ -32,9 +33,16 @@ const BATCH = 60;
 export async function translateValues({ values, from, to, examples, onProgress = () => {} }) {
   const out = new Map();
   const tokens = { in: 0, out: 0 };
-  const todo = values.filter((v) => v && v.trim());
+  // Sorted, so a company and its branches land in the same batch.
+  const todo = values.filter((v) => v && v.trim()).sort((a, b) => a.localeCompare(b));
   for (let i = 0; i < todo.length; i += BATCH) {
     const batch = todo.slice(i, i + BATCH);
+    // Earlier decisions for values that share a word with this batch.
+    const words = new Set(batch.flatMap((v) => v.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2)));
+    const decided = [...out]
+      .filter(([source]) => source.toLowerCase().split(/[^\p{L}\p{N}]+/u).some((w) => words.has(w)))
+      .slice(-40)
+      .map(([source, text]) => ({ source, translation: text }));
     const { content, usage } = await chat({
       model: SPARK,
       reasoningEffort: 'low',
@@ -47,6 +55,7 @@ export async function translateValues({ values, from, to, examples, onProgress =
             from,
             to,
             examples: examples.map((e) => ({ column: e.column, source: e.source, translation: e.target })),
+            decided,
             values: batch.map((text, id) => ({ id, text })),
           }),
         },

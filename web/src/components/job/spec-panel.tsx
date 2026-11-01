@@ -72,7 +72,7 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
           </Panel>
         )}
         {(questions.length > 0 || problems.length > 0) && (
-          <Panel title="Unclear in the spec">
+          <Panel title="Notes on the spec">
             <ul className="space-y-1.5 px-5 py-3 text-[14px]">
               {[...questions, ...problems].map((q) => (
                 <li key={q}>{q}</li>

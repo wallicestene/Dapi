@@ -9,7 +9,7 @@ const MATCH_PROMPT = `You help a data extraction tool decide which JSON endpoint
 You get the spec's columns (with any instructions), its sample rows, and the JSON endpoints a page called, each with sample records.
 Pick the endpoint whose records are the items the spec's rows are built from. Lookup lists, filter options, settings, feature flags, translations and tracking are not.
 For each column, give the key or keys inside one record of that endpoint that hold its value, using dots for nesting. For a value built from several keys (joined, split, reformatted), list every key and say how in "how". If no key in that endpoint holds the column, give an empty list.
-Match by meaning and by the sample values. Set best to null if no endpoint holds the records.`;
+Match by meaning and by the sample values. A column's instructions are the client's note from what they saw on the page ("click View", "from the overview"): they say which value is wanted, not where it must come from, so the same value from a data feed is the right match. Set best to null if no endpoint holds the records.`;
 
 const MATCH_SCHEMA = {
   type: 'object',

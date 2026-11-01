@@ -105,11 +105,12 @@ export function verdict(report, findings = null) {
 }
 
 // Writes the site part to outPath and tests it, fixing it from the checks' feedback up
-// to MAX_ATTEMPTS times. Each attempt is reported to onEvent as it finishes.
-export async function writeAndTest({ spec, specPath, findings, outPath, onEvent = () => {} }) {
+// to `attempts` times. Each attempt is reported to onEvent as it finishes. With
+// `previous` ({ code, feedback }), it starts by repairing that code: a run that broke
+// on Apify comes back here with its log.
+export async function writeAndTest({ spec, specPath, findings, outPath, onEvent = () => {}, previous = null, attempts = MAX_ATTEMPTS }) {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  let previous = null;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
     const started = Date.now();
     const written = await writeSite({ spec, findings, previous });
     fs.writeFileSync(outPath, written.code.endsWith('\n') ? written.code : `${written.code}\n`);
@@ -130,7 +131,7 @@ export async function writeAndTest({ spec, specPath, findings, outPath, onEvent 
     const crash = run.report ? '' : `\nThe run crashed. Output:\n${run.output.slice(-3000)}`;
     previous = { code: written.code, feedback: `Problems:\n- ${result.problems.join('\n- ')}${crash}` };
   }
-  return { passed: false, attempts: MAX_ATTEMPTS };
+  return { passed: false, attempts };
 }
 
 async function main() {

@@ -49,7 +49,7 @@ export type Tick =
 
 // Why a delivered value differs from the spec's sample without failing: spacing, a
 // slip in the spec, or a sample value typed under another column.
-export type Why = "spacing" | "typo" | "column";
+export type Why = "spacing" | "typo" | "column" | "site";
 
 export interface Cell {
   value: string;

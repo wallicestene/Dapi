@@ -16,7 +16,7 @@ const input = (await Actor.getInput()) ?? {};
 
 // Probe mode: check how the site answers Apify's servers, then stop.
 if (input.mode === 'probe') {
-  await Actor.setValue('REACH', await probe(input.requests ?? [], { countryCode: input.countryCode }));
+  await Actor.setValue('REACH', await probe(input.requests ?? [], { countryCode: input.countryCode, pace: input.pace ?? [] }));
   await Actor.exit();
 }
 

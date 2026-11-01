@@ -129,6 +129,14 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       timing: list.replay?.timing ?? null,
     });
     const reachability = await reach({ spec: source, list, detail, notes });
+    if (reachability?.pace) {
+      const p = reachability.pace;
+      onEvent({
+        kind: 'pace',
+        text: `Measured the site's pace from Apify: ${p.levels.map((l) => `${l.concurrency} at a time ${l.errors ? `${l.errors} error${l.errors === 1 ? '' : 's'} (${l.errorKinds.join(', ')})` : `${l.medianMs} ms`}`).join(', ')}. Sweet spot: ${p.recommended.concurrency} at a time, about ${p.recommended.perMinute} requests a minute.`,
+        ...p,
+      });
+    }
     if (reachability) {
       const how = reachability.recommendation;
       onEvent({
@@ -235,6 +243,31 @@ async function recordPageDetail({ recordPage, list, missing, sample, count, note
   const html = res.ok ? await res.text() : recordPage.html;
   const timing = { ms: Date.now() - started, bytes: Buffer.byteLength(html) };
   const { fields, jsonLd } = await mapHtmlDetail({ html, missing, sample, count });
+
+  // Columns the sample's record leaves blank are often filled on other records' pages
+  // ("Belongs to main unit" shows only on a sub-unit's page). Look at a few others,
+  // preferring records that differ from the sample's in a yes/no field, and map those
+  // columns by their labels there.
+  let blank = missing.filter((c) => !sample.values[c.name] && !fields[c.name]?.foundOn);
+  for (const url of otherRecordUrls(list, tmpl, 3)) {
+    if (!blank.length) break;
+    const other = await request(url).catch(() => null);
+    if (!other?.ok) continue;
+    const mapped = await mapHtmlDetail({ html: await other.text(), missing: blank, sample: { label: 'another record', values: {} }, count });
+    for (const c of blank) {
+      const f = mapped.fields[c.name];
+      if (f?.keys.length && f.got && !/^[-–—\s,]*$/.test(f.got)) fields[c.name] = { ...f, verified: true, sampleValue: '', foundOn: url, example: f.got };
+    }
+    blank = blank.filter((c) => !fields[c.name]?.foundOn);
+  }
+  const learned = missing.filter((c) => fields[c.name]?.foundOn);
+  if (learned.length) {
+    onEvent({
+      kind: 'other-record',
+      text: `Your sample leaves ${learned.map((c) => c.name).join(', ')} blank, so Dapi looked at other records' pages and found ${learned.map((c) => `${c.name} (e.g. “${fields[c.name].example}”)`).join(', ')}.`,
+    });
+  }
+
   onEvent({
     kind: 'detail',
     route: 'page',
@@ -252,6 +285,24 @@ async function recordPageDetail({ recordPage, list, missing, sample, count, note
     jsonLd,
     trigger: { record: sample.label, control: 'the page your spec names', reason: 'Every record has a page with the same layout.' },
   };
+}
+
+// Other records' page addresses, the ones most unlike the sample's first: records whose
+// yes/no fields differ from the sample record's (a sub-unit when the sample is a main
+// unit) are likeliest to fill what the sample leaves blank.
+function otherRecordUrls(list, tmpl, n) {
+  const records = list.records.records;
+  const own = records.find((r) => String(at(r, tmpl.field)) === tmpl.sampleValue);
+  const flags = (r) =>
+    JSON.stringify(r)
+      .match(/"[^"]+":(true|false)/g)
+      ?.join() ?? '';
+  const ownFlags = own ? flags(own) : '';
+  return records
+    .filter((r) => r !== own && at(r, tmpl.field) !== undefined)
+    .sort((a, b) => Number(flags(b) !== ownFlags) - Number(flags(a) !== ownFlags))
+    .slice(0, n)
+    .map((r) => tmpl.template.replace(`{${tmpl.field}}`, encodeURIComponent(String(at(r, tmpl.field)))));
 }
 
 // A paged list: which parameter picks the page and which sets its size, and whether one
@@ -386,11 +437,55 @@ async function reach({ spec, list, detail, notes }) {
   if (detail?.kind === 'html') requests.push({ label: 'detail page', url: detail.sampleUrl, expect: detailValue });
   try {
     const { checkReach } = await import('./apify/reach.js');
-    return await checkReach(requests);
+    return await checkReach(requests, { pace: detail ? detailRequests(list, detail, 24) : [] });
   } catch (err) {
     notes.push(`Reachability from Apify not checked: ${err.message.split('\n')[0]}`);
     return null;
   }
+}
+
+// Other records' detail requests, built the way the run will build them, for the pace
+// test: a URL template filled with a list field, the link a list field holds, or the
+// captured data request with the join parameter set to each record's value.
+function detailRequests(list, detail, n) {
+  const out = [];
+  for (const record of list.records.records) {
+    if (out.length >= n) break;
+    try {
+      if (detail.kind === 'html' && detail.urlTemplate) {
+        const value = at(record, detail.urlFrom.listField);
+        if (value !== undefined && value !== null) out.push({ label: 'pace', url: detail.urlTemplate.replace(`{${detail.urlFrom.listField}}`, encodeURIComponent(String(value))) });
+      } else if (detail.kind === 'html') {
+        const raw = String(at(record, detail.urlFrom.listField) ?? '').replace(/\\\//g, '/');
+        const url = raw.match(/href="([^"]+)"/)?.[1] ?? raw.match(/https?:\/\/[^\s"'<>]+/)?.[0];
+        if (url) out.push({ label: 'pace', url: url.startsWith('//') ? `https:${url}` : url });
+      } else if (detail.kind === 'json' && detail.join) {
+        const value = String(at(record, detail.join.listField) ?? '');
+        if (!value) continue;
+        const cap = detail.capture;
+        const url = new URL(cap.url);
+        let payload = cap.payload;
+        if (detail.join.in === 'query') url.searchParams.set(detail.join.param, value);
+        else if (detail.join.in === 'payload') {
+          try {
+            payload = JSON.stringify({ ...JSON.parse(payload), [detail.join.param]: value });
+          } catch {
+            const form = new URLSearchParams(payload ?? '');
+            form.set(detail.join.param, value);
+            payload = form.toString();
+          }
+        } else if (detail.join.in === 'path') {
+          const parts = url.pathname.split('/');
+          parts[Number(detail.join.param.replace('segment ', ''))] = encodeURIComponent(value);
+          url.pathname = parts.join('/');
+        }
+        out.push({ label: 'pace', url: url.href, method: cap.method, payload, headers: cap.headers?.['content-type'] ? { 'content-type': cap.headers['content-type'] } : {} });
+      }
+    } catch {
+      // a record without the field: skip it
+    }
+  }
+  return out;
 }
 
 // The frame obeys robots.txt (Crawlee's own parser), so the findings must only point

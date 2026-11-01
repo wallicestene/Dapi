@@ -43,8 +43,17 @@ async function load(id: string) {
   const { compareSamples } = await pipeline<{ compareSamples: (rows: unknown[], samples: Spec["samples"]) => SampleResult[] }>("src/compare.js");
   const plain = items.map((it) => Object.fromEntries(columns.map((c) => [c, it[c] ?? ""])));
   const samples = spec?.samples.length ? compareSamples(plain, spec.samples) : [];
+  // Values the investigation found the site itself contradicts: delivered as the site
+  // has them, shown as a known disagreement rather than a failure.
+  const disputes = readJson<{ samples?: { disputes?: { column: string; site: string }[] } }>(jobPath(id, "findings.json"))?.samples?.disputes ?? [];
   const sampleAt = new Map<number, SampleResult>();
-  for (const s of samples) if (s.row !== null) sampleAt.set(s.row, s);
+  for (const s of samples) {
+    for (const c of s.checks) {
+      const d = disputes.find((x) => x.column === c.column);
+      if (c.status === "fail" && d && s.row !== null && String(plain[s.row]?.[c.column]) === d.site) Object.assign(c, { status: "warn", why: "site" });
+    }
+    if (s.row !== null) sampleAt.set(s.row, s);
+  }
 
   const rows: Row[] = items.map((item, index) => {
     const cells: Record<string, Cell> = {};

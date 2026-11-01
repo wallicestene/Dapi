@@ -131,7 +131,14 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
 
 // Where a delivered value parts from the spec's sample: the same short stretch of each,
 // so a one-space difference in a 300-character legal reference is visible at once.
-function Difference({ label, expected, actual, why, belongsTo }: { label: string; expected: string; actual: string; why: "spacing" | "typo" | "column" | null; belongsTo?: string }) {
+function Difference({ label, expected, actual, why, belongsTo }: { label: string; expected: string; actual: string; why: "spacing" | "typo" | "column" | "site" | null; belongsTo?: string }) {
+  if (why === "site") {
+    return (
+      <>
+        {label} in your spec has <q>{expected}</q>, but the site shows <q>{actual}</q> for this record. Dapi delivers what the site shows.
+      </>
+    );
+  }
   if (why === "column") {
     return (
       <>
