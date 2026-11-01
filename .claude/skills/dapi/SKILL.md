@@ -641,6 +641,42 @@ freelancer would:
 - First translated delivery (job 0009, before these fixes): 291 of 291, 557 values
   translated, the Norwegian kept per receipt; issues found and fixed above.
 
+### The source behind the source (2026-11-01)
+
+The owner's `arbeidstilsynet-bht` scraper (read for lessons only, with permission)
+finishes in under 5 minutes on a server that stalls for minutes, because it barely
+asks that server anything:
+
+- The business pages take their addresses and parent unit from the Brønnøysund
+  Register; its open API answers 100 businesses per request. ~6 register requests
+  replace 291 page loads.
+- The status description depends only on the status: one page per status.
+- One request at a time, 120 s timeout, up to 20 retries, 30 s pause before a retry.
+
+Dapi now does the same by itself:
+
+- **Upstream registers:** after mapping a record page, Muse Spark proposes the public
+  register API behind it from the page's links that carry the record's ID; Dapi calls
+  it for the sample and for other records whose pages it opened, and keeps only the
+  columns whose values are really in the answers (an ID in the answer that belongs to
+  a list record counts as that record's name: "Belongs to main unit"), and only batch
+  endpoints that answer for several IDs. Arbeidstilsynet: enheter + underenheter,
+  100 IDs a request, covering visiting address, postal address, main unit.
+- **Shared values:** detail columns identical on every record page opened are
+  flagged `sameOnAllPages`; the writer fetches one page per distinct value.
+- **Stalling servers:** `timeoutSecs` (default 120) and `retryPauseSecs` in the site
+  part's config; retries up to 20.
+- Muse Spark's batch proposals varied between runs (once with, once without); the
+  prompt now insists on batches unless the register has none.
+
+Decisions (owner asked me to make the calls, 2026-11-01):
+- Use a source's upstream public register when it verifiably holds the values, with
+  receipts naming it. Faster and better evidence.
+- Translation stays with Muse Spark, not Chrome's built-in Google Translate endpoint
+  and key: that endpoint is undocumented and the key is Chrome's, so it can break or be
+  blocked mid-demo; Meta-model use is a quarter of the score.
+- Order: this, then hosting, spoken specs, submission.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
