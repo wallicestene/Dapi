@@ -51,6 +51,12 @@
       "editor": "json",
       "description": "probe mode: [{ label, url, method, payload, headers, expect }]"
     },
+    "pace": {
+      "title": "Pace test requests",
+      "type": "array",
+      "editor": "json",
+      "description": "probe mode: other records' detail requests, fetched 1, 3 and 6 at a time to find the site's sweet spot"
+    },
     "countryCode": {
       "title": "Proxy country",
       "type": "string",

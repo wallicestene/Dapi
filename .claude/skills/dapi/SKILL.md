@@ -610,6 +610,37 @@ freelancer would:
   slowed. The frame now halves concurrency on 5xx, 429 or timeouts and climbs back
   after 30 s without one.
 
+### Pace, the run watch and repairs (2026-11-01)
+
+- **The sweet spot is measured, not guessed.** The first Arbeidstilsynet run used 8
+  at a time; the site answered HTTP 500 ("Something Went Wrong") and the run took
+  ~20 min. The owner's own scraper for the same register runs one at a time, retries
+  up to 20, and finishes in under 4 min (read for lessons only, 2026-11-01). Now the
+  probe on Apify fetches other records' detail requests 1, 3 and 6 at a time from the
+  way in that worked, and recommends the highest level with no errors whose answers
+  stay under ~2.2× the one-at-a-time time (`reachability.pace`). The code writer uses
+  it; the plan's estimate follows it; the frame halves concurrency on 5xx/429/
+  timeouts and climbs back after 30 s quiet.
+- **Every run is watched.** The job runner streams the run's log and reads the
+  frame's state every 3 s. Broken = rows miss spec columns; the extraction code throws
+  (≥5 errors); ≥10 requests failed every retry and >20% of those done; nothing moved
+  for 5 min; the run crashed or timed out. A broken run is aborted gracefully (its
+  rows stay in its dataset), Muse Spark gets the reason, the failed requests and the
+  deduplicated warnings/errors, repairs the code or its config, the repair is tested
+  again, and a fresh run starts. Up to two repairs; a site that asks for a person on
+  many pages is set aside, not repaired.
+- **Blank sample columns** ("Belongs to main unit" is only filled on a sub-unit's
+  page): the investigator opens a few other records' pages, preferring records whose
+  yes/no fields differ from the sample's, and maps those columns by label there.
+- **Translation consistency:** values are translated sorted, in batches that see
+  earlier decisions for values sharing a word, so a company and its branches get the
+  same treatment.
+- **Client notes are intent, not procedure** (owner's call): "click View", "from the
+  main page overview" say which value is wanted; Dapi gets it the best way the
+  findings allow, and follows the note's route only where it picks a different value.
+- First translated delivery (job 0009, before these fixes): 291 of 291, 557 values
+  translated, the Norwegian kept per receipt; issues found and fixed above.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
