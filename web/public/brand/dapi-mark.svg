@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 4 56 56" width="512" height="512">
+  <title>Dapi</title>
+  <!-- The tick's halo is cut out of the arcs, so the mark sits on any background. -->
+  <mask id="halo" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <path d="M26.5 34.5L31.5 40L52 14" stroke="#000" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </mask>
+  <g mask="url(#halo)" fill="none" stroke-width="11">
+    <path d="M14 50V14" stroke="#6A4CFF" stroke-linecap="round"/>
+    <path d="M23 14H32A18 18 0 0 1 46.36 21.15" stroke="#F12727"/>
+    <path d="M46.36 21.15A18 18 0 0 1 32 50H23" stroke="#12B5A5"/>
+  </g>
+  <path d="M26.5 34.5L31.5 40L52 14" stroke="#9AD82B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

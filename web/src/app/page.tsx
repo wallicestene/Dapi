@@ -1,90 +1,160 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TopBar } from "@/components/shell";
-import { TickMark } from "@/components/tick";
-import { READ_ONLY, listJobs } from "@/lib/server/dapi";
-import type { Job } from "@/lib/types";
+import { Mark, Wordmark } from "@/components/shell";
+import { ReceiptDemo } from "@/components/home/receipt-demo";
+import { READ_ONLY, getJob } from "@/lib/server/dapi";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<Job["status"], string> = {
-  running: "Running",
-  waiting: "Waiting for your Go",
-  done: "Delivered",
-  failed: "Stopped: failed a check",
-  declined: "Refused: can't be extracted",
-  cancelled: "Stopped by you",
-  stopped: "Run stopped: resurrect to continue",
-};
+// The front door: what Dapi does, shown on a real delivered job, then how, then proof.
+// Every number here comes from a finished job's own record.
+
+const STEPS = [
+  { n: 1, name: "Source", title: "Finds the data behind the page", body: "Dapi's agent opens the site, watches its traffic and finds the feed the page itself uses." },
+  { n: 2, name: "Extract", title: "Writes the extraction and tests it", body: "Muse Spark writes the code and checks it against your sample rows before anything runs." },
+  { n: 3, name: "Deliver", title: "Runs on Apify at the site's pace", body: "You approve the plan. Rows stream into your dataset as they're found." },
+  { n: 4, name: "Verified", title: "Proves every value", body: "Each value links to the server response it came from, hashed the moment it was captured." },
+];
+
+const PROOF = [
+  { id: "0024", label: "FSSC certified organisations", note: "A 43,037-record register, read from its own data feed" },
+  { id: "0002", label: "Great Place to Work India", note: "Four tables embedded in one page, plus a profile per company" },
+  { id: "0006", label: "Better Work factory compliance", note: "One row per issue, from a request behind a View button" },
+  { id: "0017", label: "Occupational health services, Norway", note: "Spoken spec, delivered in English from a Norwegian site" },
+];
+
+const WHY = [
+  { title: "Calls the API, not the page", body: "Most sites load their data from a feed. Dapi reads that feed: faster, steadier, and in the server's own words." },
+  { title: "Receipts, not logs", body: "Open any value to see the exact response, when it was captured, and its SHA-256." },
+  { title: "Counted, never quietly short", body: "Rows are footed against the source's own total. Anything missing is named, with the reason." },
+  { title: "Your samples guide, the site decides", body: "When a sample disagrees with the site, you see both, and Dapi delivers what the site shows." },
+];
+
+function took(seconds?: number | null) {
+  if (!seconds) return null;
+  return seconds < 90 ? `${Math.round(seconds)} s` : `${Math.round(seconds / 60)} min`;
+}
 
 export default function Home() {
-  const jobs = listJobs();
+  const proof = PROOF.map((p) => ({ ...p, job: getJob(p.id) })).filter((p) => p.job?.status === "done");
+  const start = READ_ONLY ? { href: "/jobs", label: "Explore finished jobs" } : { href: "/jobs/new", label: "Start a job" };
   return (
     <div className="flex min-h-screen flex-col">
-      <TopBar
-        actions={
-          !READ_ONLY && (
-            <Button asChild className="h-8">
-              <Link href="/jobs/new">New job</Link>
+      <header className="flex h-16 shrink-0 items-center gap-6 px-5 sm:px-8">
+        <Wordmark bg="var(--ground)" />
+        <nav aria-label="Main" className="hidden items-center gap-6 text-[14px] font-medium text-ink-2 sm:flex">
+          <a href="#how" className="hover:text-ink">
+            How it works
+          </a>
+          <a href="#proof" className="hover:text-ink">
+            Delivered
+          </a>
+          <Link href="/jobs" className="hover:text-ink">
+            Jobs
+          </Link>
+        </nav>
+        <Button asChild className="ml-auto h-9 px-4">
+          <Link href={start.href}>{start.label}</Link>
+        </Button>
+      </header>
+
+      <main className="flex flex-col">
+        <section className="mx-auto grid w-full max-w-[1240px] items-center gap-10 px-5 pt-10 pb-20 sm:px-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,7fr)] lg:gap-12 lg:pt-16">
+          <div className="flex flex-col gap-6">
+            <Mark draw className="size-16" bg="var(--ground)" label="Dapi" />
+            <h1 className="text-[clamp(44px,5.4vw,78px)] leading-[0.95] font-bold tracking-[-0.045em]">Web data you can prove.</h1>
+            <p className="max-w-[460px] text-[19px] leading-[1.45] text-ink-2">Send a spec. Get the dataset, with every value traced to the response it came from.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild className="h-11 px-5 text-[15px]">
+                <Link href={start.href}>{start.label}</Link>
+              </Button>
+              <Button asChild variant="outline" className="h-11 bg-sheet px-5 text-[15px]">
+                <Link href="/jobs/0024">
+                  See a delivered job <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+            <p className="text-[13px] text-ink-2">Runs on Apify. Built with Meta&apos;s Muse Spark, Muse Wonder and Muse Voice Transcribe.</p>
+          </div>
+          <ReceiptDemo />
+        </section>
+
+        <section id="how" className="bg-night text-[#e6e9da]">
+          <div className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
+            <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em] text-white">From a spec to a proven dataset</h2>
+            <p className="mt-3 max-w-[560px] text-[17px] text-[#b8c0b9]">Write the spec the way you&apos;d brief a freelancer: the site, the columns, a few sample rows. PDF, text, or say it out loud.</p>
+            <ol className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+              {STEPS.map((s) => (
+                <li key={s.n} className="flex flex-col gap-3">
+                  <Mark className="size-12" bg="var(--night)" lit={s.n} dim="#2b3a48" />
+                  <span className="text-[13px] font-semibold tracking-[0.02em] text-[#b8c0b9]">
+                    {s.n} · {s.name}
+                  </span>
+                  <h3 className="text-[19px] leading-snug font-semibold text-white">{s.title}</h3>
+                  <p className="text-[15px] leading-relaxed text-[#b8c0b9]">{s.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {proof.length > 0 && (
+          <section id="proof" className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
+            <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">Delivered, and counted against the source</h2>
+            <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs, real public sources. Open any of them to check the receipts yourself.</p>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {proof.map(({ id, label, note, job }) => (
+                <Link key={id} href={`/jobs/${id}`} className="group flex flex-col gap-3 rounded-xl border bg-sheet p-5 transition-colors hover:border-ink-3">
+                  <span className="text-[32px] leading-none font-bold tracking-[-0.03em] tabular-nums">
+                    {(job!.rows ?? 0).toLocaleString("en-US")}
+                    <span className="text-[17px] font-semibold text-ink-2"> / {(job!.expected ?? job!.records ?? job!.rows ?? 0).toLocaleString("en-US")}</span>
+                  </span>
+                  <span className="text-[15px] font-semibold">{label}</span>
+                  <span className="text-[14px] leading-snug text-ink-2">{note}</span>
+                  <span className="mt-auto flex items-center gap-2 pt-2 text-[13px] text-ink-2">
+                    {[took(job!.apify?.seconds), job!.apify?.usd ? (job!.apify.usd < 0.01 ? "under $0.01 on Apify" : `$${job!.apify.usd.toFixed(2)} on Apify`) : null].filter(Boolean).join(" · ")}
+                    <ArrowRight className="ml-auto size-4 text-ink-3 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="mx-auto w-full max-w-[1240px] px-5 pb-20 sm:px-8">
+          <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2">
+            {WHY.map((w) => (
+              <div key={w.title} className="flex flex-col gap-2 bg-sheet p-7">
+                <h3 className="text-[20px] font-semibold tracking-[-0.01em]">{w.title}</h3>
+                <p className="max-w-[440px] text-[15px] leading-relaxed text-ink-2">{w.body}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-5 text-[14px] text-ink-2">Public data only. No logins, no paywalls, and no CAPTCHA solving.</p>
+        </section>
+
+        <section className="mx-auto w-full max-w-[1240px] px-5 pb-24 sm:px-8">
+          <div className="flex flex-col items-start gap-5 rounded-2xl bg-sheet px-7 py-10 sm:flex-row sm:items-center sm:px-10">
+            <Mark className="size-14" />
+            <div className="flex flex-col gap-1">
+              <h2 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">Have a spec? See it run.</h2>
+              <p className="text-[15px] text-ink-2">Dapi shows you the plan, the cost and the time before anything runs.</p>
+            </div>
+            <Button asChild className="h-11 px-5 text-[15px] sm:ml-auto">
+              <Link href={start.href}>{start.label}</Link>
             </Button>
-          )
-        }
-      />
-      <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 px-6 pt-7 pb-10">
-        <div>
-          <h1 className="condensed text-[28px] leading-tight font-semibold">Jobs</h1>
-          <p className="mt-1 text-[14px] text-ink-2">Each job turns a spec into a dataset with a receipt for every value, footed against the source&apos;s own count.</p>
-        </div>
-        <section className="overflow-hidden rounded-lg border bg-sheet">
-          <table className="w-full text-[14px]">
-            <thead>
-              <tr className="border-b text-left text-[12px] text-ink-2">
-                <th className="w-16 px-5 py-2.5 font-normal">Job</th>
-                <th className="px-3 py-2.5 font-normal">Dataset</th>
-                <th className="px-3 py-2.5 text-right font-normal">Rows</th>
-                <th className="px-3 py-2.5 font-normal">Status</th>
-                <th className="px-5 py-2.5 text-right font-normal">Started</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => {
-                const short = job.status === "done" && job.expected != null && (job.rows ?? 0) < job.expected;
-                return (
-                  <tr key={job.id} className="relative border-b border-rule last:border-0 hover:bg-raised">
-                    <td className="px-5 py-3 text-ink-3">{job.id}</td>
-                    <td className="px-3 py-3">
-                      <Link href={`/jobs/${job.id}`} className="font-medium after:absolute after:inset-0">
-                        {job.title ?? "Reading the spec…"}
-                      </Link>
-                      {job.sourceUrl && <span className="block text-[13px] text-ink-2">{new URL(job.sourceUrl).host}</span>}
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      {job.runId ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          {(job.rows ?? 0).toLocaleString("en-US")}
-                          {job.expected != null && <span className="text-ink-3">/ {job.expected.toLocaleString("en-US")}</span>}
-                          {job.status === "done" && <TickMark tick={short ? "missing" : "footed"} />}
-                        </span>
-                      ) : (
-                        <span className="text-ink-3">—</span>
-                      )}
-                    </td>
-                    <td className={job.status === "declined" || job.status === "failed" ? "px-3 py-3 text-pencil-red" : "px-3 py-3 text-ink-2"}>{STATUS[job.status]}</td>
-                    <td className="px-5 py-3 text-right text-ink-2">{new Date(job.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</td>
-                  </tr>
-                );
-              })}
-              {!jobs.length && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-6 text-ink-2">
-                    No jobs yet. {READ_ONLY ? "" : <Link href="/jobs/new" className="font-medium text-ink underline">Start one from a spec.</Link>}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          </div>
         </section>
       </main>
+
+      <footer className="border-t">
+        <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-6 text-[13px] text-ink-2 sm:px-8">
+          <Wordmark bg="var(--ground)" />
+          <span>Built for the Meta Global AI Developer Hackathon, 2026</span>
+          <span className="sm:ml-auto">Muse Spark · Muse Wonder · Muse Voice Transcribe · Apify</span>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,0 +1,428 @@
+{
+  "job": "0024",
+  "title": "FSSC certified organisations",
+  "host": "www.fssc.com",
+  "request": "GET https://www.fssc.com/wp-admin/admin-ajax.php?action=certificate_getCertificates&offset=0&limit=15",
+  "capturedAt": "2026-11-02T19:14:28.895Z",
+  "sha256": "ceff8ca9b95875d5a9fc4da9b60d9605c3831206a19600b67c36557eee30b775",
+  "via": "Apify Proxy DATACENTER",
+  "total": 43037,
+  "rows": [
+    {
+      "Organization name": {
+        "value": "\"A POLYMER INDUSTRIES\" LLC",
+        "path": "certificates.0.organisation.name",
+        "field": "name",
+        "lines": [
+          {
+            "key": "name",
+            "value": "\"\\\"A POLYMER INDUSTRIES\\\" LLC\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation"
+      },
+      "City": {
+        "value": "Tashkent",
+        "path": "certificates.0.organisation.address.city",
+        "field": "city",
+        "lines": [
+          {
+            "key": "street",
+            "value": "\"45 Oltintopgan St., Bektemir district\"",
+            "hit": false
+          },
+          {
+            "key": "zipcode",
+            "value": "\"100033\"",
+            "hit": false
+          },
+          {
+            "key": "city",
+            "value": "\"Tashkent\"",
+            "hit": true
+          },
+          {
+            "key": "state",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Uzbekistan\"",
+            "hit": false
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Country": {
+        "value": "Uzbekistan",
+        "path": "certificates.0.organisation.address.country",
+        "field": "country",
+        "lines": [
+          {
+            "key": "city",
+            "value": "\"Tashkent\"",
+            "hit": false
+          },
+          {
+            "key": "state",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Uzbekistan\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Certificate valid until": {
+        "value": "17-07-2027",
+        "path": "certificates.0.validUntil",
+        "field": "validUntil",
+        "lines": [
+          {
+            "key": "issued",
+            "value": "\"11-05-2026\"",
+            "hit": false
+          },
+          {
+            "key": "status",
+            "value": "\"Valid\"",
+            "hit": false
+          },
+          {
+            "key": "validUntil",
+            "value": "\"17-07-2027\"",
+            "hit": true
+          },
+          {
+            "key": "lastStatusDecision",
+            "value": "\"18-07-2024\"",
+            "hit": false
+          },
+          {
+            "key": "gfsi",
+            "value": "\"0\"",
+            "hit": false
+          }
+        ],
+        "parent": "certificates.0"
+      }
+    },
+    {
+      "Organization name": {
+        "value": "\"AGRARCO\" LLC",
+        "path": "certificates.1.organisation.name",
+        "field": "name",
+        "lines": [
+          {
+            "key": "name",
+            "value": "\"\\\"AGRARCO\\\" LLC\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation"
+      },
+      "City": {
+        "value": "Zaqatala",
+        "path": "certificates.1.organisation.address.city",
+        "field": "city",
+        "lines": [
+          {
+            "key": "street",
+            "value": "\"Zagathala district, Ashaghi Tala village Hazelnut kernels Production Plant\"",
+            "hit": false
+          },
+          {
+            "key": "zipcode",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "city",
+            "value": "\"Zaqatala\"",
+            "hit": true
+          },
+          {
+            "key": "state",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Azerbaijan\"",
+            "hit": false
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Country": {
+        "value": "Azerbaijan",
+        "path": "certificates.1.organisation.address.country",
+        "field": "country",
+        "lines": [
+          {
+            "key": "city",
+            "value": "\"Zaqatala\"",
+            "hit": false
+          },
+          {
+            "key": "state",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Azerbaijan\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Certificate valid until": {
+        "value": "12-10-2028",
+        "path": "certificates.1.validUntil",
+        "field": "validUntil",
+        "lines": [
+          {
+            "key": "issued",
+            "value": "\"03-10-2025\"",
+            "hit": false
+          },
+          {
+            "key": "status",
+            "value": "\"Valid\"",
+            "hit": false
+          },
+          {
+            "key": "validUntil",
+            "value": "\"12-10-2028\"",
+            "hit": true
+          },
+          {
+            "key": "lastStatusDecision",
+            "value": "\"03-10-2025\"",
+            "hit": false
+          },
+          {
+            "key": "categoryProductType",
+            "value": "null",
+            "hit": false
+          }
+        ],
+        "parent": "certificates.1"
+      }
+    },
+    {
+      "Organization name": {
+        "value": "\"AGRO CITY\" LLC",
+        "path": "certificates.2.organisation.name",
+        "field": "name",
+        "lines": [
+          {
+            "key": "name",
+            "value": "\"\\\"AGRO CITY\\\" LLC\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation"
+      },
+      "City": {
+        "value": "Urtachirchiq district, Saidovul MSG, 151",
+        "path": "certificates.2.organisation.address.city",
+        "field": "city",
+        "lines": [
+          {
+            "key": "street",
+            "value": "\"Saidovul MSG, 151\"",
+            "hit": false
+          },
+          {
+            "key": "zipcode",
+            "value": "\"111500\"",
+            "hit": false
+          },
+          {
+            "key": "city",
+            "value": "\"Urtachirchiq district, Saidovul MSG, 151\"",
+            "hit": true
+          },
+          {
+            "key": "state",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Uzbekistan\"",
+            "hit": false
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Country": {
+        "value": "Uzbekistan",
+        "path": "certificates.2.organisation.address.country",
+        "field": "country",
+        "lines": [
+          {
+            "key": "city",
+            "value": "\"Urtachirchiq district, Saidovul MSG, 151\"",
+            "hit": false
+          },
+          {
+            "key": "state",
+            "value": "\"\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Uzbekistan\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Certificate valid until": {
+        "value": "23-05-2027",
+        "path": "certificates.2.validUntil",
+        "field": "validUntil",
+        "lines": [
+          {
+            "key": "issued",
+            "value": "\"28-07-2026\"",
+            "hit": false
+          },
+          {
+            "key": "status",
+            "value": "\"Valid\"",
+            "hit": false
+          },
+          {
+            "key": "validUntil",
+            "value": "\"23-05-2027\"",
+            "hit": true
+          },
+          {
+            "key": "lastStatusDecision",
+            "value": "\"07-05-2025\"",
+            "hit": false
+          },
+          {
+            "key": "gfsi",
+            "value": "\"0\"",
+            "hit": false
+          }
+        ],
+        "parent": "certificates.2"
+      }
+    },
+    {
+      "Organization name": {
+        "value": "\"ALIMENTOS BENEFITS\", S.A. DE.C.V",
+        "path": "certificates.3.organisation.name",
+        "field": "name",
+        "lines": [
+          {
+            "key": "name",
+            "value": "\"\\\"ALIMENTOS BENEFITS\\\", S.A. DE.C.V\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation"
+      },
+      "City": {
+        "value": "Lagos de Moreno",
+        "path": "certificates.3.organisation.address.city",
+        "field": "city",
+        "lines": [
+          {
+            "key": "street",
+            "value": "\"Calle 24 de Junio No. 111, Col. Pueblo de Moya\"",
+            "hit": false
+          },
+          {
+            "key": "zipcode",
+            "value": "\"47430\"",
+            "hit": false
+          },
+          {
+            "key": "city",
+            "value": "\"Lagos de Moreno\"",
+            "hit": true
+          },
+          {
+            "key": "state",
+            "value": "\"Jalisco\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Mexico\"",
+            "hit": false
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Country": {
+        "value": "Mexico",
+        "path": "certificates.3.organisation.address.country",
+        "field": "country",
+        "lines": [
+          {
+            "key": "city",
+            "value": "\"Lagos de Moreno\"",
+            "hit": false
+          },
+          {
+            "key": "state",
+            "value": "\"Jalisco\"",
+            "hit": false
+          },
+          {
+            "key": "country",
+            "value": "\"Mexico\"",
+            "hit": true
+          }
+        ],
+        "parent": "organisation.address"
+      },
+      "Certificate valid until": {
+        "value": "10-02-2027",
+        "path": "certificates.3.validUntil",
+        "field": "validUntil",
+        "lines": [
+          {
+            "key": "issued",
+            "value": "\"07-01-2026\"",
+            "hit": false
+          },
+          {
+            "key": "status",
+            "value": "\"Valid\"",
+            "hit": false
+          },
+          {
+            "key": "validUntil",
+            "value": "\"10-02-2027\"",
+            "hit": true
+          },
+          {
+            "key": "lastStatusDecision",
+            "value": "\"26-12-2024\"",
+            "hit": false
+          },
+          {
+            "key": "categoryProductType",
+            "value": "null",
+            "hit": false
+          }
+        ],
+        "parent": "certificates.3"
+      }
+    }
+  ]
+}

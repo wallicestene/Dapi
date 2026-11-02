@@ -2,26 +2,33 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Dapi: an auditor's working paper. A pale green-grey ground, sheets one step lighter,
-   graphite ink, and two pencil colours that only ever mark data: green for checked,
-   red for an exception. Light only: it is read at a desk, like the paper it comes from. */
+/* Dapi: navy ink on sage paper, sheets one step lighter, and the mark's four colours,
+   one per stage of a job: source (violet), extract (red), deliver (teal), verified
+   (lime). Lime marks traced evidence and nothing else; its deeper cut draws the tick
+   marks, since the brand lime is too light for a 12 px icon. Red pencil is for an
+   exception. Light only: it is read at a desk. */
 :root {
-  --ground: #eef1ea;
-  --sheet: #f8f9f5;
-  --raised: #f2f4ee;
-  --active: #e1e6da;
-  --border: #d3d9cc;
-  --rule: #e3e7dd;
-  --control: #b5beae;
-  --ink: #22252a;
-  --ink-2: #545a61;
-  --ink-3: #60666c; /* placeholders and meta; 5.4:1 on the sheet */
-  --pencil-green: #2b7449;
-  --pencil-red: #b3302a;
-  --green-wash: #dce9dc;
-  --green-ink: #1c4a2f;
-  --red-wash: #f5dedb;
-  --red-ink: #7a1f19;
+  --ground: #f2f3ea;
+  --sheet: #fbfbf7;
+  --raised: #f5f6ef;
+  --active: #e6e8da;
+  --border: #d9dccb;
+  --rule: #e7e9dc;
+  --control: #b9bdaa;
+  --ink: #1d2c3a;
+  --ink-2: #4e5b67;
+  --ink-3: #5f6b76; /* placeholders and meta; 5.3:1 on the sheet */
+  --source: #6a4cff;
+  --extract: #f12727;
+  --deliver: #12b5a5;
+  --verified: #9ad82b;
+  --night: #0f1a24;
+  --pencil-green: #3d7a12;
+  --pencil-red: #c42b1c;
+  --green-wash: #e9f5d3;
+  --green-ink: #2c5a0d;
+  --red-wash: #fbe3df;
+  --red-ink: #8a1c12;
 
   /* shadcn's roles, mapped onto the paper */
   --background: var(--ground);
@@ -83,6 +90,11 @@
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
+  --color-source: var(--source);
+  --color-extract: var(--extract);
+  --color-deliver: var(--deliver);
+  --color-verified: var(--verified);
+  --color-night: var(--night);
   --color-pencil-green: var(--pencil-green);
   --color-pencil-red: var(--pencil-red);
   --color-green-wash: var(--green-wash);
@@ -137,4 +149,27 @@
 @utility condensed {
   font-stretch: 72%;
   font-variation-settings: "wdth" 72;
+}
+
+/* The mark draws itself: the stem rises, the arcs sweep round, the tick lands. Each
+   path has pathLength 1, so one dash covers it whatever its size. */
+.mark-draw path {
+  stroke-dasharray: 1 2;
+  animation: mark-draw 0.5s cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+.mark-draw .mark-extract { animation-delay: 0.3s; }
+.mark-draw .mark-deliver { animation-delay: 0.55s; animation-duration: 0.6s; }
+.mark-draw .mark-tick { animation-delay: 1s; animation-timing-function: cubic-bezier(0.5, 0, 0.15, 1); }
+@keyframes mark-draw {
+  from { stroke-dashoffset: 1; opacity: 0; }
+  1% { opacity: 1; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+/* The stage a job is in: its segment breathes until the stage is done. */
+.mark-now { animation: mark-now 1.6s ease-in-out infinite; }
+@keyframes mark-now {
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mark-draw path, .mark-now { animation: none; stroke-dashoffset: 0; opacity: 1; }
 }
