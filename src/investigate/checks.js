@@ -38,6 +38,19 @@ async function getText(url, options = {}) {
   return res.text();
 }
 
+// Response headers that state a total or the next page (X-WP-Total, X-Total-Count,
+// Content-Range, Link): many APIs give their count there, not in the body.
+const COUNT_HEADER = /^(x-wp-total|x-wp-totalpages|x-total|x-total-count|x-total-pages|x-pagination-[\w-]+|content-range|link)$/i;
+function countHeaders(res) {
+  const out = {};
+  try {
+    for (const [k, v] of res.headers.entries ? res.headers.entries() : Object.entries(res.headers ?? {})) if (COUNT_HEADER.test(k)) out[k] = String(v).slice(0, 300);
+  } catch {
+    // no headers to read
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 const matches = (record, field, equals) => String(at(record, field)) === String(equals);
 
 export function makeTools(findings) {
@@ -162,7 +175,7 @@ export function makeTools(findings) {
         // not JSON
       }
       const found = (expect ?? []).filter((v) => present(v, text));
-      return { status: res.status, works: true, bytes: Buffer.byteLength(text), records: records?.count ?? null, recordsPath: records?.path ?? null, expectedFound: found, expectedMissing: (expect ?? []).filter((v) => !found.includes(v)), sample: compact(text, 1500) };
+      return { status: res.status, works: true, headers: countHeaders(res), bytes: Buffer.byteLength(text), records: records?.count ?? null, recordsPath: records?.path ?? null, expectedFound: found, expectedMissing: (expect ?? []).filter((v) => !found.includes(v)), sample: compact(text, 1500) };
     },
 
     // Click something on a page and watch: the data requests the click makes (the feed
@@ -184,7 +197,7 @@ export function makeTools(findings) {
           text: {
             navigatedTo: after !== before ? after : null,
             page: page && { title: page.title, text: page.text.slice(0, 2500) },
-            requests: captures.slice(0, 6).map((c) => ({ method: c.method, url: c.url, payload: c.payload, status: c.status, records: findRecords(c.json)?.count ?? null, sample: compact(JSON.stringify(c.json), 1200) })),
+            requests: captures.slice(0, 6).map((c) => ({ method: c.method, url: c.url, payload: c.payload, status: c.status, contentType: c.contentType ?? 'application/json', records: c.json ? findRecords(c.json)?.count ?? null : null, sample: c.json ? compact(JSON.stringify(c.json), 1200) : clip(c.text.replace(/\s+/g, ' '), 1200) })),
           },
           image,
         };

@@ -741,7 +741,7 @@ async function respectRobots(list, notes, onEvent) {
 
 function jsonCandidates(captures) {
   return captures
-    .filter((c) => !isTracker(c.url))
+    .filter((c) => !isTracker(c.url) && c.json !== null)
     .map((c) => ({ ...c, records: findRecords(c.json) }))
     .filter((c) => c.records);
 }

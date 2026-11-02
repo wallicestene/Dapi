@@ -8,7 +8,8 @@ SaaS product, not a log. The client is not a developer.
   most four items.
 - Plain product words a SaaS user knows: dataset, rows, columns, the site's data feed,
   API, page, request, run, proxy, register. No code, JSON paths, parameter or field
-  names, or selectors.
+  names, selectors, status codes or internal IDs: "the Blog category", not "category
+  1446"; "the next page errors", not "page 3 returns 400".
 - Numbers over adjectives: "2,870 requests, about 29 minutes", not "many requests".
 - Say what Dapi does and why, in the active voice: "Dapi reads the site's own data
   feed, 15 records per request."

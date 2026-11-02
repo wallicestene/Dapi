@@ -109,3 +109,33 @@ export async function planStrategy({ spec, sourceSpec, findings, checkResults = 
   if (checkResults) content.checks = [];
   return { ...content, model: STRATEGIST, usage };
 }
+
+// The strategy's summary, open gaps and risks in the client's words: an agent deep in an
+// investigation writes for itself (selectors, field names), so Muse Spark rewrites what
+// the client reads, same meaning, nothing added. The technical originals stay for the
+// code writer. Falls back to the originals if the rewrite fails.
+const REWRITE_SCHEMA = {
+  type: 'object',
+  properties: { summary: { type: 'string' }, gaps: { type: 'array', items: { type: 'string' } }, risks: { type: 'array', items: { type: 'string' } } },
+  required: ['summary', 'gaps', 'risks'],
+  additionalProperties: false,
+};
+
+export async function forClient(strategy) {
+  const original = { summary: strategy.summary ?? '', gaps: strategy.gaps ?? [], risks: strategy.risks ?? [] };
+  try {
+    const { content } = await chat({
+      reasoningEffort: 'low',
+      timeoutMs: 60_000,
+      messages: [
+        { role: 'system', content: `Rewrite each item for the client, following this voice. Keep the meaning and every number; add nothing; one item in, one item out, in the same order. The summary says what Dapi will read and how, in one or two sentences.\n\n${VOICE}` },
+        { role: 'user', content: JSON.stringify(original) },
+      ],
+      schema: { name: 'for_client', schema: REWRITE_SCHEMA },
+    });
+    const same = content.gaps.length === original.gaps.length && content.risks.length === original.risks.length;
+    return same && content.summary ? content : original;
+  } catch {
+    return original;
+  }
+}

@@ -38,7 +38,10 @@ export async function openPage(url, { proxy } = {}) {
       return; // redirects have no body; a closed page has no response
     }
     const json = parseJson(body);
-    if (json === undefined) return;
+    // Data requests that aren't JSON (an HTML fragment behind "Load more") are kept too,
+    // with their text; documents, scripts and images are not.
+    const data = ['xhr', 'fetch'].includes(request.resourceType());
+    if (json === undefined && !data) return;
     captured.push({
       phase: inPhase,
       method: request.method(),
@@ -48,7 +51,8 @@ export async function openPage(url, { proxy } = {}) {
       // allHeaders() includes cookie and other headers that headers() leaves out.
       headers: await request.allHeaders().catch(() => ({})),
       size: body.length,
-      json,
+      json: json === undefined ? null : json,
+      ...(json === undefined && { text: body.toString('utf8').slice(0, 20_000), contentType: response.headers()['content-type'] ?? null }),
     });
   }
 

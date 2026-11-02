@@ -23,7 +23,7 @@ import { investigate } from '../investigate.js';
 import { writeAndTest } from '../write-site.js';
 import { translateValues } from '../translate.js';
 import { compareSamples } from '../compare.js';
-import { planStrategy } from '../strategy.js';
+import { planStrategy, forClient } from '../strategy.js';
 import { runAgent, AGENT } from '../agent.js';
 import { runChecks } from '../investigate/checks.js';
 
@@ -158,16 +158,18 @@ try {
       findings.checks = results;
       strategy = await planStrategy({ spec, sourceSpec: runSpec, findings, checkResults: results });
     }
+    // What the client reads, in their words; the code writer keeps Muse Wonder's own.
+    strategy.client = await forClient(strategy);
     findings.strategy = strategy;
     writeJson(dir, 'findings.json', findings);
     say('site', {
       kind: 'strategy',
-      text: strategy.summary,
+      text: strategy.client.summary,
       columns: strategy.columns,
       requests: strategy.requests,
       pace: strategy.pace,
-      risks: strategy.risks,
-      gaps: strategy.gaps,
+      risks: strategy.client.risks,
+      gaps: strategy.client.gaps,
       model: strategy.model,
     });
   } catch (err) {
@@ -323,6 +325,7 @@ function makePlan(f, config, notes, spec, tested = null) {
   // When the first pass only saw part of the list (or none), the route is the one Muse
   // Wonder found and verified: the plan says it in its words.
   const agentRoute = (more || !f.list) && f.strategy?.summary;
+  const agentSummary = f.strategy?.client?.summary ?? f.strategy?.summary;
   const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
   // The time estimate follows the measured pace at the chosen concurrency, when there is one.
   const level = (f.reachability?.pace?.levels ?? []).filter((l) => !l.errors && l.medianMs && l.concurrency <= (config.maxConcurrency ?? 4)).at(-1);
@@ -360,9 +363,9 @@ function makePlan(f, config, notes, spec, tested = null) {
     translate: f.samples?.translate ? { from: language(f.samples.translate.from), to: language(f.samples.translate.to), columns: f.samples.translate.columns } : null,
     disputes: [...(f.samples?.disputes ?? []), ...testDisputes(tested)],
     // What Muse Wonder couldn't settle: the client sees it before pressing Go.
-    unsettled: (f.strategy?.gaps ?? []).slice(0, 3),
+    unsettled: (f.strategy?.client?.gaps ?? f.strategy?.gaps ?? []).slice(0, 3),
     text: agentRoute
-      ? `${records === null ? '' : `The page shows ${records.toLocaleString('en-US')} records${more ? `, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}` : ''}. `}${f.strategy.summary} ${proxy === 'direct' ? 'Directly from Apify\'s servers.' : `Through Apify\'s ${proxy} proxy.`}`
+      ? `${records === null ? '' : `The page shows ${records.toLocaleString('en-US')} records${more ? `, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}` : ''}. `}${agentSummary} ${proxy === 'direct' ? 'Directly from Apify\'s servers.' : `Through Apify\'s ${proxy} proxy.`}`
       : `${records === null ? "Muse Wonder's strategy sets the route." : more ? `The page shows ${records.toLocaleString('en-US')} records, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}.` : `The source lists ${records.toLocaleString('en-US')} records.`} Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }

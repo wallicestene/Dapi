@@ -27,6 +27,7 @@ export async function request(url, { method = 'GET', headers = {}, body, timeout
     ok: res.statusCode >= 200 && res.statusCode < 300,
     status: res.statusCode,
     url: res.url,
+    headers: res.headers,
     buffer: async () => bytes,
     text: async () => bytes.toString('utf8'),
   };
