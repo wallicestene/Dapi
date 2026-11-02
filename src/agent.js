@@ -24,6 +24,8 @@ When the cheaper route (a register in batches, one big list page) lacks one piec
 
 The first pass is code with assumptions; a new site can break them. When the findings say it stopped short (stoppedShort, notes) or leave columns unmapped, finish the investigation yourself: open a record's page or click what reveals more and watch the requests (click_and_watch), map the missing columns where they're rendered (map_page_fields), and verify. Every column the spec asks for needs a route in the plan, or a named gap.
 
+Dapi tests the extraction against the spec's samples before any run, reading only the list's first pages. When the list runs to more pages than that, verify how to ask the site for one record directly (the feed's search or filter by a sample's ID or name: test_endpoint with that sample's values) and list it in "sources" as the sample lookup; the test reaches the samples through it. Without one, the samples go unchecked.
+
 Be efficient: a handful of tool calls, not dozens. Call submit_strategy once, when the plan is settled. Write "summary" and "why" for the client: plain, short, specific. In "sources", list every endpoint the plan uses beyond the findings' own, with how you verified it.`;
 
 const fn = (name, description, properties, required = Object.keys(properties)) => ({

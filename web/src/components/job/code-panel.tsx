@@ -8,7 +8,7 @@ import type { Report } from "@/lib/steps";
 import { Panel, Waiting, clock } from "./panel";
 
 export function CodePanel({ job, events }: { job: Job; events: JobEvent[] }) {
-  const attempts = events.filter((e) => e.step === "code" && (e.kind === "written" || e.kind === "tested"));
+  const attempts = events.filter((e) => e.step === "code" && ["written", "unwritten", "tested"].includes(e.kind as string));
   if (!attempts.length) return <Waiting>Muse Spark writes the extraction from your spec and what the investigation found, then Dapi tests it against your sample rows.</Waiting>;
   const written = [...attempts].reverse().find((e) => e.kind === "written");
   return (
@@ -23,6 +23,7 @@ export function CodePanel({ job, events }: { job: Job; events: JobEvent[] }) {
                 <div>
                   <p className="flex items-center gap-2">
                     {e.kind === "tested" && <TickMark tick={e.passed ? "traced" : "fail"} />}
+                    {e.kind === "unwritten" && <TickMark tick="fail" />}
                     {e.text}
                   </p>
                   {e.kind === "tested" && report && (

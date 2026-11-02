@@ -76,8 +76,12 @@ export function verdict(report, findings = null) {
   if (!report) return { passed: false, problems: ['the run crashed before writing a report'] };
   const problems = [];
   // Said plainly, because empty columns alone don't say why.
-  if (findings?.detail && !report.enqueued) {
-    const cols = Object.keys(findings.detail.fields ?? {}).join(', ');
+  // Only where the strategy still routes a detail column through its page or request:
+  // Muse Wonder may have found a cheaper way (FSSC: a suspension date from the feed).
+  const routes = new Map((findings?.strategy?.columns ?? []).map((c) => [c.column, c.route]));
+  const viaDetail = Object.keys(findings?.detail?.fields ?? {}).filter((c) => !routes.size || ['page', 'shared-page', 'feed'].includes(routes.get(c)));
+  if (findings?.detail && viaDetail.length && !report.enqueued) {
+    const cols = viaDetail.join(', ');
     problems.push(`no detail request was ever made, but the findings say ${cols} come from detail ${findings.detail.kind === 'html' ? 'pages' : 'requests'}: check how detail URLs or payloads are built (traced values hold their plain value in .value)`);
   }
   const heldBack = report.testMode?.skippedRequests > 0;
@@ -122,7 +126,14 @@ export async function writeAndTest({ spec, specPath, findings, outPath, onEvent 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const started = Date.now();
-    const written = await writeSite({ spec, findings, previous });
+    // A model call that times out or fails costs this attempt, not the job.
+    let written;
+    try {
+      written = await writeSite({ spec, findings, previous });
+    } catch (err) {
+      onEvent({ kind: 'unwritten', attempt, error: err.message.split('\n')[0] });
+      continue;
+    }
     fs.writeFileSync(outPath, written.code.endsWith('\n') ? written.code : `${written.code}\n`);
     const t = written.usage ?? {};
     onEvent({
@@ -156,6 +167,7 @@ async function main() {
     findings: JSON.parse(fs.readFileSync(findingsPath, 'utf8')),
     outPath,
     onEvent(e) {
+      if (e.kind === 'unwritten') return console.log(`\nAttempt ${e.attempt}: no answer from Muse Spark (${e.error})`);
       if (e.kind === 'written') {
         console.log(`\nAttempt ${e.attempt}: wrote ${outPath} (${e.lines} lines, ${e.tokens.in} in / ${e.tokens.out} out tokens, ${e.seconds} s)`);
         if (e.notes) console.log(`  notes: ${e.notes}`);

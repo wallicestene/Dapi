@@ -261,6 +261,7 @@ function refuse(f) {
 
 function describeAttempt(e) {
   if (e.kind === 'written') return `Attempt ${e.attempt}: Muse Spark wrote the extraction (${e.lines} lines).`;
+  if (e.kind === 'unwritten') return `Attempt ${e.attempt}: Muse Spark didn't answer (${e.error}), so this attempt is spent.`;
   if (!e.report) return `Attempt ${e.attempt}: the test run crashed.`;
   const samples = e.report.samples;
   const pass = samples.filter((s) => s.status === 'pass').length;

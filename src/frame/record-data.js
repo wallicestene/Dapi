@@ -18,16 +18,20 @@ function leavesOf(value, path, out) {
   return out;
 }
 
-// Every value a page shows or carries: its text nodes and the quoted strings in its
-// scripts (config blocks that map codes to names).
-function pageValues(html, path) {
+// Every value a page shows, without the site's own chrome (a footer holds the site's
+// address, not the record's), and with `scripts`, the quoted strings in its scripts
+// (config blocks that map codes to names).
+function pageValues(html, path, { scripts = false } = {}) {
   const $ = cheerio.load(html);
   const out = [];
-  $('script').each((_, s) => {
-    for (const m of $(s).text().matchAll(/"((?:[^"\\]|\\.){1,200})"/g)) out.push({ path: `${path} script`, value: m[1] });
-  });
-  $('script, style, noscript').remove();
-  $('body *')
+  if (scripts) {
+    $('script').each((_, s) => {
+      for (const m of $(s).text().matchAll(/"((?:[^"\\]|\\.){1,200})"/g)) out.push({ path: `${path} script`, value: m[1] });
+    });
+  }
+  $('script, style, noscript, header, footer, nav, aside, [role=banner], [role=contentinfo], [role=navigation]').remove();
+  ($('main').length ? $('main') : $('body'))
+    .find('*')
     .contents()
     .each((_, node) => {
       if (node.type === 'text' && $(node).text().trim()) out.push({ path, value: $(node).text().trim() });
@@ -92,7 +96,7 @@ export async function valuesIn(keys, load) {
     } catch {
       // a page
     }
-    const values = json !== null ? leavesOf(json, '', []) : pageValues(record.body, '');
+    const values = json !== null ? leavesOf(json, '', []) : pageValues(record.body, '', { scripts: true });
     for (const v of values) all.add(loose(v.value).toLowerCase());
   }
   return all;
