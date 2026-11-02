@@ -813,6 +813,35 @@ agent ever ran.
 - The reach probe also matches the JSON-escaped form of the value it expects (a
   quote inside a name is `\"` in a feed).
 
+### Samples against the site's own data (decided 2026-11-02)
+
+Owner's point: specs carry human errors, sites change, and a sample may be stale or
+just a guess at how to fill each column; a loop that chases them can fail for hours.
+FSSC showed both halves. The test read 11 of 2,870 pages and never reached the
+samples, so three attempts failed on code that was right. Then, once it could reach
+them, Muse Spark passed only by writing rules for one stale sample ("The Netherlands",
+a city blanked when the state is "."), which would have corrupted 43,037 rows.
+
+**Decision: the site's data is the truth; a sample is evidence of intent.** A failing
+sample cell is judged against the record's captured response (its receipt's evidence,
+cut to the record: `certificates.3`, not the page of 15):
+- the value, or every word of it, is in the record's data: the code is wrong, and the
+  feedback says where the value sits;
+- it's a whole value in another captured response (a lookup table): still wrong;
+- the sample holds words the record's data has nowhere: a **dispute**, shown on the
+  plan ("your sample has X; the site shows Y"), and the site's value is delivered;
+- the sample is blank where other samples fill the column and the site has a value: a
+  dispute; blank in every sample is the client's convention and still counts;
+- disputes on more than half a sample's columns excuse nothing (the row is wrong);
+- `sampleRequests` (tests only) reach each sample's record through the site's own
+  search; a lookup that answers with nothing means the record isn't on the site,
+  reported, not looped on. No way to ask for one record: `sampleRequests = []`, and the
+  samples are "not reached", with the run's first rows as the check.
+- The writer must never write code for one sample. FSSC passed on attempt 1 after
+  this, with City, Category and Country as disputes and no special cases.
+- **Pace for paged lists:** with no detail requests, the pace test measures 24 of the
+  list's own pages (FSSC had none and guessed 60/min, ~48 min).
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
