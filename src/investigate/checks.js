@@ -9,6 +9,7 @@ import { request } from './http.js';
 import { findRecords, at } from './data.js';
 import { select } from '../select.js';
 import { outline } from './record-page.js';
+import { mapHtmlDetail } from './html.js';
 
 const clip = (v, n = 2000) => (typeof v === 'string' ? v : JSON.stringify(v)).slice(0, n);
 
@@ -144,6 +145,48 @@ export function makeTools(findings) {
       return { status: res.status, works: true, bytes: Buffer.byteLength(text), records: records?.count ?? null, recordsPath: records?.path ?? null, expectedFound: found, expectedMissing: (expect ?? []).filter((v) => !found.includes(v)), sample: compact(text, 1500) };
     },
 
+    // Click something on a page and watch: the data requests the click makes (the feed
+    // behind a "View" button), or the page it navigates to.
+    async click_and_watch({ url, text }) {
+      allowed(url);
+      const { openPage } = await import('./browser.js');
+      const session = await openPage(url);
+      try {
+        const target = session.page.getByText(text, { exact: false }).first();
+        if (!(await target.count())) throw new Error(`nothing on ${url} says “${text}”`);
+        const before = session.page.url();
+        const captures = await session.during('click', () => target.click({ timeout: 10_000 }));
+        await session.page.waitForLoadState('domcontentloaded').catch(() => {});
+        const after = session.page.url();
+        const image = await session.page.screenshot().catch(() => null);
+        const page = after !== before ? outline(await session.page.content(), after) : null;
+        return {
+          text: {
+            navigatedTo: after !== before ? after : null,
+            page: page && { title: page.title, text: page.text.slice(0, 2500) },
+            requests: captures.slice(0, 6).map((c) => ({ method: c.method, url: c.url, payload: c.payload, status: c.status, records: findRecords(c.json)?.count ?? null, sample: compact(JSON.stringify(c.json), 1200) })),
+          },
+          image,
+        };
+      } finally {
+        await session.close();
+      }
+    },
+
+    // Selectors for columns on a page, each checked against the page: with a value when
+    // it's known, by its label when it isn't.
+    async map_page_fields({ url, columns }) {
+      allowed(url);
+      const html = await getText(url, { timeoutMs: 120_000 });
+      const { fields } = await mapHtmlDetail({
+        html,
+        missing: columns.map((c) => ({ name: c.name, instructions: c.hint ?? '' })),
+        sample: { label: 'given', values: Object.fromEntries(columns.map((c) => [c.name, c.value ?? ''])) },
+        count: () => {},
+      });
+      return Object.fromEntries(Object.entries(fields).map(([column, f]) => [column, { selector: f.keys[0] ?? '', verified: f.verified, got: f.got, how: f.how }]));
+    },
+
     // The page as a person sees it: a screenshot (with any cookie banner dismissed), its
     // text and links. Multimodal: the screenshot goes to the model with the outline.
     async look_at_page({ url }) {
@@ -151,9 +194,7 @@ export function makeTools(findings) {
       const { openPage } = await import('./browser.js');
       const session = await openPage(url);
       try {
-        const banner = session.page.locator('button, a[role=button]').filter({ hasText: /^(godta|aksepter|accept|agree|allow all|i agree|ok|godkjenn)/i });
-        if (await banner.count()) await banner.first().click({ timeout: 2000 }).catch(() => {});
-        await session.page.waitForTimeout(500);
+        await session.page.waitForTimeout(300);
         const image = await session.page.screenshot().catch(() => null);
         const html = await session.page.content();
         const o = outline(html, url);

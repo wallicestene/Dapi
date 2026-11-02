@@ -94,6 +94,10 @@ sample is blank. A column with no verified route is a gap to name, not a guess t
   cheaper holds; never a browser where a plain request works. A verified register in
   batches beats every record's page even when a column needs a lookup through the
   site's own list (a parent unit's ID to its name), and all the more on a slow site.
+- **Details only where they can hold something.** A column only some records have (a
+  "Suspended since" date exists only for suspended certificates) needs the detail
+  pages of those records alone: let the list's own fields (the certificate status)
+  pick them. 43,020 detail pages for a value most records lack is waste.
 - **A missing piece doesn't sink a cheap route.** When the register lacks something
   the page shows (the county name after an address), the piece is usually in the site's
   own data: the list page's filters, facets or config block map codes to names

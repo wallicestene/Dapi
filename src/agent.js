@@ -22,6 +22,8 @@ Work as the playbook says. Before planning, settle the gaps and risks you see wi
 
 When the cheaper route (a register in batches, one big list page) lacks one piece the page shows, find that piece before giving the route up: a code's name (a county, a status, a category) is almost always in the site's own data, in the list page's filters, facets or config block, or a code list the register publishes. One lookup request beats hundreds of page loads, and a slow or stalling site makes every page load a risk.
 
+The first pass is code with assumptions; a new site can break them. When the findings say it stopped short (stoppedShort, notes) or leave columns unmapped, finish the investigation yourself: open a record's page or click what reveals more and watch the requests (click_and_watch), map the missing columns where they're rendered (map_page_fields), and verify. Every column the spec asks for needs a route in the plan, or a named gap.
+
 Be efficient: a handful of tool calls, not dozens. Call submit_strategy once, when the plan is settled. Write "summary" and "why" for the client: plain, short, specific. In "sources", list every endpoint the plan uses beyond the findings' own, with how you verified it.`;
 
 const fn = (name, description, properties, required = Object.keys(properties)) => ({
@@ -52,6 +54,14 @@ const TOOLS = [
   fn('open_record_page', "Open the page of a record whose list field equals a value, and read its values with the verified selectors.", { field: { type: 'string' }, equals: { type: 'string' } }),
   fn('call_register', 'Ask the verified register about one record: by its ID, or by a list field that equals a value.', { id: { type: 'string' }, field: { type: 'string' }, equals: { type: 'string' } }),
   fn('fetch_url', 'Read a URL on the site or a host a cited search result named.', { url: { type: 'string' } }),
+  fn('click_and_watch', 'Open a page, click the element showing some text, and report the data requests the click made or the page it led to (with a screenshot).', { url: { type: 'string' }, text: { type: 'string' } }),
+  fn('map_page_fields', "Selectors for columns on a page, each checked against it: give each column's value when you know it, or a hint (its label) when you don't.", {
+    url: { type: 'string' },
+    columns: {
+      type: 'array',
+      items: { type: 'object', properties: { name: { type: 'string' }, value: { type: 'string' }, hint: { type: 'string' } }, required: ['name', 'value', 'hint'], additionalProperties: false },
+    },
+  }),
   fn('search_page_source', "Find a piece of text anywhere in a page's source, scripts and config blocks included, with the text around each match: e.g. search the list page for a county name seen on a record page to find where codes map to names.", { url: { type: 'string' }, text: { type: 'string' } }),
   fn('test_endpoint', 'Try an endpoint the plan would rely on: status, records held, and which expected values it returns.', {
     url: { type: 'string' },
@@ -80,6 +90,10 @@ function describe(name, args, result) {
       return `tested ${args.url}: ${result.works ? `works${result.records !== null ? `, ${result.records} records` : ''}${args.expect?.length ? `, ${result.expectedFound.length} of ${args.expect.length} expected values found` : ''}` : `HTTP ${result.status}`}`;
     case 'look_at_page':
       return `looked at ${args.url}`;
+    case 'click_and_watch':
+      return `clicked “${args.text}” on ${args.url}: ${result.navigatedTo ? `led to ${result.navigatedTo}` : `${result.requests?.length ?? 0} data request${result.requests?.length === 1 ? '' : 's'}`}`;
+    case 'map_page_fields':
+      return `mapped ${Object.keys(result).length} column${Object.keys(result).length === 1 ? '' : 's'} on ${args.url} (${Object.values(result).filter((f) => f.verified || f.got).length} found)`;
     default:
       return name;
   }

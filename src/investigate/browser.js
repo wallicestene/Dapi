@@ -97,6 +97,10 @@ export async function openPage(url, { proxy } = {}) {
       status = 200;
     }
   }
+  // A cookie banner sits over the page and catches clicks meant for it: dismiss it the
+  // way a visitor would, refusing where the banner offers that.
+  await dismissCookieBanner(page);
+
   // Widgets that ask for a person arrive by script, so the rendered page decides.
   check = classifyBlock({ status, body: html ?? '' }) && classifyBlock({ status, body: await page.content().catch(() => html ?? '') });
 
@@ -118,6 +122,24 @@ export async function openPage(url, { proxy } = {}) {
   };
 }
 
+export async function dismissCookieBanner(page) {
+  const refuse = /^(reject all|reject|decline|deny|only necessary|necessary only|avvis( alle)?|alle ablehnen|tout refuser|rechazar todo)$/i;
+  const accept = /^(accept all|accept|allow all|i agree|agree|ok|got it|godta( alle)?|aksepter( alle)?|alle akzeptieren|tout accepter|aceptar todo)$/i;
+  for (const re of [refuse, accept]) {
+    const button = page.locator('button, a[role=button], [role=button]').filter({ hasText: re });
+    try {
+      if (await button.count()) {
+        await button.first().click({ timeout: 2000 });
+        await page.waitForTimeout(400);
+        return true;
+      }
+    } catch {
+      // not clickable: try the next kind
+    }
+  }
+  return false;
+}
+
 // Finds the element showing a record's text and returns its row: the nearest
 // container that looks like one record (a table row, list item, card).
 export async function findRecordRow(page, text) {
@@ -137,7 +159,7 @@ export async function clickablesIn(row) {
     const el = controls.nth(i);
     if (!(await el.isVisible())) continue;
     const text = (await el.innerText().catch(() => '')).trim() || (await el.getAttribute('title')) || (await el.getAttribute('aria-label')) || '';
-    list.push({ id: list.length, text: text.replace(/\s+/g, ' ').slice(0, 60), tag: await el.evaluate((e) => e.tagName.toLowerCase()), href: await el.getAttribute('href'), element: el });
+    list.push({ id: list.length, text: text.replace(/\s+/g, ' ').slice(0, 60), tag: await el.evaluate((e) => e.tagName.toLowerCase()), href: await el.getAttribute('href'), base: row.page().url(), element: el });
   }
   return list;
 }

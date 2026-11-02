@@ -54,6 +54,9 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
   let source = spec;
   let alignment = null;
   let recordPage = null;
+  // What's known so far, so a step that fails hands the agent a partial picture instead
+  // of ending the job.
+  const partial = {};
   try {
     const firstShot = await session.page.screenshot().catch(() => null);
     let candidates = pageCandidates(session, firstShot, onEvent);
@@ -99,6 +102,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       return report({ spec, session, list: null, detail: null, wanted, notes, tokens });
     }
     if (list.embedded) list.siblings = siblingsOf(list, candidates);
+    partial.list = list;
     let missing = wanted.filter((c) => !list.fields[c.name]?.keys.length);
     const found = Object.keys(list.fields).filter((c) => list.fields[c].keys.length);
     onEvent({
@@ -133,6 +137,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
         ? await recordPageDetail({ recordPage, list, missing: [...missing, ...weak], sample: source.samples[0] ?? { label: 'the page your spec names', values: {} }, count, notes, onEvent })
         : await revealDetail({ spec: source, session, list, missing, count, notes, onEvent });
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
+      partial.detail = detail;
       for (const c of weak) {
         if (!detail?.fields[c.name]?.foundOn) continue;
         const key = list.fields[c.name].keys[0];
@@ -176,6 +181,18 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       ...report({ spec, session, list, detail, wanted, notes, tokens }),
       reachability,
       access: session.access,
+      ...(alignment && { samples: sampleFindings(spec, alignment), sourceSamples: source.samples }),
+    };
+  } catch (err) {
+    // A site that breaks one of the first pass's assumptions: say where it stopped and
+    // hand over what's known; the investigation agent finishes the job.
+    const where = err.message.split('\n')[0];
+    notes.push(`The first pass stopped short: ${where}. The investigation agent takes it from here.`);
+    onEvent({ kind: 'stopped-short', text: `Dapi's first pass stopped short on this site (${where}); Muse Wonder takes over the investigation with what's known.` });
+    return {
+      ...report({ spec, session, list: partial.list ?? null, detail: partial.detail ?? null, wanted, notes, tokens }),
+      access: session.access,
+      stoppedShort: where,
       ...(alignment && { samples: sampleFindings(spec, alignment), sourceSamples: source.samples }),
     };
   } finally {
@@ -416,8 +433,10 @@ async function paging(list, onEvent) {
   if (!pageParam && !sizeParam) return null;
   const total = list.total?.value ?? null;
   const out = { pageParam, sizeParam, pageSize: list.records.count, total, bigPage: null };
-  if (sizeParam && total && total > list.records.count && total <= 5000) {
-    const size = String(total);
+  // One page with everything when the total is modest; otherwise the biggest page size
+  // the server honours, up to 1,000 (43,020 records in 44 requests instead of 2,868).
+  if (sizeParam && total && total > list.records.count) {
+    const size = String(Math.min(total, 1000));
     const u = new URL(cap.url);
     if (u.searchParams.has(sizeParam)) u.searchParams.set(sizeParam, size);
     let payload = cap.payload;
@@ -428,7 +447,7 @@ async function paging(list, onEvent) {
     try {
       const res = await request(u.href, { method: cap.method, body: payload, headers: cap.headers?.['content-type'] ? { 'content-type': cap.headers['content-type'] } : {}, timeoutMs: 120_000 });
       const got = findRecords(parseJsonSafe(await res.text()))?.count ?? 0;
-      if (got >= total) out.bigPage = { size: Number(size), records: got, request: { method: cap.method, url: u.href, payload } };
+      if (got >= Math.min(total, Number(size))) out.bigPage = { size: Number(size), records: got, onePage: got >= total, request: { method: cap.method, url: u.href, payload } };
     } catch {
       // keep the paged route
     }
@@ -436,7 +455,9 @@ async function paging(list, onEvent) {
   onEvent({
     kind: 'paging',
     text: out.bigPage
-      ? `The list comes ${list.records.count} per page (${pageParam ?? 'page'}, ${sizeParam}), but asking for ${out.bigPage.size} per page returns all ${total} records in one request.`
+      ? out.bigPage.onePage
+        ? `The list comes ${list.records.count} per page (${pageParam ?? 'page'}, ${sizeParam}), but asking for ${out.bigPage.size} per page returns all ${total} records in one request.`
+        : `The list comes ${list.records.count} per page, but the server honours ${out.bigPage.size} per page: ${Math.ceil(total / out.bigPage.size)} requests for all ${total} records instead of ${Math.ceil(total / list.records.count)}.`
       : `The list comes in pages (${[pageParam, sizeParam].filter(Boolean).join(', ')})${total ? ` of ${total} records` : ''}: the extraction reads every page.`,
     ...out,
   });
@@ -695,12 +716,16 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
     samples = [{ label: 'the first record', values: Object.fromEntries(anchors.map(([column, f]) => [column, String(at(records[0], f.keys[0]) ?? '')])) }];
   }
 
+  // Each row is looked at once: the same row under another column's name would only ask
+  // Muse Spark the same question again.
+  const tried = new Set();
   for (const sample of samples) {
     for (const [column, field] of anchors) {
       const value = sample.values[column];
       if (!value || value.length < 4) continue;
       const record = records.find((r) => String(at(r, field.keys[0])) === value);
       if (!record) continue;
+      try {
 
       // The sample's own row, or, when the page doesn't show it (paginated tables),
       // the first visible row of the same list.
@@ -716,11 +741,13 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
         }
       }
       if (!row) continue;
+      const recordText = (await row.innerText()).replace(/\s+/g, ' ').slice(0, 300);
+      if (tried.has(recordText)) continue;
+      tried.add(recordText);
 
-      await row.scrollIntoViewIfNeeded();
+      await row.scrollIntoViewIfNeeded({ timeout: 10_000 }).catch(() => {});
       const controls = await clickablesIn(row);
       if (!controls.length) continue;
-      const recordText = (await row.innerText()).replace(/\s+/g, ' ').slice(0, 300);
       const screenshot = await session.page.screenshot();
       const pick = await pickControl({ screenshot, recordText, missing, controls });
       count(pick.usage);
@@ -745,7 +772,7 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
 
       // A link to another page: the detail is an HTML page, fetched without a browser.
       if (control.href && /^https?:\/\/|^\//.test(control.href)) {
-        const html = await htmlDetail({ control, shownRecord, record, missing, sample, count, notes });
+        const html = await htmlDetail({ control, shownRecord, record, records, missing, sample, count, notes });
         if (html) {
           onEvent({
             kind: 'detail',
@@ -776,6 +803,11 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
         join,
       });
       return { ...found, kind: 'json', trigger, join };
+      } catch (err) {
+        // One record's row misbehaving (a banner over it, a stale element) is a note,
+        // never the end of the job: the agent picks up what's left.
+        notes.push(`Revealing the missing columns on one record stopped: ${err.message.split('\n')[0]}`);
+      }
     }
   }
   notes.push('Could not reveal the missing columns from any record.');
@@ -785,14 +817,35 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
 // The detail link lives in one of the list record's fields (GPTW: an <a href> inside
 // field 4). Take the sample record's own link from that field, fetch its page, and map
 // the missing columns to verified selectors.
-async function htmlDetail({ control, shownRecord, record, missing, sample, count, notes }) {
+async function htmlDetail({ control, shownRecord, record, records, missing, sample, count, notes }) {
   const href = new URL(control.href, 'https://x.invalid').pathname;
   const fieldOf = (r) =>
     Object.keys(r).find((k) => typeof r[k] === 'string' && r[k].replace(/\\\//g, '/').includes(href));
   const linkField = fieldOf(shownRecord);
   if (linkField === undefined) {
-    notes.push(`The "${control.text}" link isn't in any field of the list record, so it can't be built per record.`);
-    return null;
+    // The link isn't written in a field, but may be built from one: /register/{ID}.
+    const absolute = new URL(control.href, control.base ?? 'https://x.invalid').href;
+    const tmpl = absolute.startsWith('https://x.invalid') ? null : urlTemplate(absolute, [shownRecord, ...(records ?? [])]);
+    if (!tmpl) {
+      notes.push(`The "${control.text}" link isn't in any list field and isn't built from one, so it can't be addressed per record.`);
+      return null;
+    }
+    const res = await request(absolute, { timeoutMs: 120_000 }).catch((err) => ({ ok: false, status: err.code ?? err.name }));
+    if (!res.ok) {
+      notes.push(`The record page ${absolute} returned ${res.status} to a plain request.`);
+      return null;
+    }
+    const html = await res.text();
+    const { fields, jsonLd } = await mapHtmlDetail({ html, missing, sample: { label: 'the record shown', values: {} }, count });
+    return {
+      kind: 'html',
+      urlFrom: { listField: tmpl.field, how: `put the list field's value into the URL template` },
+      urlTemplate: tmpl.template,
+      sampleUrl: absolute,
+      replay: { works: 'plain request', needsSession: false, tried: [], timing: null },
+      fields,
+      jsonLd,
+    };
   }
   const raw = String(record[linkField]).replace(/\\\//g, '/');
   const url = raw.match(/href="([^"]+)"/)?.[1] ?? raw.match(/https?:\/\/[^\s"'<>]+/)?.[0];

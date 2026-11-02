@@ -125,6 +125,11 @@ its list columns. Call `expect` with the source's own counts, so any gap shows u
 **Don't tidy the source.** If the source lists a record twice, emit it twice; the
 frame reports source duplicates to the user. Deduplicate only if the spec says to.
 
+**Details only where they can hold something.** When a detail column applies only to
+some records (a suspension date for suspended certificates), request details only for
+the records the list says have it; the others get the column blank, as the source
+shows it.
+
 **Fetch each distinct detail once.** When several records share one detail page,
 request it once, carry all their rows, and emit them all from that response.
 
@@ -134,9 +139,10 @@ table or filter a row is under comes from that table's context, written the way 
 spec's samples write it.
 
 **Read every page of a paged list.** When `list.paging` is set, the list comes in
-pages. If `paging.bigPage` is set, the investigation found that one request with a
-larger page size returns every record: use exactly that request, and the source's
-total for `expect`. Otherwise request every page (`pageParam`, up to the total), and
+pages. If `paging.bigPage` is set, the investigation found the server honours a larger
+page size: with `bigPage.onePage` one such request returns every record, so use
+exactly that request; otherwise page through with `bigPage.size` per page. Either
+way, call `expect` once with the source's total. Otherwise request every page (`pageParam`, up to the total), and
 call `expect` once with the source's total, not once per page.
 
 **Record pages by address.** When `detail.urlTemplate` is set, each record's page is
