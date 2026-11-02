@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Mark, Wordmark } from "@/components/shell";
 import { ReceiptDemo } from "@/components/home/receipt-demo";
 import { JobArt } from "@/components/job-art";
+import { GLASS } from "@/lib/glass";
+import { cn } from "@/lib/utils";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { READ_ONLY, getJob } from "@/lib/server/dapi";
 import { cost, took } from "@/lib/stage";
@@ -103,19 +105,19 @@ export default function Home() {
             <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs, real public sources. Open any of them to check the receipts yourself.</p>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {proof.map(({ id, label, note, job }) => (
-                <Link key={id} href={`/jobs/${id}`} className="group flex flex-col overflow-hidden rounded-xl border bg-sheet transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-ink-3 hover:shadow-[0_10px_28px_-14px_rgb(15_26_36/0.35)]">
-                  <JobArt seed={job!.sourceUrl ? new URL(job!.sourceUrl).host.replace(/^www\./, "") : id} className="h-20" />
-                  <div className="flex flex-1 flex-col gap-3 p-5">
-                  <span className="text-[32px] leading-none font-bold tracking-[-0.03em] tabular-nums">
+                <Link key={id} href={`/jobs/${id}`} className="group relative block h-[320px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
+                  <JobArt seed={job!.sourceUrl ? new URL(job!.sourceUrl).host.replace(/^www\./, "") : id} className="absolute inset-0" />
+                  <span className="absolute top-5 left-5 text-[34px] leading-none font-bold tracking-[-0.03em] text-white tabular-nums drop-shadow-[0_1px_8px_rgb(15_26_36/0.35)]">
                     <NumberTicker value={job!.rows ?? 0} />
-                    <span className="text-[17px] font-semibold text-ink-2"> / {(job!.expected ?? job!.records ?? job!.rows ?? 0).toLocaleString("en-US")}</span>
+                    <span className="block pt-1.5 text-[14px] font-medium tracking-normal text-white/85">of {(job!.expected ?? job!.records ?? job!.rows ?? 0).toLocaleString("en-US")} the source lists</span>
                   </span>
-                  <span className="text-[15px] font-semibold">{label}</span>
-                  <span className="text-[14px] leading-snug text-ink-2">{note}</span>
-                  <span className="mt-auto flex items-center gap-2 pt-2 text-[13px] text-ink-2">
-                    {[took(job!.apify?.seconds), job!.apify?.usd ? `${cost(job!.apify.usd)} on Apify` : null].filter(Boolean).join(" · ")}
-                    <ArrowRight className="ml-auto size-4 text-ink-3 transition-transform group-hover:translate-x-0.5" />
-                  </span>
+                  <div className={cn(GLASS, "absolute inset-x-3 bottom-3 flex flex-col gap-1.5 px-4 pt-3.5 pb-4")}>
+                    <span className="text-[15.5px] leading-snug font-semibold">{label}</span>
+                    <span className="text-[13.5px] leading-snug text-white/75">{note}</span>
+                    <span className="mt-2 flex items-center gap-2 text-[12.5px] text-white/75">
+                      {[took(job!.apify?.seconds), job!.apify?.usd ? `${cost(job!.apify.usd)} on Apify` : null].filter(Boolean).join(" · ")}
+                      <ArrowRight className="ml-auto size-4 text-white/70 transition-transform group-hover:translate-x-0.5" />
+                    </span>
                   </div>
                 </Link>
               ))}

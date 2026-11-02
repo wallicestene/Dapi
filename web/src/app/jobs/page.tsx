@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { CheckCircle2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mark, TopBar } from "@/components/shell";
 import { JobArt } from "@/components/job-art";
-import { TickMark } from "@/components/tick";
+import { GLASS } from "@/lib/glass";
 import { READ_ONLY, listJobs } from "@/lib/server/dapi";
 import { STAGE_TEXT, cost, stageOf, took } from "@/lib/stage";
 import { cn } from "@/lib/utils";
@@ -112,29 +112,26 @@ function JobCard({ job }: { job: Job }) {
   const short = job.status === "done" && job.expected != null && (job.rows ?? 0) < job.expected;
   const meta = [took(job.apify?.seconds), cost(job.apify?.usd), new Date(job.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })].filter(Boolean);
   return (
-    <Link href={`/jobs/${job.id}`} className="group flex h-full flex-col overflow-hidden rounded-xl border bg-sheet transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-ink-3 hover:shadow-[0_10px_28px_-14px_rgb(15_26_36/0.35)]">
-      <div className="relative">
-        <JobArt seed={host ?? job.id} muted={bad} className="h-28" />
-        <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-sheet/95 py-1 pr-2.5 pl-1.5 text-[12px] font-medium shadow-sm">
-          <Mark className="size-4" lit={stage} now={live ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
-          <span className={bad ? "text-pencil-red" : undefined}>{STATUS[job.status]}</span>
-        </span>
-        <span className="absolute top-3 right-3 rounded-full bg-night/70 px-2 py-0.5 text-[11px] font-medium text-white tabular-nums">#{job.id}</span>
-      </div>
-      <div className="flex flex-1 flex-col gap-1 px-4 pt-3.5 pb-4">
+    <Link href={`/jobs/${job.id}`} className="group relative block h-[268px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
+      <JobArt seed={host ?? job.id} muted={bad} className="absolute inset-0" />
+      <span className="absolute top-3.5 left-3.5 inline-flex items-center gap-1.5 rounded-full bg-sheet/95 py-1 pr-2.5 pl-1.5 text-[12px] font-medium text-ink shadow-sm">
+        <Mark className="size-4" lit={stage} now={live ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
+        <span className={bad ? "text-pencil-red" : undefined}>{STATUS[job.status]}</span>
+      </span>
+      <div className={cn(GLASS, "absolute inset-x-3 bottom-3 px-4 pt-3.5 pb-4")}>
         <p className="line-clamp-2 text-[15.5px] leading-snug font-semibold">{job.title ?? "Reading the spec…"}</p>
-        {host && <p className="text-[13px] text-ink-2">{host}</p>}
-        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+        {host && <p className="mt-0.5 text-[13px] text-white/70">{host}</p>}
+        <div className="mt-3.5 flex items-end justify-between gap-3">
           {job.runId ? (
-            <span className="inline-flex items-center gap-1.5 text-[20px] leading-none font-bold tracking-[-0.02em] tabular-nums">
+            <span className="inline-flex items-center gap-1.5 text-[21px] leading-none font-bold tracking-[-0.02em] tabular-nums">
               {(job.rows ?? 0).toLocaleString("en-US")}
-              {job.expected != null && <span className="text-[13px] font-medium text-ink-3">/ {job.expected.toLocaleString("en-US")}</span>}
-              {job.status === "done" && <TickMark tick={short ? "missing" : "footed"} />}
+              {job.expected != null && <span className="text-[13px] font-medium text-white/60">/ {job.expected.toLocaleString("en-US")}</span>}
+              {job.status === "done" && (short ? <span className="text-[12px] font-semibold text-[#ffb4a3]">short</span> : <CheckCircle2 aria-label="Footed to the source's total" className="size-4 text-verified" />)}
             </span>
           ) : (
-            <span className="text-[13px] text-ink-3">No run yet</span>
+            <span className="text-[13px] text-white/60">No run yet</span>
           )}
-          <span className="text-right text-[12.5px] text-ink-2">{meta.join(" · ")}</span>
+          <span className="text-right text-[12.5px] text-white/75">{meta.join(" · ")}</span>
         </div>
       </div>
     </Link>

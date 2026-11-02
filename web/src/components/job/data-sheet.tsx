@@ -75,7 +75,7 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
   };
 
   return (
-    <section aria-label="Delivered rows" className="min-w-0 overflow-hidden rounded-lg border bg-sheet">
+    <section aria-label="Delivered rows" className="min-w-0 overflow-hidden rounded-xl border bg-sheet">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5">
         <div className="relative">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-ink-3" />
@@ -111,7 +111,7 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
             <ToggleGroupItem
               key={value as string}
               value={value as string}
-              className="h-8 rounded-full border border-rule px-3 text-[12px] text-ink-2 data-[state=on]:border-ink data-[state=on]:bg-sheet data-[state=on]:text-ink"
+              className="h-8 rounded-full border border-border bg-sheet px-3 text-[12.5px] font-medium text-ink-2 transition-colors hover:border-ink-3 hover:text-ink data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-sheet"
             >
               {label} <span className="ml-1 tabular-nums">{count === undefined ? "–" : n(count as number)}</span>
             </ToggleGroupItem>

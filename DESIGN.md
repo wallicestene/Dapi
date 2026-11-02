@@ -242,6 +242,14 @@ cell turns lime with an ink ring, and the receipt below shows the request, when 
 captured and through which proxy, the SHA-256, and the response's own lines with the
 value's line in lime. Data: `web/src/lib/showcase.json`, built from the real capture.
 
+### Job Cards (signature)
+The jobs list and the home page's proof: each card is its job's art across the whole card
+(the source host's Bauhaus composition from boring-avatars, in the mark's colours,
+blurred into a field of colour), with the text on dark glass at the bottom (night at 45%,
+a 1px white edge at 15%, backdrop blur, white text). Same site, same art. A job that
+didn't deliver goes grey. The status sits top left in a white pill with the progress
+mark. The class lives in `web/src/lib/glass.ts`.
+
 ### The Step Strip (signature)
 Six steps as cards: Spec, Site, Extraction, Samples, Run on Apify, Footed. Each carries
 the mark lit to its stage (Spec and Site: source; Extraction and Samples: extract; Run:
@@ -278,7 +286,7 @@ it isn't).
 - **Do** write short: the answer first, one idea per line.
 
 ### Don't:
-- **Don't** put gradients, glows or glass on anything, the mark included.
+- **Don't** put gradients, glows or glass on anything but a job card's art (below); never on the mark.
 - **Don't** use lime on buttons, badges or decoration.
 - **Don't** use monospace for anything but requests, responses and seals.
 - **Don't** add copy that the person doesn't need to decide or act.

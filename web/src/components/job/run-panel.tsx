@@ -15,7 +15,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   if (!job.runId) {
     if (job.status === "waiting" && plan) return <PlanCard job={job} plan={plan} readOnly={readOnly} />;
     return (
-      <section className="rounded-lg border bg-sheet px-5 py-4 text-[14px] text-ink-2">
+      <section className="rounded-xl border bg-sheet px-5 py-4 text-[14px] text-ink-2">
         {job.status === "declined"
           ? "Nothing was run: the site step says why."
           : job.status === "failed"
@@ -35,9 +35,9 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
     <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-      {finished && <RunFacts event={finished} runUrl={job.runUrl} />}
+      {finished && <RunFacts event={finished} />}
       {(notes.length > 0 || (job.status === "stopped" && !readOnly)) && (
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border bg-sheet px-5 py-2 lg:col-span-2">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">
           <ul className="text-[13px]" aria-label="During the run">
             {notes.map((e) => (
               <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" || e.kind === "stopped" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
@@ -54,7 +54,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   );
 }
 
-function RunFacts({ event, runUrl }: { event: JobEvent; runUrl?: string }) {
+function RunFacts({ event }: { event: JobEvent }) {
   const ok = event.status === "SUCCEEDED";
   const seconds = event.seconds as number | null;
   const facts = [
@@ -75,11 +75,6 @@ function RunFacts({ event, runUrl }: { event: JobEvent; runUrl?: string }) {
           {k} <b className="font-semibold text-ink tabular-nums">{v}</b>
         </span>
       ))}
-      {runUrl && (
-        <a href={runUrl} target="_blank" rel="noreferrer" className="ml-auto text-[13px] font-medium underline">
-          Open the run on Apify
-        </a>
-      )}
     </div>
   );
 }
@@ -138,7 +133,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
   const translate = plan.translate as { from: string; to: string; columns: string[] } | null;
   const disputes = (plan.disputes as { label?: string; column: string | null; sample: string; site: string }[] | undefined) ?? [];
   return (
-    <section className="max-w-[760px] rounded-lg border bg-sheet">
+    <section className="max-w-[760px] rounded-xl border bg-sheet">
       <div className="px-5 pt-4 pb-3">
         <h2 className="text-[16px] font-semibold">The plan</h2>
         <p className="mt-1 text-[14px] text-ink-2">{plan.text}</p>

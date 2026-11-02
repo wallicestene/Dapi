@@ -70,7 +70,7 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
       <div className="flex flex-col gap-4">
         {strategy && <Strategy event={strategy} />}
         {declined && (
-          <section className="rounded-lg border border-pencil-red/40 bg-red-wash px-5 py-4 text-red-ink">
+          <section className="rounded-xl border border-pencil-red/40 bg-red-wash px-5 py-4 text-red-ink">
             <h2 className="flex items-center gap-2 text-[16px] font-semibold">
               <TickMark tick="missing" /> {declined.text}
             </h2>
@@ -195,7 +195,7 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
 
 function Finding({ title, req, url, lines }: { title: string; req?: Req; url?: string; lines: string[] }) {
   return (
-    <section className="rounded-lg border bg-sheet px-5 py-4">
+    <section className="rounded-xl border bg-sheet px-5 py-4">
       <h2 className="flex items-center gap-2 text-[16px] font-semibold">
         <TickMark tick="traced" /> {title}
       </h2>
@@ -222,7 +222,7 @@ function Finding({ title, req, url, lines }: { title: string; req?: Req; url?: s
 
 function Shot({ job, image, caption }: { job: Job; image: string; caption: string }) {
   return (
-    <figure className="overflow-hidden rounded-lg border bg-sheet">
+    <figure className="overflow-hidden rounded-xl border bg-sheet">
       {/* eslint-disable-next-line @next/next/no-img-element -- a screenshot from the job's folder, served as is */}
       <img src={`/api/jobs/${job.id}/files/${image}`} alt={caption} className="block w-full border-b" />
       <figcaption className="px-4 py-2.5 text-[13px] text-ink-2">{caption}</figcaption>
@@ -256,7 +256,7 @@ function Strategy({ event }: { event: JobEvent }) {
   const pace = event.pace as { concurrency: number; perMinute: number; proxy: string; why: string };
   const gaps = (event.gaps as string[]) ?? [];
   return (
-    <Panel title="The strategy" action={<span className="text-[12px] text-ink-2">planned by {String(event.model ?? "Muse Wonder")}</span>}>
+    <Panel title="The strategy" action={<span className="text-[12px] text-ink-2">planned by {/spark/i.test(String(event.model)) ? "Muse Spark" : "Muse Wonder"}</span>}>
       <p className="px-5 pt-3 text-[14px] leading-relaxed">{event.text}</p>
       <p className="px-5 pt-2 text-[13px] text-ink-2">
         {requests.total.toLocaleString("en-US")} requests ({[requests.list && `${requests.list} list`, requests.register && `${requests.register} register`, requests.pages && `${requests.pages} pages`].filter(Boolean).join(", ")}), {pace.concurrency} at a time, about {pace.perMinute} a minute, {pace.proxy}. {pace.why}
