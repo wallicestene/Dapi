@@ -40,9 +40,12 @@ function holder($, value, scope = null) {
   return null;
 }
 
-// The record element: the nearest ancestor (or the holder itself) with at least two
-// siblings of the same shape.
-function recordOf($, el) {
+// The record element: among the holder's ancestors that repeat (at least two siblings of
+// the same shape), the lowest one holding the most of the sample's values: a table's row
+// rather than its cell. Its selector is narrowed by its parents until it matches only
+// its own group (a bare "tr" would match every table on the page).
+function recordOf($, el, values = []) {
+  let best = null;
   for (let node = el; node && node.tagName && node.tagName !== 'body'; node = node.parent) {
     const parent = node.parent;
     if (!parent) break;
@@ -51,16 +54,29 @@ function recordOf($, el) {
       .children()
       .toArray()
       .filter((c) => c.tagName && sig($, c) === s);
-    if (same.length >= 3) return { el: node, selector: s, count: same.length };
+    if (same.length < 3) continue;
+    const holds = values.filter((v) => holder($, v, node)).length;
+    if (!best || holds > best.holds) best = { el: node, parent, s, count: same.length, holds };
   }
-  return null;
+  if (!best) return null;
+  let selector = best.s;
+  for (let up = best.parent, depth = 0; up && up.tagName && depth < 3 && $(selector).length > best.count * 1.5; up = up.parent, depth++) {
+    selector = `${sig($, up)} > ${selector}`;
+  }
+  return { el: best.el, selector, count: best.count };
 }
 
-// The path from the record element down to the holder, as a selector inside the record.
+// The path from the record element down to the holder, as a selector inside the
+// record; a step whose siblings share its shape (a row's cells) carries its position.
 function pathWithin($, record, el) {
   if (record === el) return '';
   const steps = [];
-  for (let node = el; node && node !== record; node = node.parent) steps.unshift(sig($, node));
+  for (let node = el; node && node !== record; node = node.parent) {
+    const s = sig($, node);
+    const kin = $(node.parent).children().toArray();
+    const twins = kin.filter((c) => c.tagName && sig($, c) === s);
+    steps.unshift(twins.length > 1 ? `${s}:nth-child(${kin.indexOf(node) + 1})` : s);
+  }
   return steps.join(' > ');
 }
 
@@ -85,7 +101,7 @@ export function htmlList({ html, url, spec }) {
     // Once a record is found, later columns are looked for inside it.
     const h = (record && holder($, value, record.el)) ?? (record ? null : holder($, value));
     if (!h) continue;
-    const r = record ?? recordOf($, h.el);
+    const r = record ?? recordOf($, h.el, Object.values(sample.values).filter((v) => v && v !== value));
     if (!r) continue;
     record = r;
     fields[c.name] = { path: pathWithin($, r.el, h.el), attr: h.attr };
