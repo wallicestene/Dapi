@@ -851,6 +851,28 @@ cut to the record: `certificates.3`, not the page of 15):
   page chrome, a slow write, the tester demanding detail pages the strategy dropped,
   and the plan's request count.
 
+### Identity, front door and the client voice (2026-11-02)
+
+- **The mark** (owner's sketch, redrawn): a D in four flat parts, one per stage of a
+  job: source (violet #6a4cff), extract (red #f12727), deliver (teal #12b5a5), and the
+  verified tick (lime #9ad82b) where extraction ends and delivery begins. It draws
+  itself in that order and is the job's progress on its page. Gradients and Apify's own
+  blue and orange were dropped: mud at 16 px, and Dapi would read as an Apify add-on.
+- **Palette** merged from one the owner picked: navy ink #1d2c3a, sage paper #f2f3ea,
+  navy-black #0f1a24 for dark. Three of that palette's five colours were near-black, so
+  they could not carry a four-colour mark (they vanish on dark); they became the system
+  around it instead. Rendered and compared at real sizes before choosing.
+- **Home page** at `/`, jobs at `/jobs`. Built from what the best SaaS pages share (read
+  Linear, Vercel, Browse AI): a 2-10 word headline, a one-sentence subhead, one button,
+  the real product instead of illustrations, proof as named numbers, a few short steps,
+  one closing call to action. Hero: FSSC's real rows; click a value, see the captured
+  response it came from. Browse AI shows a finished table but never the receipt.
+- **Client voice** (`src/prompts/client-voice.md`): everything the client reads is the
+  answer first, lines under 20 words, plain SaaS words, no code or field names. Muse
+  Wonder's summary, risks and gaps and Muse Spark's new `forClient` plan lines follow
+  it. On FSSC the plan went from a 150-word technical paragraph to three lines ("Dapi
+  reads the register's own data feed, 15 records per request.").
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
