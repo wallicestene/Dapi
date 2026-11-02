@@ -284,4 +284,6 @@ Return the full module in `code`; in `notes`, for Dapi's engineers, any assumpti
 you made and why you chose that `config`; and in `forClient`, two to four short lines
 the client reads on the plan before they press Go: the way in, the pace, and anything
 they should know (a column the site leaves blank, a sample the site disagrees with).
-Write them in the client voice below.
+Say why, not how much: the plan shows the record count, the requests and the time, so
+never put numbers of requests, minutes or records in these lines. Write them in the
+client voice below.

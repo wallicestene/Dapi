@@ -11,8 +11,15 @@ import { STAGE_TEXT, stageOf } from "@/lib/stage";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
-// Which of the mark's four stages each step belongs to.
+// Which of the mark's four stages each step belongs to, and the beam that runs round the
+// step under way: that stage's colour, fading to a light tint of it.
 const STEP_STAGE: Record<Tab, number> = { spec: 1, site: 1, code: 2, samples: 2, run: 3, footed: 4 };
+const BEAM: Record<number, [string, string]> = {
+  1: ["var(--source)", "#c4b8ff"],
+  2: ["var(--extract)", "#ffb0a8"],
+  3: ["var(--deliver)", "#9eece3"],
+  4: ["var(--verified)", "#dcf7a8"],
+};
 import { defaultTab, n, stepStates, type Report, type Tab } from "@/lib/steps";
 import type { Job, JobEvent } from "@/lib/types";
 import { SpecPanel } from "./spec-panel";
@@ -156,10 +163,11 @@ export function JobView({
                   "group relative overflow-hidden rounded-xl border bg-sheet px-3.5 pt-3 pb-3.5 text-left outline-none transition-[background-color,box-shadow,border-color] hover:border-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
                   "data-[state=active]:border-ink data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_24px_-12px_rgb(15_26_36/0.3)]",
                   s.state === "todo" && "bg-transparent",
-                  s.state === "stopped" && "border-pencil-red/50"
+                  s.state === "stopped" && "border-pencil-red/50",
+                  s.state === "now" && job.status === "waiting" && "border-deliver ring-3 ring-deliver/20"
                 )}
               >
-                {s.state === "now" && job.status === "running" && <BorderBeam size={70} duration={4} borderWidth={1.5} colorFrom="var(--source)" colorTo="var(--deliver)" />}
+                {s.state === "now" && job.status === "running" && <BorderBeam size={80} duration={4} borderWidth={2} colorFrom={BEAM[STEP_STAGE[s.tab]][0]} colorTo={BEAM[STEP_STAGE[s.tab]][1]} />}
                 <span className="flex items-center gap-2">
                   <Mark className="size-5 shrink-0" lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
                   <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>

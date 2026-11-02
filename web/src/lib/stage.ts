@@ -7,6 +7,9 @@ export function stageOf(job: Pick<Job, "status" | "step">) {
 
 export const STAGE_TEXT = ["Stage 1 of 4: reading the spec and the site", "Stage 2 of 4: writing and testing the extraction", "Stage 3 of 4: running on Apify", "Delivered: every value traced"];
 
+// How the strategy reads a column, in the client's words.
+export const ROUTE_WORD: Record<string, string> = { feed: "data feed", embedded: "embedded data", page: "record page", register: "register", "shared-page": "shared page", constant: "fixed", derived: "derived", none: "gap" };
+
 export function took(seconds?: number | null) {
   if (!seconds) return null;
   return seconds < 90 ? `${Math.round(seconds)} s` : `${Math.round(seconds / 60)} min`;
