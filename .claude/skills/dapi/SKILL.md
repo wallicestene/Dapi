@@ -841,6 +841,15 @@ cut to the record: `certificates.3`, not the page of 15):
   this, with City, Category and Country as disputes and no special cases.
 - **Pace for paged lists:** with no detail requests, the pace test measures 24 of the
   list's own pages (FSSC had none and guessed 60/min, ~48 min).
+- **FSSC end to end (job 0024, 2026-11-02):** 43,037 of 43,037 certificates in 2,870
+  feed pages, 29 min on Apify through the datacenter proxy at 6 at a time (measured),
+  0.98 compute units, $0.92; no failed request, no duplicate, 424 suspended with their
+  date (from the feed, no detail pages). The full run's own sample check came out the
+  same as the test: Sample 2 exact, Sample 1's City, Country and Category disputes.
+  It took four runs of the same spec to get here (0021-0024), each fixing something
+  general: a recorder crash, the test not reaching samples, samples bending the code,
+  page chrome, a slow write, the tester demanding detail pages the strategy dropped,
+  and the plan's request count.
 
 ### Receipt view (2026-10-30)
 
