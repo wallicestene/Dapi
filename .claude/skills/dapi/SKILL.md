@@ -729,6 +729,35 @@ so any spec gets a thorough investigation and the best strategy, not just this s
   run time (temporal dead zone): helpers it calls must be function declarations or
   sit above the main flow.
 
+### The investigation agent on Meta's Responses API (2026-11-02)
+
+- **What Meta's agent API does, tested:** `/v1/responses` is OpenAI-Responses shaped.
+  Function tools work; the model calls them itself and continues with
+  `previous_response_id` (server-kept state). Only `tool_choice: "auto"` is accepted
+  ("required" and named choices return 400). `{ type: "web_search" }` is Meta's
+  grounded search: several searches per answer, `url_citation` annotations (it found
+  the Brønnøysund API docs and "up to 2,000 organisation numbers per request"); one
+  such answer used ~55k input tokens. Images can be sent back mid-loop as a user
+  message with `input_image` after the `function_call_output`.
+- **State can expire mid-loop** ("referenced response not found or expired") even
+  with `store: true`; the agent keeps its own trail of tool calls and results and
+  carries on from it.
+- **The agent** (`src/agent.js`, Muse Wonder): playbook + spec + findings in, tools:
+  web_search, look_at_page (screenshot + outline, cookie banner dismissed),
+  list_values, open_record_page, call_register, search_page_source, fetch_url,
+  test_endpoint, submit_strategy (the plan, strict schema, ends the loop). Hosts:
+  only those the investigation found or a cited search result named. 4–7 rounds,
+  10–13 tool calls, ~2 min, ~40–80k tokens in (~$0.3) per job.
+- **Its judgement differs from the code-driven loop:** on Arbeidstilsynet it chose
+  292 page loads over the register, because the register's addresses lack the county
+  name the page appends and sub-units need a parent lookup. Defensible (exactness),
+  but slower on a stalling site. Tooling gaps found and fixed: `fetch_url` showed only
+  3,000 characters of visible text, so lookups in the list page's config were
+  invisible (now `search_page_source`); findings didn't name the list page (now
+  `listPage`). The playbook now says a missing piece rarely sinks a cheap route.
+- The step-by-step plan + checks loop (`src/strategy.js`, `runChecks`) is the
+  fallback if the agent fails.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
