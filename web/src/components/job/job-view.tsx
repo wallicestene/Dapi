@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import { Button } from "@/components/ui/button";
-import { TopBar } from "@/components/shell";
+import { Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { defaultTab, n, stepStates, type Report, type Tab } from "@/lib/steps";
@@ -15,6 +15,8 @@ import { CodePanel } from "./code-panel";
 import { SamplesPanel } from "./samples-panel";
 import { RunPanel } from "./run-panel";
 import { FootedPanel } from "./footed-panel";
+
+const STAGE_TEXT = ["Stage 1 of 4: reading the spec and the site", "Stage 2 of 4: writing and testing the extraction", "Stage 3 of 4: running on Apify", "Delivered: every value traced"];
 
 export function JobView({
   initialJob,
@@ -74,6 +76,8 @@ export function JobView({
   const steps = useMemo(() => stepStates(job, events, report), [job, events, report]);
   const tab = picked ?? defaultTab(job, events);
   const live = !["done", "failed", "declined", "cancelled", "stopped"].includes(job.status);
+  // The mark as the job's progress: source, extract, deliver, verified.
+  const stage = job.status === "done" ? 4 : { spec: 1, site: 1, code: 2, plan: 2, run: 3, footed: 4 }[job.step];
   const host = job.sourceUrl ? new URL(job.sourceUrl).host : null;
   const expected = job.expected ?? null;
 
@@ -101,23 +105,26 @@ export function JobView({
 
       <main className="flex flex-1 flex-col gap-4 px-6 pt-5 pb-8 md:px-7">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-          <div className="min-w-0">
-            <h1 className="condensed text-[28px] leading-tight font-semibold tracking-[-0.01em]">{job.title ?? "Reading your spec…"}</h1>
-            <p className="mt-1 text-[14px] text-ink-2">
-              {host ? (
-                <>
-                  <a href={job.sourceUrl} target="_blank" rel="noreferrer" className="hover:text-ink">
-                    {host}
-                  </a>
-                  {job.rowUnit && <> · each row is {job.rowUnit}</>}
-                </>
-              ) : (
-                `Job ${job.id}, started ${new Date(job.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`
-              )}
-            </p>
+          <div className="flex min-w-0 items-start gap-3.5">
+            <Mark className="mt-0.5 size-10 shrink-0" bg="var(--ground)" lit={stage} now={live && job.status !== "waiting" ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
+            <div className="min-w-0">
+              <h1 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">{job.title ?? "Reading your spec…"}</h1>
+              <p className="mt-1 text-[14px] text-ink-2">
+                {host ? (
+                  <>
+                    <a href={job.sourceUrl} target="_blank" rel="noreferrer" className="hover:text-ink">
+                      {host}
+                    </a>
+                    {job.rowUnit && <> · each row is {job.rowUnit}</>}
+                  </>
+                ) : (
+                  `Job ${job.id}, started ${new Date(job.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`
+                )}
+              </p>
+            </div>
           </div>
           <div className="text-right" aria-live="polite">
-            <p className="condensed text-[38px] leading-none font-semibold">
+            <p className="text-[38px] leading-none font-bold tracking-[-0.03em]">
               {job.runId ? n(job.rows ?? 0) : "–"}
               <span className="text-ink-3"> / </span>
               {expected !== null ? n(expected) : job.records ? <span className="text-ink-3">…</span> : "–"}

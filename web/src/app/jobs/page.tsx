@@ -33,7 +33,7 @@ export default function Jobs() {
       />
       <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 px-6 pt-7 pb-10">
         <div>
-          <h1 className="condensed text-[28px] leading-tight font-semibold">Jobs</h1>
+          <h1 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">Jobs</h1>
           <p className="mt-1 text-[14px] text-ink-2">Each job turns a spec into a dataset with a receipt for every value, footed against the source&apos;s own count.</p>
         </div>
         <section className="overflow-hidden rounded-lg border bg-sheet">
