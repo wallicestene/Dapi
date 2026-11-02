@@ -110,7 +110,7 @@ export function JobView({
       <main className="flex flex-1 flex-col gap-4 px-6 pt-5 pb-8 md:px-7">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
           <div className="flex min-w-0 items-start gap-3.5">
-            <Mark className="mt-0.5 size-10 shrink-0" bg="var(--ground)" lit={stage} now={live && job.status !== "waiting" ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
+            <Mark className="mt-0.5 size-10 shrink-0" lit={stage} now={live && job.status !== "waiting" ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
             <div className="min-w-0">
               <h1 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">{job.title ?? "Reading your spec…"}</h1>
               <p className="mt-1 text-[14px] text-ink-2">
@@ -161,7 +161,7 @@ export function JobView({
               >
                 {s.state === "now" && job.status === "running" && <BorderBeam size={70} duration={4} borderWidth={1.5} colorFrom="var(--source)" colorTo="var(--deliver)" />}
                 <span className="flex items-center gap-2">
-                  <Mark className="size-5 shrink-0" bg={s.tab === tab ? "#ffffff" : "var(--sheet)"} lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
+                  <Mark className="size-5 shrink-0" lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
                   <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>
                   {s.tick && <TickMark tick={s.tick} className="ml-auto" />}
                 </span>

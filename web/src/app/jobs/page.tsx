@@ -116,7 +116,7 @@ function JobCard({ job }: { job: Job }) {
       <div className="relative">
         <JobArt seed={host ?? job.id} muted={bad} className="h-28" />
         <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-sheet/95 py-1 pr-2.5 pl-1.5 text-[12px] font-medium shadow-sm">
-          <Mark className="size-4" bg="var(--sheet)" lit={stage} now={live ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
+          <Mark className="size-4" lit={stage} now={live ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
           <span className={bad ? "text-pencil-red" : undefined}>{STATUS[job.status]}</span>
         </span>
         <span className="absolute top-3 right-3 rounded-full bg-night/70 px-2 py-0.5 text-[11px] font-medium text-white tabular-nums">#{job.id}</span>

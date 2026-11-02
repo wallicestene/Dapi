@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex h-16 shrink-0 items-center gap-6 px-5 sm:px-8">
-        <Wordmark bg="var(--ground)" />
+        <Wordmark />
         <nav aria-label="Main" className="hidden items-center gap-6 text-[14px] font-medium text-ink-2 sm:flex">
           <a href="#how" className="hover:text-ink">
             How it works
@@ -60,7 +60,7 @@ export default function Home() {
       <main className="flex flex-col">
         <section className="mx-auto grid w-full max-w-[1240px] items-center gap-10 px-5 pt-10 pb-20 sm:px-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,7fr)] lg:gap-12 lg:pt-16">
           <div className="flex flex-col gap-6">
-            <Mark draw className="size-16" bg="var(--ground)" label="Dapi" />
+            <Mark draw className="size-16" label="Dapi" />
             <h1 className="text-[clamp(44px,5.4vw,78px)] leading-[0.95] font-bold tracking-[-0.045em]">Web data you can prove.</h1>
             <p className="max-w-[460px] text-[19px] leading-[1.45] text-ink-2">Send a spec. Get the dataset, with every value traced to the response it came from.</p>
             <div className="flex flex-wrap items-center gap-3">
@@ -85,7 +85,7 @@ export default function Home() {
             <ol className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((s) => (
                 <li key={s.n} className="flex flex-col gap-3">
-                  <Mark className="size-12" bg="var(--night)" lit={s.n} dim="#2b3a48" />
+                  <Mark className="size-12" lit={s.n} dim="#2b3a48" />
                   <span className="text-[13px] font-semibold tracking-[0.02em] text-[#b8c0b9]">
                     {s.n} · {s.name}
                   </span>
@@ -151,7 +151,7 @@ export default function Home() {
 
       <footer className="border-t">
         <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-6 text-[13px] text-ink-2 sm:px-8">
-          <Wordmark bg="var(--ground)" />
+          <Wordmark />
           <span>Built for the Meta Global AI Developer Hackathon, 2026</span>
           <span className="sm:ml-auto">Muse Spark · Muse Wonder · Muse Voice Transcribe · Apify</span>
         </div>

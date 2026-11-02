@@ -17,7 +17,7 @@ export function FootedPanel({ job, report }: { job: Job; events: JobEvent[]; rep
         {/* The footing itself: what arrived against what the source says exists. */}
         {counted.length > 0 && (
           <section className="flex flex-col gap-5 rounded-xl bg-night px-6 py-6 text-[#e6e9da] sm:flex-row sm:items-center">
-            <Mark className="size-14 shrink-0" bg="var(--night)" lit={footed ? 4 : 3} dim="#2b3a48" />
+            <Mark className="size-14 shrink-0" lit={footed ? 4 : 3} dim="#2b3a48" />
             <div className="flex min-w-0 flex-1 flex-col gap-3">
               <p className="text-[15px] text-[#b8c0b9]">{footed ? "Footed. Every row the source counts is here." : `${n(expected - got)} rows short. Each gap is named below.`}</p>
               <p className="text-[34px] leading-none font-bold tracking-[-0.03em] text-white tabular-nums">
