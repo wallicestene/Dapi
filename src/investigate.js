@@ -554,11 +554,46 @@ async function reach({ spec, list, detail, notes }) {
   if (detail?.kind === 'html') requests.push({ label: 'detail page', url: detail.sampleUrl, expect: detailValue });
   try {
     const { checkReach } = await import('./apify/reach.js');
-    return await checkReach(requests, { pace: detail ? detailRequests(list, detail, 24) : [] });
+    return await checkReach(requests, { pace: detail ? detailRequests(list, detail, 24) : listPages(list, 24) });
   } catch (err) {
     notes.push(`Reachability from Apify not checked: ${err.message.split('\n')[0]}`);
     return null;
   }
+}
+
+// A long paged list's next pages, for the pace test when they are what the run mostly
+// requests (FSSC: 2,870 pages of 15, no detail requests). An offset steps by the page
+// size; a page number by one.
+function listPages(list, n) {
+  const p = list.paging;
+  if (!p?.pageParam || !p.total || p.bigPage?.onePage) return [];
+  const base = p.bigPage?.request ?? { url: list.capture.url, method: list.capture.method, payload: list.capture.payload };
+  const size = p.bigPage?.size ?? p.pageSize;
+  if (Math.ceil(p.total / size) < 30) return [];
+  const byOffset = /^(offset|skip|start|from)$/i.test(p.pageParam);
+  const out = [];
+  for (let k = 1; k <= n && k * size < p.total; k++) {
+    const url = new URL(base.url);
+    let payload = base.payload;
+    let body = null;
+    try {
+      body = payload ? JSON.parse(payload) : null;
+    } catch {
+      // a form
+    }
+    const form = payload && !body ? new URLSearchParams(payload) : null;
+    const first = Number(url.searchParams.get(p.pageParam) ?? body?.[p.pageParam] ?? form?.get(p.pageParam) ?? 0) || 0;
+    const value = String(byOffset ? first + k * size : first + k);
+    if (url.searchParams.has(p.pageParam)) url.searchParams.set(p.pageParam, value);
+    else if (body) payload = JSON.stringify({ ...body, [p.pageParam]: Number(value) });
+    else if (form) {
+      form.set(p.pageParam, value);
+      payload = form.toString();
+    }
+    const type = list.capture.headers?.['content-type'];
+    out.push({ label: 'pace', url: url.href, method: base.method, payload, headers: type ? { 'content-type': type } : {} });
+  }
+  return out;
 }
 
 // Other records' detail requests, built the way the run will build them, for the pace
