@@ -218,7 +218,7 @@ try {
   const asked = spec.outputLanguage && findings.siteLanguage && spec.outputLanguage !== findings.siteLanguage
     ? { from: findings.siteLanguage, to: spec.outputLanguage, columns: 'text', examples: [] }
     : null;
-  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? asked, robotsOverride: Boolean(approval.robotsOverride), records: plan.records, findings, specPath: runSpecPath });
+  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? asked, robotsOverride: Boolean(approval.robotsOverride), records: plan.more ? null : plan.records, findings, specPath: runSpecPath });
 } catch (err) {
   console.error(err);
   // A run left going on Apify with nothing watching it is stopped (its rows stay).
