@@ -27,20 +27,51 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   }
 
   // What the watch saw during the run: easing off, a break and its repair, translation.
-  const notes = events.filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated"].includes(e.kind)).slice(-3);
+  const notes = events
+    .filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify", "following", "stopped", "apify-finished"].includes(e.kind))
+    .slice(-4);
   return (
     <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-      {notes.length > 0 && (
-        <ul className="rounded-lg border bg-sheet px-5 py-2 text-[13px] lg:col-span-2" aria-label="During the run">
-          {notes.map((e) => (
-            <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
-              {e.text}
-            </li>
-          ))}
-        </ul>
+      {(notes.length > 0 || (job.status === "stopped" && !readOnly)) && (
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border bg-sheet px-5 py-2 lg:col-span-2">
+          <ul className="text-[13px]" aria-label="During the run">
+            {notes.map((e) => (
+              <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" || e.kind === "stopped" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
+                {e.text}
+              </li>
+            ))}
+          </ul>
+          {job.status === "stopped" && !readOnly && <ResurrectButton job={job} />}
+        </div>
       )}
       <DataSheet job={job} selected={selected} onSelect={setSelected} />
       <ReceiptPanel job={job} events={events} selected={selected} translatedFrom={(plan?.translate as { from: string } | null)?.from ?? null} />
+    </div>
+  );
+}
+
+// A stopped run carries on where it stopped: same dataset, saved state and queue.
+function ResurrectButton({ job }: { job: Job }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="flex items-center gap-2 py-1">
+      {error && <span className="text-[13px] text-pencil-red">{error}</span>}
+      <Button
+        disabled={busy}
+        className="h-8"
+        onClick={async () => {
+          setBusy(true);
+          const res = await fetch(`/api/jobs/${job.id}/resurrect`, { method: "POST" });
+          if (res.ok) window.location.reload();
+          else {
+            setError((await res.json().catch(() => ({}))).error ?? "Couldn't resurrect the run.");
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Resurrecting…" : "Resurrect the run"}
+      </Button>
     </div>
   );
 }

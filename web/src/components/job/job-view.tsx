@@ -45,6 +45,18 @@ export function JobView({
     return () => source.close();
   }, [initialJob.id, initialJob.status, initialEvents.length]);
 
+  // In step with Apify: a run resurrected or left unwatched gets a runner to follow it
+  // again (then the page reloads to stream it); a finished run's own report is recorded.
+  useEffect(() => {
+    if (!initialJob.runId || ["declined", "cancelled"].includes(initialJob.status)) return;
+    fetch(`/api/jobs/${initialJob.id}/sync`, { method: "POST" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (r?.state === "following" && initialJob.status !== "running") window.location.reload();
+      })
+      .catch(() => {});
+  }, [initialJob.id, initialJob.runId, initialJob.status]);
+
   // The run's report arrives with the footing event.
   useEffect(() => {
     if (job.status !== "done" || report) return;

@@ -10,6 +10,9 @@
 //   node src/jobs/run-job.js <jobId>                 run a job the web app created
 //   node src/jobs/run-job.js --new <spec.pdf> [--go] create a job and run it; --go
 //                                                   approves the plan without asking
+//   node src/jobs/run-job.js <jobId> --follow       attach to the job's Apify run as it is
+//                                                   now (resurrected, or left unwatched)
+//                                                   and see it to the end
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,6 +46,7 @@ if (id === '--new') {
   console.log(`job ${id}: ${jobDir(id)}`);
 }
 const autoGo = args.includes('--go');
+const follow = args.includes('--follow');
 const dir = jobDir(id);
 const job = readJson(dir, 'job.json');
 if (!job) {
@@ -56,8 +60,14 @@ const say = (step, event) => {
   return line;
 };
 const step = (name) => updateJob(dir, { step: name, status: 'running' });
+// So the web app can tell whether a runner is watching this job.
+updateJob(dir, { runnerPid: process.pid });
 
 try {
+  if (follow) {
+    await followExisting();
+    process.exit(0);
+  }
   // 1. The spec.
   step('spec');
   say('spec', { kind: 'start', text: 'Reading your spec.' });
@@ -310,6 +320,28 @@ async function runOnce({ apify, actor, spec, robotsOverride, attempt }) {
   };
   updateJob(dir, { runId: run.id, datasetId: run.defaultDatasetId, storeId: run.defaultKeyValueStoreId, ...links, rows: 0, runAttempt: attempt });
   say('run', { kind: 'started', text: `${attempt > 1 ? `Run ${attempt}: ` : ''}Running on Apify now. Rows appear in your dataset as they are found.`, runId: run.id, attempt, ...links });
+  return watchRun({ apify, run, fresh: true });
+}
+
+// What Apify itself reports about a run, kept on the job.
+function apifyFacts(r) {
+  return {
+    status: r.status,
+    startedAt: r.startedAt,
+    finishedAt: r.finishedAt ?? null,
+    seconds: r.stats?.runTimeSecs ?? null,
+    computeUnits: r.stats?.computeUnits ?? null,
+    usd: r.usageTotalUsd ?? null,
+    migrations: r.stats?.migrationCount ?? 0,
+    restarts: r.stats?.restartCount ?? 0,
+    resurrects: r.stats?.resurrectCount ?? 0,
+  };
+}
+
+// Watches a run to its end: copies rows as they land, passes on what Apify and the
+// frame report, and stops the run if it breaks. `fresh` is false when attaching to a
+// run already under way (resurrected, or left unwatched): rows already copied stay.
+async function watchRun({ apify, run, fresh }) {
 
   // The run's own log, line by line as Apify writes it.
   const log = [];
@@ -327,7 +359,7 @@ async function runOnce({ apify, actor, spec, robotsOverride, attempt }) {
 
   // Copy rows as they land, so the screen shows them without waiting for the end.
   const rowsPath = path.join(dir, 'rows.jsonl');
-  let copied = 0;
+  let copied = fresh || !fs.existsSync(rowsPath) ? 0 : fs.readFileSync(rowsPath, 'utf8').split('\n').filter(Boolean).length;
   const copy = async () => {
     for (;;) {
       const { items } = await apify.dataset(run.defaultDatasetId).listItems({ offset: copied, limit: 1000 });
@@ -338,15 +370,23 @@ async function runOnce({ apify, actor, spec, robotsOverride, attempt }) {
   };
 
   let current = run;
-  let firstRows = false;
+  let firstRows = copied > 0;
   let lastProgress = Date.now();
   let lastMark = '';
   let easedNoted = 0;
+  const seen = { migrations: run.stats?.migrationCount ?? 0, restarts: run.stats?.restartCount ?? 0, resurrects: run.stats?.resurrectCount ?? 0 };
   try {
     while (!['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(current.status)) {
       await sleep(3000);
       current = await apify.run(run.id).get();
       await copy();
+      // Apify's own events: a move to another server, a restart, a resurrect.
+      const facts = apifyFacts(current);
+      if (facts.migrations > seen.migrations) say('run', { kind: 'apify', text: `Apify moved the run to another server (${facts.migrations}×); it carried on where it was, nothing lost.` });
+      if (facts.restarts > seen.restarts) say('run', { kind: 'apify', text: 'The run restarted on Apify and carried on from its saved state.' });
+      if (facts.resurrects > seen.resurrects) say('run', { kind: 'apify', text: 'The run was resurrected on Apify and carried on where it stopped.' });
+      Object.assign(seen, { migrations: facts.migrations, restarts: facts.restarts, resurrects: facts.resurrects });
+      updateJob(dir, { apify: facts });
       // The frame's saved state holds the rows the source says exist (it learns them as
       // it reads), the footing figure the screen shows against the rows delivered.
       const state = (await apify.keyValueStore(run.defaultKeyValueStoreId).getRecord('DAPI_FRAME_STATE').catch(() => null))?.value;
@@ -375,18 +415,56 @@ async function runOnce({ apify, actor, spec, robotsOverride, attempt }) {
           await sleep(3000);
           current = await apify.run(run.id).get();
         }
+        recordFinish(current);
         return { status: 'broken', ...broken, ...evidence(log, state, broken.reason) };
       }
     }
   } finally {
     stream?.destroy();
   }
+  recordFinish(current);
   if (current.status === 'FAILED' || current.status === 'TIMED-OUT') {
     const reason = current.status === 'FAILED' ? 'The run crashed on Apify.' : 'The run hit its time limit on Apify.';
     return { status: 'broken', reason, ...evidence(log, null, reason) };
   }
   if (current.status !== 'SUCCEEDED') return { status: 'stopped', runStatus: current.status, copied };
   return { status: 'succeeded', run, copied, copy };
+}
+
+// Apify's own account of a finished run: how it ended, how long, what it cost.
+function recordFinish(r) {
+  const f = apifyFacts(r);
+  updateJob(dir, { apify: f, runStatus: r.status });
+  const extras = [f.migrations && `moved servers ${f.migrations}×`, f.resurrects && `resurrected ${f.resurrects}×`].filter(Boolean);
+  say('run', {
+    kind: 'apify-finished',
+    text: `Apify reports the run ${r.status.toLowerCase().replace('-', ' ')}${f.seconds !== null ? ` after ${Math.round(f.seconds)} s` : ''}${f.computeUnits !== null ? `, ${f.computeUnits.toFixed(3)} compute units` : ''}${f.usd !== null ? `, $${f.usd.toFixed(3)}` : ''}${extras.length ? `; ${extras.join(', ')}` : ''}.`,
+    ...f,
+  });
+}
+
+// Attach to the job's run as it is now: a run resurrected on Apify after Dapi stopped
+// watching, or one left running when its runner stopped. Sees it to the end like a
+// fresh run, without repairs: the code was already tested and approved.
+async function followExisting() {
+  const { apify } = await import('../apify/client.js');
+  const current = readJson(dir, 'job.json');
+  const spec = readJson(dir, 'spec.json');
+  const findings = readJson(dir, 'findings.json');
+  const run = await apify.run(current.runId).get();
+  step('run');
+  say('run', { kind: 'following', text: `Dapi is following the run on Apify again (it is ${run.status.toLowerCase()}).` });
+  const outcome = await watchRun({ apify, run, fresh: false });
+  if (outcome.status === 'succeeded') {
+    return finish({ apify, ...outcome, userSpec: spec, translate: findings?.samples?.translate ?? null, records: current.records ?? outcome.copied, disputes: findings?.samples?.disputes ?? [] });
+  }
+  if (outcome.status === 'stopped') {
+    say('run', { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${outcome.copied.toLocaleString('en-US')} rows. Resurrect it to continue where it stopped.` });
+    updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus });
+    return;
+  }
+  say('run', { kind: 'broken', text: outcome.reason, log: outcome.log });
+  updateJob(dir, { status: 'failed', failed: outcome.reason });
 }
 
 // Whether a running extraction is broken, from its saved state and its log.

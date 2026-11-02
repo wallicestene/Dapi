@@ -75,6 +75,16 @@ export function FootedPanel({ job, report }: { job: Job; events: JobEvent[]; rep
             ["Skipped for robots.txt", n(report.skipped.length)],
             ["Fetched despite robots.txt", n(report.robotsOverridden)],
             ["Resumed after a stop", report.resumed ? `${report.resumed}×, no row read twice` : "0"],
+            ...(job.apify
+              ? [
+                  ["On Apify", `${job.apify.status.toLowerCase().replace("-", " ")}${job.apify.seconds !== null ? `, ${Math.round(job.apify.seconds)} s` : ""}`],
+                  ["Compute units", job.apify.computeUnits === null ? "—" : job.apify.computeUnits.toFixed(3)],
+                  ["Cost of the run", job.apify.usd === null ? "—" : `$${job.apify.usd.toFixed(3)}`],
+                  ...(job.apify.migrations || job.apify.resurrects
+                    ? [["Server moves, resurrects", `${job.apify.migrations}, ${job.apify.resurrects}`]]
+                    : []),
+                ]
+              : []),
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4 px-5 py-2.5">
               <dt className="text-ink-2">{k}</dt>

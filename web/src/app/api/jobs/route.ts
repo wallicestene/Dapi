@@ -4,8 +4,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
-import { JOBS_DIR, READ_ONLY, REPO, pipeline } from "@/lib/server/dapi";
+import { READ_ONLY, pipeline } from "@/lib/server/dapi";
+import { startRunner } from "@/lib/server/runner";
 
 const ALLOWED = new Set([".pdf", ".md", ".txt"]);
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -34,16 +34,8 @@ export async function POST(request: Request) {
   const upload = path.join(tmp, `spec${path.extname(name).toLowerCase() || ".txt"}`);
   fs.writeFileSync(upload, bytes);
   const { createJob } = await pipeline<{ createJob: (p: string) => { id: string; dir: string } }>("src/jobs/store.js");
-  const { id, dir } = createJob(upload);
+  const { id } = createJob(upload);
   fs.rmSync(tmp, { recursive: true, force: true });
-
-  const log = fs.openSync(path.join(dir, "runner.log"), "a");
-  const child = spawn(process.execPath, [path.join(REPO, "src/jobs/run-job.js"), id], {
-    cwd: REPO,
-    detached: true,
-    stdio: ["ignore", log, log],
-    env: { ...process.env, DAPI_JOBS_DIR: JOBS_DIR },
-  });
-  child.unref();
+  startRunner(id);
   return Response.json({ id });
 }

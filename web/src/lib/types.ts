@@ -25,6 +25,20 @@ export interface Job {
   statusMessage?: string | null;
   declined?: string;
   failed?: string;
+  runnerPid?: number;
+  runAttempt?: number;
+  // What Apify itself reports about the run.
+  apify?: {
+    status: string;
+    startedAt: string;
+    finishedAt: string | null;
+    seconds: number | null;
+    computeUnits: number | null;
+    usd: number | null;
+    migrations: number;
+    restarts: number;
+    resurrects: number;
+  };
 }
 
 export interface JobEvent {
