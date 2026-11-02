@@ -536,7 +536,13 @@ async function apifyProxy(way, notes) {
 // back holding one of the sample's values. Skipped without an Apify token.
 async function reach({ spec, list, detail, notes }) {
   const sample = spec.samples[0];
-  const firstValue = sample?.values[spec.columns[0].name];
+  // The list request must come back holding a value that's really on that page: the
+  // sample's, when the page the investigator saw held it, else the first record's (a
+  // paged list's first page rarely holds the sample).
+  const sampleValue = sample?.values[spec.columns[0].name];
+  const onPage = (v) => v && JSON.stringify(list.records.records).includes(JSON.stringify(v).slice(1, -1));
+  const anchor = Object.values(list.fields).find((f) => f.keys.length === 1 && String(at(list.records.records[0] ?? {}, f.keys[0]) ?? '').length >= 4);
+  const firstValue = onPage(sampleValue) ? sampleValue : anchor ? String(at(list.records.records[0], anchor.keys[0])) : undefined;
   const detailValue = detail && Object.keys(detail.fields).map((c) => sample?.values[c]).find((v) => v && v.length >= 4);
   const header = (c) => (c.headers?.['content-type'] ? { 'content-type': c.headers['content-type'] } : {});
   const requests = [

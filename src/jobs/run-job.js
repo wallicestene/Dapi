@@ -228,7 +228,11 @@ function refuse(f) {
   } else if (!f.list) {
     reasons.push("Neither the site's own data requests nor its embedded data hold the records. Reading the visible page alone is a route Dapi doesn't run yet.");
   }
-  if (f.reachability && !f.reachability.recommendation) {
+  // A refusal from Apify's servers means every way in was refused (blocked, an error, or
+  // HTTP 4xx/5xx), not that one answer lacked one record.
+  const results = f.reachability?.results ?? [];
+  const everyWayBlocked = results.length > 0 && results.every((r) => r.blocked || r.error || (r.status ?? 0) >= 400);
+  if (f.reachability && !f.reachability.recommendation && everyWayBlocked) {
     const human = f.reachability.results?.some((r) => r.human);
     reasons.push(`From Apify's servers, where the run happens, the site refused every way: direct, datacenter and residential proxy${human ? ', with a check only a person can pass' : ''}.`);
   }
