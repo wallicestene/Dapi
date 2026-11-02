@@ -293,14 +293,21 @@ function makePlan(f, config, notes, spec, tested = null) {
   // With a register behind the record pages, its batches replace most page loads; pages
   // are still needed for columns it doesn't hold, once per record or once per shared value.
   const up = f.detail?.upstream;
+  // Detail requests only where the strategy still routes a column through them: Muse
+  // Wonder may have found the value cheaper (FSSC: a suspension date from the feed).
+  const routes = new Map((f.strategy?.columns ?? []).map((c) => [c.column, c.route]));
+  const usesDetail = Object.keys(f.detail?.fields ?? {}).some((c) => !routes.size || ['page', 'shared-page', 'feed', 'register'].includes(routes.get(c)));
   const pageColumns = Object.keys(f.detail?.fields ?? {}).filter((c) => f.detail.fields[c].keys?.length && !up?.columns.includes(c));
   const perRecordPages = pageColumns.some((c) => !f.detail.fields[c].sameOnAllPages);
-  const details = !f.detail
+  // A paged list is a request per page (of the biggest size the server honours).
+  const paging = f.list.paging;
+  const listRequests = paging?.total && !paging.bigPage?.onePage ? Math.ceil(paging.total / (paging.bigPage?.size ?? paging.pageSize ?? paging.total)) : 1;
+  const details = !f.detail || !usesDetail
     ? 0
     : up
       ? up.apis.reduce((n, a) => n + (a.batch ? Math.ceil(records / a.batch.maxIds) : records), 0) + (perRecordPages ? records : pageColumns.length ? 3 : 0)
       : records;
-  const requests = 1 + details;
+  const requests = listRequests + details;
   const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
   // The time estimate follows the measured pace at the chosen concurrency, when there is one.
   const level = (f.reachability?.pace?.levels ?? []).filter((l) => !l.errors && l.medianMs && l.concurrency <= (config.maxConcurrency ?? 4)).at(-1);
@@ -313,7 +320,8 @@ function makePlan(f, config, notes, spec, tested = null) {
     feed: "the site's own data feed (JSON)",
     embedded: 'data embedded in the page',
   }[route];
-  const detailHow = !f.detail
+  const pagesHow = listRequests > 1 ? ` in ${listRequests.toLocaleString('en-US')} pages` : '';
+  const detailHow = !f.detail || !usesDetail
     ? ''
     : up
       ? `, then ${up.apis[0].name}'s own API${up.apis.some((a) => a.batch) ? ' in batches' : ''}${perRecordPages ? ', and each record page' : pageColumns.length ? ', and a page per shared value' : ''}`
@@ -325,7 +333,7 @@ function makePlan(f, config, notes, spec, tested = null) {
     requests,
     minutes,
     route,
-    detail: f.detail?.kind ?? null,
+    detail: usesDetail ? (f.detail?.kind ?? null) : null,
     proxy,
     pace: { concurrency: config.maxConcurrency ?? null, perMinute: rpm, retries: config.maxRetries ?? null },
     reasoning: notes,
@@ -333,7 +341,7 @@ function makePlan(f, config, notes, spec, tested = null) {
     personalData: spec.personalData ?? [],
     translate: f.samples?.translate ? { from: language(f.samples.translate.from), to: language(f.samples.translate.to), columns: f.samples.translate.columns } : null,
     disputes: [...(f.samples?.disputes ?? []), ...testDisputes(tested)],
-    text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
+    text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }
 
