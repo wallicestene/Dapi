@@ -26,14 +26,16 @@ export async function openPage(url, { proxy } = {}) {
     pending.push(record(request, phase));
   });
 
+  // Never throws: a request still finishing when the page closes is simply not recorded.
   async function record(request, inPhase) {
-    const response = await request.response();
-    if (!response) return;
+    let response;
     let body;
     try {
+      response = await request.response();
+      if (!response) return;
       body = await response.body();
     } catch {
-      return; // redirects have no body
+      return; // redirects have no body; a closed page has no response
     }
     const json = parseJson(body);
     if (json === undefined) return;
@@ -44,7 +46,7 @@ export async function openPage(url, { proxy } = {}) {
       payload: request.postData(),
       status: response.status(),
       // allHeaders() includes cookie and other headers that headers() leaves out.
-      headers: await request.allHeaders(),
+      headers: await request.allHeaders().catch(() => ({})),
       size: body.length,
       json,
     });

@@ -65,6 +65,25 @@ const step = (name) => updateJob(dir, { step: name, status: 'running' });
 // So the web app can tell whether a runner is watching this job.
 updateJob(dir, { runnerPid: process.pid });
 
+// Anything that escapes every handler (a stray rejected promise from a closed browser
+// page) still ends the job honestly: marked failed with the reason, and any run on
+// Apify stopped, never a job that says "running" with nothing behind it.
+async function crashed(err) {
+  try {
+    const { runId, runStatus } = readJson(dir, 'job.json') ?? {};
+    if (runId && !['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(runStatus)) {
+      const { apify } = await import('../apify/client.js');
+      await apify.run(runId).abort({ gracefully: true }).catch(() => {});
+    }
+    say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${String(err?.message ?? err).split('\n')[0]}` });
+    updateJob(dir, { status: 'failed', failed: String(err?.message ?? err).split('\n')[0] });
+  } finally {
+    process.exit(1);
+  }
+}
+process.on('unhandledRejection', crashed);
+process.on('uncaughtException', crashed);
+
 try {
   if (follow) {
     await followExisting();

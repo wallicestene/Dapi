@@ -48,13 +48,18 @@ export function JobView({
   // In step with Apify: a run resurrected or left unwatched gets a runner to follow it
   // again (then the page reloads to stream it); a finished run's own report is recorded.
   useEffect(() => {
-    if (!initialJob.runId || ["declined", "cancelled"].includes(initialJob.status)) return;
-    fetch(`/api/jobs/${initialJob.id}/sync`, { method: "POST" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((r) => {
-        if (r?.state === "following" && initialJob.status !== "running") window.location.reload();
-      })
-      .catch(() => {});
+    if (["declined", "cancelled", "failed"].includes(initialJob.status) || (initialJob.status === "done" && initialJob.apify)) return;
+    const check = () =>
+      fetch(`/api/jobs/${initialJob.id}/sync`, { method: "POST" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((r) => {
+          if ((r?.state === "following" && initialJob.status !== "running") || r?.state === "runner-died") window.location.reload();
+        })
+        .catch(() => {});
+    check();
+    // While a job is under way, look again now and then: a runner can die at any step.
+    const timer = initialJob.status === "running" || initialJob.status === "waiting" ? setInterval(check, 60_000) : undefined;
+    return () => clearInterval(timer);
   }, [initialJob.id, initialJob.runId, initialJob.status]);
 
   // The run's report arrives with the footing event.

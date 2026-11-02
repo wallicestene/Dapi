@@ -17,8 +17,18 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
   const { id } = await ctx.params;
   const job = validId(id) ? getJob(id) : null;
   if (!job) return Response.json({ error: "no such job" }, { status: 404 });
-  if (!job.runId) return Response.json({ state: "no-run" });
   if (runnerAlive(job.runnerPid)) return Response.json({ state: "watching" });
+  // A job that says it's under way but whose runner is gone before any run started
+  // (a crash in the investigation): say so, rather than "running" forever.
+  if (!job.runId) {
+    if (["running", "waiting"].includes(job.status) && job.runnerPid) {
+      const { updateJob, emit } = await pipeline<{ updateJob: (dir: string, changes: object) => void; emit: (dir: string, e: object) => void }>("src/jobs/store.js");
+      emit(jobPath(id), { step: job.step, kind: "error", text: "Dapi's runner for this job stopped unexpectedly. Start the job again." });
+      updateJob(jobPath(id), { status: "failed", failed: "The runner stopped unexpectedly." });
+      return Response.json({ state: "runner-died" });
+    }
+    return Response.json({ state: "no-run" });
+  }
 
   const { apify } = await pipeline<{ apify: { run: (id: string) => { get: () => Promise<ApifyRun> } } }>("src/apify/client.js");
   const run = await apify.run(job.runId).get();
