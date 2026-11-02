@@ -24,6 +24,7 @@ import { writeAndTest } from '../write-site.js';
 import { translateValues } from '../translate.js';
 import { compareSamples } from '../compare.js';
 import { planStrategy } from '../strategy.js';
+import { runChecks } from '../investigate/checks.js';
 
 // The run watch (see runOnApify). Declared up here: the job runs at the top level,
 // before declarations further down the file are initialised.
@@ -109,7 +110,17 @@ try {
   // plans each column's route and the run's pace before any code is written.
   say('site', { kind: 'strategizing', text: 'Muse Wonder is reading everything the investigation found and planning the extraction column by column.' });
   try {
-    const strategy = await planStrategy({ spec, sourceSpec: runSpec, findings });
+    let strategy = await planStrategy({ spec, sourceSpec: runSpec, findings });
+    // The agent loop: checks Muse Wonder asks for to settle gaps, then a second plan.
+    if (strategy.checks?.length) {
+      say('site', { kind: 'checks', text: `Muse Wonder wants ${strategy.checks.length} more look${strategy.checks.length === 1 ? '' : 's'} before it settles the plan: ${strategy.checks.map((c) => c.why).join(' ')}`, checks: strategy.checks });
+      const results = await runChecks({ checks: strategy.checks, findings });
+      for (const r of results) {
+        say('site', { kind: 'check', text: `${describeCheck(r.check)}: ${r.found?.error ? `couldn't (${r.found.error})` : 'done'}.`, check: r.check, found: r.found });
+      }
+      findings.checks = results;
+      strategy = await planStrategy({ spec, sourceSpec: runSpec, findings, checkResults: results });
+    }
     findings.strategy = strategy;
     writeJson(dir, 'findings.json', findings);
     say('site', {
@@ -177,6 +188,13 @@ try {
   say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${err.message.split('\n')[0]}` });
   updateJob(dir, { status: 'failed', failed: err.message.split('\n')[0] });
   process.exit(1);
+}
+
+function describeCheck(c) {
+  if (c.tool === 'list-values') return `Counted every value of ${c.field} in the list`;
+  if (c.tool === 'record-page') return `Opened the page of a record with ${c.field} = ${c.equals}`;
+  if (c.tool === 'register') return `Asked the register about ${c.id || `a record with ${c.field} = ${c.equals}`}`;
+  return `Read ${c.url}`;
 }
 
 // A plain no, before any code is written. Owner's line (2026-11-01): whatever the spec

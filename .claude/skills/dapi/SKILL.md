@@ -703,6 +703,32 @@ so any spec gets a thorough investigation and the best strategy, not just this s
   and translation. Every sample column exact except the known Brønnøysund dispute;
   names consistent across branches; "Belongs to main unit" holds parent names.
 
+### The agent loop and Apify sync (2026-11-02)
+
+- **Muse Wonder asks for checks.** Its plan may ask (at most 4) for quick looks that
+  settle a gap: `list-values` (every distinct value of a list field), `record-page`
+  (a record whose field equals a value), `register` (the verified register about a
+  record), `fetch` (a URL on a host the investigation found). Dapi runs them
+  (`src/investigate/checks.js`) and Muse Wonder plans again with the results. On
+  Arbeidstilsynet: it asked whether every business shares one status (all 291: yes)
+  and what the register holds for two sub-units; the second plan closed every gap: 8
+  requests.
+- Lesson: check results must reach the model whole. Register answers clipped at
+  1,500 characters hid the sub-units' postal addresses, and Wonder wrongly dropped the
+  register for 292 page loads. Answers now come without `_links`, up to 5,000
+  characters; the prompt and playbook say a register in batches with a lookup through
+  the list beats every record's page.
+- **Apify in sync.** The runner reports Apify's own events (server moves, restarts,
+  resurrects) and records its report at the end (status, run time, compute units, USD
+  cost) on the job. A job page that opens on a run nobody is watching starts a runner
+  to follow it (`run-job.js <id> --follow`); a stopped run can be resurrected from the
+  page and is followed to the end with its rows kept (tested: job 0006, 430 rows, no
+  duplicates). The slow page route cost $0.124 over 11 min (job 0012, stopped); the
+  register route $0.005 in 15 s (job 0014).
+- Twice now a `const` declared below the job runner's top-level code crashed it at
+  run time (temporal dead zone): helpers it calls must be function declarations or
+  sit above the main flow.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell

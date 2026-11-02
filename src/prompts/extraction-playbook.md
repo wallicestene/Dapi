@@ -91,7 +91,12 @@ sample is blank. A column with no verified route is a gap to name, not a guess t
 
 - **Fewest requests:** one big list page; batch endpoints; shared values once; a detail
   shared by several records fetched once; record pages only for columns nothing
-  cheaper holds; never a browser where a plain request works.
+  cheaper holds; never a browser where a plain request works. A verified register in
+  batches beats every record's page even when a column needs a lookup through the
+  site's own list (a parent unit's ID to its name), and all the more on a slow site.
+- **Settle gaps before building.** When a route is only partly proven, look: count a
+  list field's values (are any records not approved?), open a record that differs,
+  ask the register about it. Building on a guess costs a broken run.
 - **Measure from where the run happens.** The run is on Apify's servers, which a site
   may treat differently from the investigator's connection (GPTW: 30 s from Nairobi,
   2 s from Apify).
