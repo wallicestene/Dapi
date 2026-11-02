@@ -1,37 +1,47 @@
 ---
 name: Dapi
-description: Web data you can stand behind, presented as an auditor's working paper.
+description: Web data you can prove, from a mark in four parts that is also the job's progress.
 colors:
-  working-paper: "#eef1ea"
-  schedule-sheet: "#f8f9f5"
-  raised-sheet: "#f2f4ee"
-  selected-row: "#e1e6da"
-  sheet-edge: "#d3d9cc"
-  row-rule: "#e3e7dd"
-  control-edge: "#b5beae"
-  graphite: "#22252a"
-  graphite-soft: "#545a61"
-  graphite-faint: "#60666c"
-  pencil-green: "#2b7449"
-  pencil-red: "#b3302a"
-  green-wash: "#dce9dc"
-  green-wash-ink: "#1c4a2f"
-  red-wash: "#f5dedb"
-  red-wash-ink: "#7a1f19"
+  paper: "#f2f3ea"
+  sheet: "#fbfbf7"
+  raised: "#f5f6ef"
+  active: "#e6e8da"
+  border: "#d9dccb"
+  rule: "#e7e9dc"
+  control: "#b9bdaa"
+  ink: "#1d2c3a"
+  ink-2: "#4e5b67"
+  ink-3: "#5f6b76"
+  night: "#0f1a24"
+  source: "#6a4cff"
+  extract: "#f12727"
+  deliver: "#12b5a5"
+  verified: "#9ad82b"
+  pencil-green: "#3d7a12"
+  pencil-red: "#c42b1c"
+  green-wash: "#e9f5d3"
+  green-wash-ink: "#2c5a0d"
+  red-wash: "#fbe3df"
+  red-wash-ink: "#8a1c12"
 typography:
+  hero:
+    fontFamily: "Archivo, sans-serif"
+    fontSize: "clamp(44px, 5.4vw, 78px)"
+    fontWeight: 700
+    lineHeight: 0.95
+    letterSpacing: "-0.045em"
   display:
     fontFamily: "Archivo, sans-serif"
     fontSize: "38px"
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 1
-    fontVariation: "'wdth' 72"
+    letterSpacing: "-0.03em"
   headline:
     fontFamily: "Archivo, sans-serif"
     fontSize: "28px"
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 1.25
-    letterSpacing: "-0.01em"
-    fontVariation: "'wdth' 72"
+    letterSpacing: "-0.03em"
   title:
     fontFamily: "Archivo, sans-serif"
     fontSize: "16px"
@@ -58,6 +68,7 @@ rounded:
   md: "5px"
   lg: "6px"
   xl: "8px"
+  card: "12px"
   pill: "9999px"
 spacing:
   xs: "8px"
@@ -67,31 +78,31 @@ spacing:
   xl: "28px"
 components:
   button-primary:
-    backgroundColor: "{colors.graphite}"
-    textColor: "{colors.schedule-sheet}"
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.sheet}"
     rounded: "{rounded.lg}"
     height: "32px"
     padding: "0 10px"
   button-outline:
-    backgroundColor: "{colors.schedule-sheet}"
-    textColor: "{colors.graphite}"
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
     height: "32px"
   input-filter:
     backgroundColor: "#ffffff"
-    textColor: "{colors.graphite}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
     height: "32px"
   chip-scope:
-    textColor: "{colors.graphite-soft}"
+    textColor: "{colors.ink-2}"
     rounded: "{rounded.pill}"
     height: "32px"
   chip-scope-on:
-    backgroundColor: "{colors.schedule-sheet}"
-    textColor: "{colors.graphite}"
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.pill}"
   panel:
-    backgroundColor: "{colors.schedule-sheet}"
+    backgroundColor: "{colors.sheet}"
     rounded: "{rounded.lg}"
     padding: "16px 20px"
 ---
@@ -100,129 +111,160 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Working Paper"**
+**Creative North Star: "Every value traced"**
 
-Dapi's screens are an auditor's working papers for web data. A schedule sheet lies on a pale green-grey desk; graphite ink sets everything; and two pencil colours mark what was checked. Green means a check held. Red means an exception. Every delivered value carries the tick that says what it was checked against, and every dataset is footed against the source's own total on a double rule. The product's whole claim is that its data can be stood behind, so the screen looks like the paper a compliance officer, procurement analyst or journalist would sign off.
+Dapi turns a spec into a dataset and proves every value. The identity says that in one
+mark: a D in four parts, one per stage of a job. The stem is the **source** (violet),
+the top arc the **extraction** (red), the bottom arc the **delivery** (teal), and the
+tick, **verified** (lime), sits exactly where extraction ends and delivery begins. The
+mark draws itself in that order, and on a job's page it is the progress: lit up to the
+stage the job has reached, the stage under way breathing.
 
-Density is that of a working tool, not a landing page: tables with rules and alignment, small sentence-case labels, figures in tabular digits that line up on their right edge. Expression lives in three places only: the condensed cut of the type for titles and the footing figure, the tick marks, and the double-ruled footing line. Everything else is plain, standard web controls the visitor already knows.
-
-The category default this refuses is the AI agent console: a chat timeline beside a table, with "verified" badges. Dapi shows the agent's work as steps of an audit, and its evidence as the server's own words.
+Around the mark the system is calm and exact: navy ink on sage paper, white sheets,
+tabular figures, the real product on screen. Colour belongs to the mark and to state;
+lime marks traced evidence and nothing else. (Chosen 2026-11-02 from a board of options:
+the owner's four-part sketch, made flat and redrawn, with navy, sage and red taken from
+a palette they picked.)
 
 **Key Characteristics:**
-- Pale green-grey ground, sheets one step lighter, no shadows at rest.
-- Graphite ink; colour appears only as pencil marks on data and states.
-- One grotesk (Archivo) whose condensed width sets titles and the footing figure; IBM Plex Mono only for requests, responses and seals.
-- Tick marks on values, a legend docked under the table, totals on a double rule.
-- Light only: it is read at a desk, like the paper it comes from.
+- The four-colour mark: flat colours, no gradients, legible at 16 px and on dark.
+- Navy ink (#1d2c3a) on sage paper (#f2f3ea); sheets one step lighter; navy-black
+  (#0f1a24) for dark sections.
+- One grotesk, Archivo, bold and tight for headings; IBM Plex Mono only for evidence.
+- Show the product, not illustrations: real rows, a real receipt.
+- Copy is short and plain (see Voice).
+
+## The Mark
+
+Four strokes on a 64-unit grid (viewBox 4 4 56 56), weight 11 (12 at 32 px and under):
+stem `M14 50V14`; extract `M23 14H32A18 18 0 0 1 46.36 21.15`; deliver
+`M46.36 21.15A18 18 0 0 1 32 50H23`; tick `M26.5 34.5L31.5 40L52 14` at weight 7
+(8.5 small) over a halo of 13 in the background colour, which splits the arcs. Master
+files: `web/public/brand/dapi-mark.svg` (the halo is a mask, so it sits on any
+background) and `dapi-mark-animated.svg` (draws, holds, fades, loops). In the app:
+`Mark` in `web/src/components/shell.tsx` (`draw`, `lit`, `now`, `bg`, `dim`).
+
+- **Draw order:** stem rises, top arc sweeps, bottom arc sweeps round, tick lands
+  (about 1.5 s). Still for people who prefer reduced motion.
+- **Progress:** stages not yet reached take `dim` (the active tone on paper, #2b3a48 on
+  night); the stage under way breathes.
+- The wordmark is "Dapi" in Archivo 700 at -0.04em, in ink, beside the mark.
 
 ## Colors
 
-A paper desk and graphite, with two pencils that only ever touch data.
+### The mark's four
+- **Source** (#6a4cff), **Extract** (#f12727), **Deliver** (#12b5a5), **Verified**
+  (#9ad82b). They name the stages of a job wherever stages appear (the home page's
+  steps, the progress mark). Verified lime is also the highlight on a traced value and
+  on the line of a response it came from.
 
-### Primary
-- **Pencil Green** (#2b7449): a check that held. The tick beside a traced value (at 45% strength in the table, where nearly every value is traced, so exceptions stand out), the "S" of a value that agrees with the spec's sample, the "F" of a footed total, a seal re-checked in the browser.
-
-### Secondary
-- **Pencil Red** (#b3302a): an exception. A near-match or a mismatch with a sample, a value that never arrived, a refused source, a failed request. Washes: **Red Wash** (#f5dedb) with **Red Wash Ink** (#7a1f19) for refusal and robots.txt notices; **Green Wash** (#dce9dc) with **Green Wash Ink** (#1c4a2f) to mark the line in a response a value came from, and for text selection.
+### State
+- **Pencil Green** (#3d7a12): the tick beside a traced value, the "S" of a value that
+  agrees with a sample, the "F" of a footed total. A deeper cut of the lime, because a
+  12 px icon in brand lime fails contrast.
+- **Pencil Red** (#c42b1c): an exception: a mismatch, a value that never arrived, a
+  refused source, a failed request, a sample the site disagrees with. Washes: red wash
+  (#fbe3df) with #8a1c12; green wash (#e9f5d3) with #2c5a0d.
 
 ### Neutral
-- **Working Paper** (#eef1ea): the page ground.
-- **Schedule Sheet** (#f8f9f5): panels, the top bar, the data sheet, the receipt rail.
-- **Raised Sheet** (#f2f4ee): hover, and the selected step in the step strip.
-- **Selected Row** (#e1e6da): the row whose cell is open in the receipt rail.
-- **Sheet Edge** (#d3d9cc): 1px panel borders. **Row Rule** (#e3e7dd): rules between rows and list items. **Control Edge** (#b5beae): input, outline-button and dropzone borders.
-- **Graphite** (#22252a): all primary text, the primary button, focus rings, the selected cell's outline, the footing rules. **Graphite Soft** (#545a61): secondary text and column headers. **Graphite Faint** (#60666c): placeholders, row numbers, timestamps (5.4:1 on the sheet).
+- **Paper** (#f2f3ea) ground; **Sheet** (#fbfbf7) panels, the top bar, the data sheet;
+  **Raised** (#f5f6ef) hover; **Active** (#e6e8da) selected rows and unlit mark parts.
+- **Border** (#d9dccb), **Rule** (#e7e9dc), **Control** (#b9bdaa).
+- **Ink** (#1d2c3a) text and the primary button; **Ink 2** (#4e5b67) secondary text;
+  **Ink 3** (#5f6b76) placeholders and meta (5.3:1 on the sheet).
+- **Night** (#0f1a24): dark sections (the home page's how-it-works, video frames).
 
 ### Named Rules
-**The Two Pencils Rule.** Colour is only ever a pencil mark on data or state: green for a check that held, red for an exception. No colour on chrome, navigation or buttons.
+**The Lime Is Evidence Rule.** Lime fills only a traced value and the line of the
+response it came from. Never a button, a badge or decoration.
 
-**The Quiet Tick Rule.** Where most values pass, the routine tick recedes (green at 45%) and only exceptions are drawn at full strength.
+**The Four Stages Rule.** The mark's colours mean the four stages. Use them for stages,
+not for unrelated categories.
 
 ## Typography
 
-**Display Font:** Archivo, condensed (width 72) (with sans-serif)
-**Body Font:** Archivo, normal width (with sans-serif)
-**Label/Mono Font:** IBM Plex Mono (with monospace), for evidence only
-
-**Character:** One sturdy grotesk in two widths: the condensed cut reads like the headings typed on an accountant's schedule; the normal width carries the work. Tabular figures everywhere, so counts and dates line up.
+**Display:** Archivo 700, tight tracking. **Body:** Archivo 400-600. **Evidence:** IBM
+Plex Mono. Tabular figures everywhere, so counts and dates line up.
 
 ### Hierarchy
-- **Display** (600, 38px, line-height 1, condensed): the footing figure, "430 / 430", top right of a job.
-- **Headline** (600, 28px, 1.25, condensed, -0.01em): the one h1 per screen: the job's or the page's name.
-- **Title** (600, 14-16px): panel headings, step names in the step strip.
-- **Body** (400, 13-14px, 1.6): table cells (13px), sentences and lists (14px).
-- **Label** (400, 12px): column headers in sentence case, step results, captions, legends.
+- **Hero** (700, clamp 44-78 px, 0.95, -0.045em): the home page's one line.
+- **Display** (700, 38px, -0.03em): the footing figure, "43,037 / 43,037".
+- **Headline** (700, 28px, -0.03em): the one h1 per app screen.
+- **Section** (700, 30-44px, -0.03em): home page section heads.
+- **Title** (600, 14-19px), **Body** (400, 13-17px), **Label** (400, 12px).
 - **Evidence** (400, 11.5-12px, Plex Mono): requests, response bodies, SHA-256 seals.
 
 ### Named Rules
-**The Typed Schedule Rule.** The condensed cut is for the h1 and the footing figure only; nothing else is condensed.
+**The Mono Is Evidence Rule.** Monospace only where Dapi shows what a server said or
+sent. Never as a "technical" costume.
 
-**The Mono Is Evidence Rule.** Monospace appears only where Dapi shows what a server said or sent: requests, responses, seals. Never as a "technical" costume.
+## Voice
+
+Everything the client reads, from the home page to the plan Muse writes, follows
+`src/prompts/client-voice.md`: the answer first; lines under 20 words; plain SaaS words
+(dataset, rows, the site's data feed, API, run, proxy); numbers over adjectives; no
+code, field names or paths. Muse prompts that write for the client include that file.
+Headlines are 2 to 6 words; a subhead is one sentence.
 
 ## Layout
 
-Fluid canvas with 28px side padding (24px on tablets, 16px on phones), one 16-20px gap between blocks. A job screen reads top to bottom: title row (h1 and source left, footing figure right), the six-step strip as one bordered container split by rules (6 columns on desktop, 3 on tablets, 2 on phones), then the step's content. On the Run tab, the data sheet takes the width and a 360px receipt rail sits to its right (`minmax(0,1fr) 360px`, 20px gap), sticky as the sheet scrolls; below 1024px the rail drops under the sheet. The data sheet scrolls inside its own frame both ways; the row number and the identity column stay pinned on the left. Lists of jobs sit in a centred 1120px column.
+App screens: fluid canvas, 28px side padding (24 on tablets, 16 on phones). A job reads
+top to bottom: title row (progress mark, h1 and source left, footing figure right), the
+six-step strip, then the step's content; on Run, the data sheet with a 360px receipt rail
+to its right (below 1024px, under it). The jobs list sits in a centred 1120px column.
+
+Home page: a centred 1240px column. Hero (copy left, the live receipt right; stacked on
+phones), how it works on night in four steps (one per mark colour, each with the mark
+lit to that stage), real finished jobs as proof, why it holds up (four short claims),
+and one closing call to action.
 
 ## Elevation & Depth
 
-Flat. Surfaces are separated by a 1px edge or one tone step, never a shadow at rest. The only shadows are on what floats: the code sheet that slides in from the right, over a flat graphite scrim at 20%.
-
-### Named Rules
-**The Paper Lies Flat Rule.** A border or a tone step, never both a border and a shadow; nothing at rest casts a shadow.
+Flat at rest: a 1px border or one tone step. One soft shadow lifts the home page's live
+receipt; otherwise shadows only on what floats (the code sheet, over a 20% ink scrim).
 
 ## Shapes
 
-Tight corners: 6px on panels, buttons and inputs, 4-5px on small controls, a full pill only for the scope chips over the table. Rules do the structuring: 1px row rules, a 2px graphite rule over the footing line and a 3px double rule under it, a 3px graphite bar under the selected step.
+6px on panels, buttons and inputs; 12px on home page cards; a full pill only for the
+table's scope chips. Rules do the structuring: row rules, the footing's double rule.
 
 ## Components
 
 ### Buttons
-- **Shape:** gently squared (6px).
-- **Primary:** graphite fill, sheet-coloured label, 32px tall (36px for the plan's Run): New job, Start the job, Run on Apify. One per screen.
-- **Outline:** sheet fill with a control-edge border: Open run on Apify, the robots.txt override.
-- **Ghost:** text only, graphite soft: Stop here, paging arrows.
-- **Focus:** a 2px graphite outline, 2px offset.
+- **Primary:** ink fill, sheet label, 32px in the app (44px on the home page). One per
+  screen: Start a job, Run on Apify.
+- **Outline:** sheet fill with a control border: See a delivered job, Open run on Apify.
+- **Focus:** a 2px ink outline, 2px offset.
 
-### Chips
-- **Style:** the table's scope filter (All, Exceptions, Missing), each with its count: a pill with a row-rule border and graphite-soft label.
-- **State:** selected takes a graphite border and graphite label.
-
-### Cards / Containers
-- **Corner Style:** 6px.
-- **Background:** schedule sheet on the working-paper ground.
-- **Shadow Strategy:** none (see Elevation & Depth).
-- **Border:** 1px sheet edge; a 1px rule under the heading row.
-- **Internal Padding:** 16px vertical, 20px horizontal.
-
-### Inputs / Fields
-- **Style:** white field, 1px control-edge border, 6px corners, 32px tall in tool rows; placeholders in graphite faint.
-- **Focus:** the graphite focus ring.
-- **Dropzone:** a dashed control-edge box on the sheet; while a file is dragged over it, the border turns graphite.
-
-### Navigation
-- **Style:** a 56px top bar on the sheet with a bottom edge: the Dapi mark and wordmark, then Jobs and the current job's name in 14px. The current page is graphite, others graphite soft. Actions sit at the right end. On phones the job's name and the secondary action fold away.
+### The Live Receipt (home page, signature)
+FSSC's first delivered rows (job 0024) as a table; every cell is a button. The picked
+cell turns lime with an ink ring, and the receipt below shows the request, when it was
+captured and through which proxy, the SHA-256, and the response's own lines with the
+value's line in lime. Data: `web/src/lib/showcase.json`, built from the real capture.
 
 ### The Step Strip (signature)
-Six steps of the audit, as tabs in one container: Spec, Site, Extraction, Samples, Run on Apify, Footed. Each carries its tick and one line of result ("3 exact, 1 spacing", "430 of 430"). A step under way shows a graphite dot; the selected step takes the raised sheet and a 3px graphite bar.
+Six steps as tabs in one container: Spec, Site, Extraction, Samples, Run on Apify,
+Footed, each with its tick and a one-line result.
 
 ### The Ticked Data Sheet (signature)
-The delivered rows in a ruled table: 12px sentence-case headers, 40px rows, numbers and dates right-aligned, every value followed by its tick. Each cell is a button that opens its receipt. Under the table, the footing line: "Footed against the source's own count", the count with its F, between a 2px rule and a double rule; then the tick legend.
+Delivered rows in a ruled table, every value followed by its tick; each cell opens its
+receipt. Under it, the footing line against the source's own count.
 
 ### The Receipt Rail (signature)
-For the picked value: its ticks as sentences, then "The server's own words": the request, the response record with the value's line marked in green wash (or the captured page in a sandboxed frame with the element outlined), and the SHA-256 seal with a "Re-check the seal" control that hashes the body in the browser.
+For the picked value: its ticks as sentences, then the request, the response with the
+value's line marked, and the SHA-256 seal with "Re-check the seal", which hashes the body
+in the browser.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** put every value's tick directly after it, and dock the legend under the table.
-- **Do** foot every dataset against the source's own count, on the double rule, and name every gap with its reason.
-- **Do** keep colour on data and state only: pencil green (#2b7449) and pencil red (#b3302a).
-- **Do** right-align numbers and dates in tabular figures.
-- **Do** show missing values as a grey dash and real zeros as "0".
+- **Do** show the real product and real numbers from finished jobs.
+- **Do** foot every dataset against the source's own count and name every gap.
+- **Do** keep the mark's colours for the four stages, and lime for evidence.
+- **Do** write short: the answer first, one idea per line.
 
 ### Don't:
-- **Don't** add shadows, gradients, glass or glows to resting surfaces.
-- **Don't** set anything but the h1 and the footing figure in the condensed cut.
+- **Don't** put gradients, glows or glass on anything, the mark included.
+- **Don't** use lime on buttons, badges or decoration.
 - **Don't** use monospace for anything but requests, responses and seals.
-- **Don't** put a coloured fill on a button, a tab or the navigation.
-- **Don't** add a dark theme; Dapi is paper.
+- **Don't** add copy that the person doesn't need to decide or act.
