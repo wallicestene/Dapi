@@ -243,17 +243,31 @@ captured and through which proxy, the SHA-256, and the response's own lines with
 value's line in lime. Data: `web/src/lib/showcase.json`, built from the real capture.
 
 ### The Step Strip (signature)
-Six steps as tabs in one container: Spec, Site, Extraction, Samples, Run on Apify,
-Footed, each with its tick and a one-line result.
+Six steps as cards: Spec, Site, Extraction, Samples, Run on Apify, Footed. Each carries
+the mark lit to its stage (Spec and Site: source; Extraction and Samples: extract; Run:
+deliver; Footed: verified), its tick, and a one-line result. The step under way has
+Magic UI's border beam running round it, violet to teal; the selected step sits on white
+with an ink edge; a stopped step's name turns pencil red.
+
+### The Agent Timeline (signature)
+The Site tab's "What Dapi did": a vertical rule, an icon per action (web search, looked
+at a page, tested an endpoint, searched the source…), and a chip naming the Meta model
+that acted: Muse Wonder in violet, Muse Spark in teal.
 
 ### The Ticked Data Sheet (signature)
 Delivered rows in a ruled table, every value followed by its tick; each cell opens its
-receipt. Under it, the footing line against the source's own count.
+receipt, and the picked cell turns lime with an ink outline.
 
 ### The Receipt Rail (signature)
-For the picked value: its ticks as sentences, then the request, the response with the
-value's line marked, and the SHA-256 seal with "Re-check the seal", which hashes the body
-in the browser.
+For the picked value: its ticks as sentences; then the request with its method as a
+badge, and the response in a night panel (keys and values in two tones, the value's
+line in lime); then the SHA-256 seal and "Re-check the seal", which hashes the body in
+the browser and confirms in lime ("Seal verified").
+
+### The Footing (signature)
+The Footed tab opens on night: the mark, "43,037 delivered of 43,037 the source lists",
+and a bar that fills lime when every count is met (pencil red, with the gap named, when
+it isn't).
 
 ## Do's and Don'ts
 
