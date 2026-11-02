@@ -64,26 +64,34 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
     // A spec often names one record's page (the one its sample came from) rather than
     // the list. Then: learn the sample's values in the site's own words from this page,
     // and go up to the list the way a person would.
-    if (!list && session.html) {
+    // A spoken spec often names the site's home page: then follow the links toward the
+    // records, up to three hops.
+    let shot = firstShot;
+    for (let hop = 0; hop < 3 && !list && session.html; hop++) {
       const page = outline(session.html, session.finalUrl);
-      const up = await findListLink({ screenshot: firstShot, page, spec });
+      const up = await findListLink({ screenshot: shot, page, spec });
       count(up.usage);
-      if (up.recordPage) {
-        alignment = await alignSamples({ page, spec });
-        count(alignment.usage);
-        source = alignedSpec(spec, alignment, notes);
+      if (up.recordPage && !recordPage) {
         recordPage = { url: session.finalUrl, html: session.html };
-        onEvent({ kind: 'record-page', text: describeAlignment(spec, alignment), alignment: alignment.columns, pageLanguage: alignment.pageLanguage, sampleLanguage: alignment.sampleLanguage });
-        if (up.url) {
-          onEvent({ kind: 'up', text: `This page shows one record, so Dapi went up to the list: ${up.url}. ${up.reason}`, url: up.url });
-          await session.close();
-          session = await openByWays(up.url, { onEvent, notes });
-          if (session.page) {
-            candidates = pageCandidates(session, await session.page.screenshot().catch(() => null), onEvent);
-            list = await chooseSource({ columns: wanted, samples: source.samples, candidates, count });
-          }
+        if (spec.samples.length) {
+          alignment = await alignSamples({ page, spec });
+          count(alignment.usage);
+          source = alignedSpec(spec, alignment, notes);
+          onEvent({ kind: 'record-page', text: describeAlignment(spec, alignment), alignment: alignment.columns, pageLanguage: alignment.pageLanguage, sampleLanguage: alignment.sampleLanguage });
         }
       }
+      if (!up.url) break;
+      onEvent({
+        kind: 'up',
+        text: up.recordPage ? `This page shows one record, so Dapi went up to the list: ${up.url}. ${up.reason}` : `This page isn't the list yet; following the link toward it: ${up.url}. ${up.reason}`,
+        url: up.url,
+      });
+      await session.close();
+      session = await openByWays(up.url, { onEvent, notes });
+      if (!session.page) break;
+      shot = await session.page.screenshot().catch(() => null);
+      candidates = pageCandidates(session, shot, onEvent);
+      list = await chooseSource({ columns: wanted, samples: source.samples, candidates, count });
     }
     if (!list) {
       notes.push("Neither the page's JSON traffic nor its embedded data holds the spec's records: likely the HTML route.");
@@ -122,7 +130,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
     let detail = null;
     if (missing.length || weak.length) {
       detail = recordPage
-        ? await recordPageDetail({ recordPage, list, missing: [...missing, ...weak], sample: source.samples[0], count, notes, onEvent })
+        ? await recordPageDetail({ recordPage, list, missing: [...missing, ...weak], sample: source.samples[0] ?? { label: 'the page your spec names', values: {} }, count, notes, onEvent })
         : await revealDetail({ spec: source, session, list, missing, count, notes, onEvent });
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
       for (const c of weak) {
@@ -677,10 +685,15 @@ function allListRecords(list, session) {
 }
 
 async function revealDetail({ spec, session, list, missing, count, notes, onEvent }) {
-  // A sample with values for the missing columns, so the record we open has them.
-  const samples = spec.samples.filter((s) => missing.some((c) => s.values[c.name]));
+  // A sample with values for the missing columns, so the record we open has them. A spec
+  // without samples (a spoken one) opens the list's first record instead and maps its
+  // page by the labels.
   const anchors = Object.entries(list.fields).filter(([, f]) => f.keys.length === 1);
   const records = allListRecords(list, session);
+  let samples = spec.samples.filter((s) => missing.some((c) => s.values[c.name]));
+  if (!samples.length && records.length) {
+    samples = [{ label: 'the first record', values: Object.fromEntries(anchors.map(([column, f]) => [column, String(at(records[0], f.keys[0]) ?? '')])) }];
+  }
 
   for (const sample of samples) {
     for (const [column, field] of anchors) {
@@ -870,6 +883,8 @@ function report({ spec, session, list, detail, wanted, notes, tokens }) {
     sourceUrl: spec.sourceUrl,
     investigatedAt: new Date().toISOString(),
     pageStatus: session.status ?? null,
+    // The site's own language, from the page's markup.
+    siteLanguage: session.html?.match(/<html[^>]*\blang="([a-z]{2})/i)?.[1]?.toLowerCase() ?? null,
     // The page the list was found on (its filters and config blocks often hold lookups).
     listPage: list ? session.finalUrl ?? null : null,
     list: list && describe(list),

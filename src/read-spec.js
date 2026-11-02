@@ -17,6 +17,7 @@ Return:
 - rowUnit: what one output row represents, in a few words, e.g. "one compliance issue".
 - columns: every output column, in the spec's order. name: the column's name with obvious slips fixed: a missing, doubled or swapped letter ("Organizaton name"), stray spaces or punctuation, capitals that break the pattern the other columns follow. Judge by how the spec writes its other columns and by the source's own terms; leave unusual but deliberate names alone. instructions: the spec's note for the column ("" if it says nothing). Clients write notes from what they see on the page ("click View", "from the main page overview"); keep the note as written: Dapi reads it as what they want, not as steps it must follow. constant: the value if the spec fixes it for every row, e.g. "set the country as India"; otherwise null.
 - corrections: every column name you changed, as {original, corrected, why}. Empty if none.
+- outputLanguage: the language the client wants the table in, as an ISO 639-1 code, when they say so ("in English" → "en"); "" when they don't.
 - rules: every instruction about the table as a whole, e.g. how rows split or how to write dates.
 - samples: every sample row, labelled as in the spec, its values keyed by the corrected column names. Copy each value exactly as the spec shows it, character for character, including typos, capitals and punctuation, because these values are used as test cases: Dapi compares them with the source tolerantly, and reports a value that looks mistyped or typed under the wrong column rather than failing on it. When a value wraps across lines, rejoin it the way the page shows it, keeping hyphens that belong to the value. When a sample leaves a column blank, give it as an empty string: blank is an expected value too.
 - questions: anything the spec leaves unclear that would change the output, phrased as a question to the person who wrote it. Empty if nothing is unclear.
@@ -66,6 +67,7 @@ const SPEC_SCHEMA = {
       },
     },
     questions: { type: 'array', items: { type: 'string' } },
+    outputLanguage: { type: 'string' },
     corrections: {
       type: 'array',
       items: {
@@ -85,7 +87,7 @@ const SPEC_SCHEMA = {
       },
     },
   },
-  required: ['title', 'sourceUrl', 'rowUnit', 'columns', 'rules', 'samples', 'questions', 'corrections', 'personalData'],
+  required: ['title', 'sourceUrl', 'rowUnit', 'columns', 'rules', 'samples', 'questions', 'outputLanguage', 'corrections', 'personalData'],
   additionalProperties: false,
 };
 

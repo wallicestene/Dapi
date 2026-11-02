@@ -185,7 +185,12 @@ try {
 
   // 5. The run.
   step('run');
-  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? null, robotsOverride: Boolean(approval.robotsOverride), records: plan.records, findings, specPath: runSpecPath });
+  // Translation: from samples written through a translation, or from a language the
+  // client asked for (a spoken "in English") that isn't the site's own.
+  const asked = spec.outputLanguage && findings.siteLanguage && spec.outputLanguage !== findings.siteLanguage
+    ? { from: findings.siteLanguage, to: spec.outputLanguage, columns: 'text', examples: [] }
+    : null;
+  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? asked, robotsOverride: Boolean(approval.robotsOverride), records: plan.records, findings, specPath: runSpecPath });
 } catch (err) {
   console.error(err);
   // A run left going on Apify with nothing watching it is stopped (its rows stay).
@@ -566,6 +571,20 @@ async function finish({ apify, run, copied: copiedSoFar, copy, userSpec, transla
 async function translateRows({ translate, userSpec, report, disputes }) {
   const rowsPath = path.join(dir, 'rows.jsonl');
   const rows = fs.readFileSync(rowsPath, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  // "text": every column whose values read as words, not numbers, codes or links.
+  if (translate.columns === 'text') {
+    const constants = new Set(userSpec.columns.filter((c) => c.constant !== null).map((c) => c.name));
+    translate = {
+      ...translate,
+      columns: userSpec.columns
+        .map((c) => c.name)
+        .filter((c) => !constants.has(c))
+        .filter((c) => {
+          const values = rows.map((r) => String(r[c] ?? '')).filter(Boolean).slice(0, 50);
+          return values.length && values.filter((v) => /\p{L}{3}/u.test(v) && !/^https?:|@/.test(v)).length / values.length > 0.6;
+        }),
+    };
+  }
   const distinct = [...new Set(rows.flatMap((r) => translate.columns.map((c) => String(r[c] ?? ''))))].filter((v) => v.trim());
   say('run', { kind: 'translating', text: `Your samples are in ${language(translate.to)}; the site is in ${language(translate.from)}. Muse Spark is translating ${distinct.length.toLocaleString('en-US')} distinct values in ${translate.columns.join(', ')}, following your samples' wording.` });
   let map;

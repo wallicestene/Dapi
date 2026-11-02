@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { FileText, Upload } from "lucide-react";
+import { FileText, Mic, Square, Upload } from "lucide-react";
+import { toWav } from "@/lib/wav";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,42 @@ export function NewJobForm() {
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Spoken jobs: record, then Muse Voice Transcribe hears it and Muse Spark writes it up.
+  const recorder = useRef<MediaRecorder | null>(null);
+  const [voice, setVoice] = useState<"idle" | "recording" | "listening">("idle");
+  const [heard, setHeard] = useState<string | null>(null);
+
+  const record = async () => {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks: Blob[] = [];
+      const rec = new MediaRecorder(stream);
+      rec.ondataavailable = (e) => chunks.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setVoice("listening");
+        try {
+          const form = new FormData();
+          form.set("audio", await toWav(new Blob(chunks, { type: rec.mimeType })), "spec.wav");
+          const res = await fetch("/api/voice", { method: "POST", body: form });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(body.error ?? "Couldn't hear that recording.");
+          setHeard(body.transcript);
+          setFile(null);
+          setText(body.spec);
+        } catch (err) {
+          setError((err as Error).message);
+        }
+        setVoice("idle");
+      };
+      recorder.current = rec;
+      rec.start();
+      setVoice("recording");
+    } catch {
+      setError("Dapi couldn't use the microphone. Allow it in the browser, or type the spec instead.");
+    }
+  };
 
   const start = async () => {
     setBusy(true);
@@ -88,9 +125,31 @@ export function NewJobForm() {
       </div>
 
       {!file && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-sheet px-4 py-3">
+          {voice === "recording" ? (
+            <Button type="button" onClick={() => recorder.current?.stop()} className="h-9 gap-2 px-4">
+              <Square aria-hidden className="size-3.5" /> Stop and use it
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" disabled={voice === "listening"} onClick={record} className="h-9 gap-2 border-control bg-white px-4">
+              <Mic aria-hidden className="size-4" /> {voice === "listening" ? "Listening…" : "Describe it out loud"}
+            </Button>
+          )}
+          <p className="text-[13px] text-ink-2">
+            {voice === "recording"
+              ? "Recording: say which site, what one row is, and the columns you need."
+              : voice === "listening"
+                ? "Muse Voice Transcribe is listening to your recording; Muse Spark will write it up as a spec."
+                : "Say what you need; Dapi writes it up as a spec you can check before it starts."}
+          </p>
+          {heard && <p className="w-full text-[13px] text-ink-2">Heard: <q>{heard}</q></p>}
+        </div>
+      )}
+
+      {!file && (
         <div className="flex flex-col gap-2">
           <label htmlFor="spec-text" className="text-[14px] font-medium">
-            Or paste it
+            {heard ? "The spec, written up from what you said: check it, then start" : "Or paste it"}
           </label>
           <Textarea
             id="spec-text"

@@ -34,7 +34,9 @@ export function outline(html, baseUrl) {
 
 const UP_PROMPT = `You help a data extraction tool find the list a spec's rows come from.
 You get a screenshot of the page the spec names, its title, text and links (numbered), and the spec's columns, row unit and sample rows. Samples may be written in another language than the page (read through a browser translation) or formatted differently.
-Decide whether this page shows ONE record (one business, one product, one person: a detail page) rather than a list of records. If it does, choose the link most likely to lead to the list or search of all such records: a breadcrumb, a "back to list", "find …", "search …", "register", "overview" link. Answer link null if this page is itself the list, or if no link leads to one.`;
+Decide whether this page shows ONE record (one business, one product, one person: a detail page) rather than a list of records. If it does, choose the link most likely to lead to the list or search of all such records: a breadcrumb, a "back to list", "find …", "search …", "register", "overview" link.
+If it is a home, section or landing page instead (the spec named a site, not the list), recordPage is false, but still choose the link most likely to lead toward the list of the records the spec wants: a register, a search, a section named for them.
+Answer link null only if this page is itself the list, or if no link leads toward one.`;
 
 const UP_SCHEMA = {
   type: 'object',
