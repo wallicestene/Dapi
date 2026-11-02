@@ -851,6 +851,36 @@ cut to the record: `certificates.3`, not the page of 15):
   page chrome, a slow write, the tester demanding detail pages the strategy dropped,
   and the plan's request count.
 
+### The investigation scales: never fail, hand over, test on every site type (2026-11-02)
+
+Owner's point: every new spec meant touching code; the investigation must handle most
+sites, modern ones included, without that. The pattern behind it: a first pass written
+job by job, whose consumers assumed shapes they had seen, and a refusal that fired when
+a site didn't fit ("no JSON feed or embedded data" refused the climate database before
+the agent ever looked).
+
+- **Never fail.** Each first-pass step runs through `safely()`: one that breaks on
+  something new is noted for the agent and the rest carries on; if the whole first pass
+  throws, the job continues with Muse Wonder from the spec; the findings always write.
+  Refusal only for real blocks (every way in blocked, or a check only a person can pass).
+- **Three list routes:** a JSON feed, embedded data, and the page's own HTML
+  (`src/investigate/html-list.js`): the element holding a sample value (a link, an
+  attribute such as a full title, or text), the lowest repeating ancestor holding the
+  most of the sample's values (a row, not a cell), a selector per column inside it with
+  positions where siblings share a shape, verified by finding the sample again; any
+  next page or Load more is noted for the agent.
+- **The agent finishes** what the first pass leaves (24 steps); the playbook knows Load
+  more calls an endpoint, WordPress `/wp-json/wp/v2/posts`, sitemaps and feeds, and to
+  check that an index holds exactly the records the page lists.
+- **The suite** (`node src/investigate/suite.js`): nine differently built sites (five
+  real specs, toscrape.com's HTML list / infinite scroll / JavaScript pages, a Wikipedia
+  table) through the first pass, without the Apify check. 9 of 9, no crash. Any change
+  to the investigation runs it; a miss is a gap in a route, fixed in general.
+- **Climate database (jobs 0027-0030):** WordPress; 100 cases in the page's HTML plus
+  "More"; the API lists 235 posts of which 48 are in "Blog", not cases. The first plan
+  took all posts (the agent ran out of steps mid-check); the plan now shows what Muse
+  Wonder couldn't settle ("Not settled yet") before Go.
+
 ### Identity, front door and the client voice (2026-11-02)
 
 - **The mark** (owner's sketch, redrawn): a D in four flat parts, one per stage of a
