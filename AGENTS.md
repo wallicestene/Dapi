@@ -85,6 +85,13 @@ Plus a **completeness count**: records retrieved versus records the source's own
 pagination claims exist. If 13 are missing, say so and say which pages. The tool
 must never quietly hand over a short dataset.
 
+**Dapi delivers what the site shows** (owner, Nov 2). A spec's samples are guidance on
+what each column means and how it's written; they can be stale, mistyped or made up.
+The real value is what the site shows in that column. A sample that disagrees with
+the site never stops the pipeline and never bends the code: the tester judges it
+against the record's captured evidence, and the client sees each disagreement on the
+plan and decides there, with Go.
+
 ### Scope rules
 
 Public sources only — data any visitor can see without authentication. If the spec
