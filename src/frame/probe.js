@@ -97,7 +97,8 @@ async function fetchOnce(r, mode, proxyConfiguration) {
     // A refusal even behind a 200; one that wants a person is noted as such.
     const check = classifyBlock({ status: res.statusCode, body });
     const blocked = Boolean(check);
-    const hasData = !r.expect || body.includes(r.expect);
+    // In JSON the value may sit escaped ("A \"POLYMER\" LLC").
+    const hasData = !r.expect || body.includes(r.expect) || body.includes(JSON.stringify(r.expect).slice(1, -1));
     return {
       mode,
       label: r.label,
