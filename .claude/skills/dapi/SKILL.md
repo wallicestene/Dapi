@@ -805,6 +805,13 @@ agent ever ran.
   the feed's own `status=Suspended` filter and `search=<COID>` by itself.
 - Playbook: fetch details only for records that can hold the value (a suspension date
   only for suspended certificates).
+- **A dead runner must say so.** Job 0021 died mid-investigation on an unhandled
+  rejection (the browser's request recorder asked a closed page for its response) and
+  showed "running" for 1¾ hours. Now the recorder never throws; any unexpected crash
+  marks the job failed with its reason and aborts its Apify run; and the job page
+  checks every minute that the runner is alive, at every step, not only during a run.
+- The reach probe also matches the JSON-escaped form of the value it expects (a
+  quote inside a name is `\"` in a feed).
 
 ### Receipt view (2026-10-30)
 
