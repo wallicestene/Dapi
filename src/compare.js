@@ -98,6 +98,68 @@ export function compareSamples(rows, samples) {
   });
 }
 
+// Samples are written by people, and sites change: a sample can be stale, mistyped or
+// guessed. The site's own data is the truth, so a failing cell is judged against the
+// record's captured response (the one its receipt points to), not argued with:
+//   - the sample's value is in the record's data, or every part of it is: the code
+//     read or formatted it wrong. Still a failure, with where the value sits;
+//   - the sample holds words the record's data has nowhere, and no response Dapi
+//     fetched holds the value either: the sample disagrees with the site. A dispute,
+//     shown to the client on the plan; the site's value is delivered;
+//   - the sample leaves a cell blank that other samples fill, and the site has a value
+//     for this record: a dispute too. When every sample leaves the column blank, the
+//     blank is the client's convention and still counts.
+// When disputes would cover most of a sample's columns, the row is more likely wrong
+// than the sample, so nothing is excused.
+// recordOf(row) returns the record's data as { leaves: [{ path, value }], text };
+// everywhere holds every value in every response the test captured, loosened.
+const words = (text) => new Set(String(text).toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+/gu) ?? []);
+const meaningful = (text) => [...words(text)].filter((w) => w.length >= 3 || /\d/.test(w));
+
+export async function settleWithEvidence(results, samples, recordOf, everywhere = new Set()) {
+  for (const result of results) {
+    const failing = result.checks.filter((c) => c.status === 'fail');
+    if (result.row === null || !failing.length) continue;
+    const record = await recordOf(result.row);
+    if (!record) continue;
+    const inRecord = words(record.text);
+    const judged = failing.map((c) => {
+      if (c.expected === '') {
+        const othersFill = samples.some((s) => s.label !== result.label && (s.values[c.column] ?? '') !== '');
+        return othersFill && String(c.actual) !== ''
+          ? { why: 'dispute', reason: 'your sample leaves it blank, but other samples fill this column and the site has a value for this record' }
+          : null;
+      }
+      const leaf = record.leaves.find((l) => agrees(c.expected, l.value));
+      if (leaf) return { hint: `the sample's value is in this record's data at ${leaf.path}` };
+      const missing = meaningful(c.expected).filter((w) => !inRecord.has(w));
+      if (!missing.length) return { hint: "every part of the sample's value is in this record's data: build it from those fields" };
+      if (everywhere.has(loose(c.expected).toLowerCase())) return { hint: "the sample's value is a value in another response Dapi fetched: look it up there" };
+      return { why: 'dispute', reason: `the site's data for this record has no “${missing.join(' ')}”` };
+    });
+    const disputes = judged.filter((j) => j?.why === 'dispute').length;
+    const checked = result.checks.filter((c) => c.expected !== '').length || result.checks.length;
+    failing.forEach((c, i) => {
+      const j = judged[i];
+      if (!j) return;
+      if (j.why === 'dispute' && disputes <= checked / 2) Object.assign(c, { status: 'warn', why: 'dispute', reason: j.reason });
+      else if (j.hint) c.hint = j.hint;
+    });
+    result.status = result.checks.some((c) => c.status === 'fail') ? 'fail' : result.checks.some((c) => c.status === 'warn') ? 'warn' : 'pass';
+  }
+  return results;
+}
+
+// A sample whose record the site doesn't have: the site part asked for it directly
+// (sampleRequests), the site answered, and nothing came back.
+export function notOnSite(results, probes = {}) {
+  for (const r of results) {
+    const p = probes[r.label];
+    if (r.status === 'not found' && p?.requests > 0 && p.rows === 0 && p.failed === 0) Object.assign(r, { status: 'warn', why: 'not on the site' });
+  }
+  return results;
+}
+
 export function formatReport(results) {
   const lines = [];
   for (const r of results) {

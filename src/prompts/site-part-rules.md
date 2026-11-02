@@ -25,6 +25,7 @@ allows, and never hand over a short or wrong dataset quietly.
 export const config = { maxConcurrency, maxRequestsPerMinute, maxRetries, timeoutSecs, retryPauseSecs, proxy }; // see "Speed", "Getting through"
 export const start = [ request, ... ];   // the first requests
 export async function handle(ctx) { ... } // called once per response
+export const sampleRequests = [ request, ... ]; // tests only; see "Reach the samples in a test"
 ```
 
 A **request** is a plain object:
@@ -144,6 +145,29 @@ page size: with `bigPage.onePage` one such request returns every record, so use
 exactly that request; otherwise page through with `bigPage.size` per page. Either
 way, call `expect` once with the source's total. Otherwise request every page (`pageParam`, up to the total), and
 call `expect` once with the source's total, not once per page.
+
+**Reach the samples in a test.** Dapi tests your module against the spec's samples
+before any run, reading the start requests and only a few follow-ups. On a big paged
+list the samples' records sit far past those pages, so the test never sees them.
+Then export `sampleRequests`: one request per sample that reaches its record directly,
+the site's own search or filter by a value the sample gives (an ID, a name), as the
+findings or the strategy's sources verified it (e.g. the list feed with
+`search=<the sample's ID>`), with the sample's label in `userData.sample`. Give them
+the same label as the requests they stand in for, so `handle` treats their responses
+the same way; the frame runs them first in a
+test, ignores their `expect` counts and doesn't count their rows, and a full run never
+makes them. When the whole list comes in one request, or the samples are on its first
+page, leave `sampleRequests` out. When the site offers no way to ask for one record,
+export `sampleRequests = []`: the samples are reported as not reached, not failed.
+
+**Never write code for one sample.** Samples are typed by people and copied from
+sites that change: one can be stale, mistyped or guessed. The tester judges every
+sample value that disagrees with your rows against the site's own data for that
+record: when the site's data doesn't hold the sample's value, it's the sample's
+mistake, shown to the client, and your rows stand. So a failing sample check means
+the value IS in the site's data (the problem says where): read it from there. Never
+add a condition, a mapping or a blank that only makes one sample's row match ("blank
+the city when the state is '.'", "write Netherlands as The Netherlands").
 
 **Record pages by address.** When `detail.urlTemplate` is set, each record's page is
 that template with the record's list field (`detail.urlFrom.listField`) filled in,

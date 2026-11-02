@@ -189,7 +189,7 @@ try {
   step('plan');
   // The extraction's own settings: the way in and the pace Muse Spark chose for this site.
   const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
-  const plan = makePlan(findings, config, writerNotes, spec);
+  const plan = makePlan(findings, config, writerNotes, spec, written.report);
   say('plan', { kind: 'plan', text: plan.text, ...plan });
   updateJob(dir, { status: 'waiting', records: plan.records });
   if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
@@ -265,16 +265,29 @@ function describeAttempt(e) {
   const samples = e.report.samples;
   const pass = samples.filter((s) => s.status === 'pass').length;
   const whys = samples.flatMap((s) => s.checks.filter((c) => c.status === 'warn').map((c) => c.why ?? 'spacing'));
-  const words = { spacing: 'spacing differs', typo: 'a likely typo in the spec', column: 'a value typed under another column' };
+  const words = { spacing: 'spacing differs', typo: 'a likely typo in the spec', column: 'a value typed under another column', dispute: "a sample value the site's data doesn't hold" };
   const notes = Object.keys(words).filter((w) => whys.includes(w)).map((w) => `${whys.filter((x) => x === w).length}× ${words[w]}`);
-  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(', ')}` : ''}`;
+  const unreached = samples.filter((s) => s.status === 'not found').length;
+  const missing = samples.filter((s) => s.why === 'not on the site').length;
+  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(', ')}` : ''}${missing ? `; ${missing} ${missing === 1 ? "isn't" : "aren't"} on the site: Dapi asked the site for ${missing === 1 ? 'it' : 'them'} directly and got nothing back` : ''}${unreached ? `; ${unreached} couldn't be reached in a test (the site has no way to ask for one record), so the run's first rows are the check` : ''}`;
   return e.passed
     ? `Attempt ${e.attempt} passed: ${e.report.rows} rows in the test run, ${sampleText}.`
     : `Attempt ${e.attempt} failed: ${e.problems[0]}${e.problems.length > 1 ? ` (and ${e.problems.length - 1} more)` : ''}. Fixing it.`;
 }
 
+// Where the test found the client's samples at odds with the site's own data: values
+// the site's data for that record doesn't hold, blanks where it has a value, records
+// the site doesn't have. Dapi delivers what the site shows; the client sees why.
+function testDisputes(report) {
+  return (report?.samples ?? []).flatMap((s) =>
+    s.why === 'not on the site'
+      ? [{ label: s.label, column: null, sample: '', site: '', note: "Dapi asked the site for this record directly and it has none: the sample may be from an older version of the site, or an example." }]
+      : s.checks.filter((c) => c.why === 'dispute').map((c) => ({ label: s.label, column: c.column, sample: c.expected, site: String(c.actual ?? ''), note: c.reason }))
+  );
+}
+
 // What the run will do, from the findings and the extraction's own settings.
-function makePlan(f, config, notes, spec) {
+function makePlan(f, config, notes, spec, tested = null) {
   const records = Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0));
   // With a register behind the record pages, its batches replace most page loads; pages
   // are still needed for columns it doesn't hold, once per record or once per shared value.
@@ -318,7 +331,7 @@ function makePlan(f, config, notes, spec) {
     robotsQuestion: f.list.robotsBlocked ? `robots.txt disallows ${f.list.request.url}. Fetch it anyway?` : null,
     personalData: spec.personalData ?? [],
     translate: f.samples?.translate ? { from: language(f.samples.translate.from), to: language(f.samples.translate.to), columns: f.samples.translate.columns } : null,
-    disputes: f.samples?.disputes ?? [],
+    disputes: [...(f.samples?.disputes ?? []), ...testDisputes(tested)],
     text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }

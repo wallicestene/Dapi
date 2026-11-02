@@ -19,6 +19,7 @@ const FILES = {
   'src/frame/actor-main.js': 'src/frame/actor-main.js',
   'src/frame/frame.js': 'src/frame/frame.js',
   'src/frame/probe.js': 'src/frame/probe.js',
+  'src/frame/record-data.js': 'src/frame/record-data.js',
   'src/compare.js': 'src/compare.js',
   'src/embedded.js': 'src/embedded.js',
   'src/select.js': 'src/select.js',

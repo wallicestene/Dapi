@@ -101,7 +101,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
   ];
   const reasoning = typeof plan.reasoning === "string" ? plan.reasoning.trim() : "";
   const translate = plan.translate as { from: string; to: string; columns: string[] } | null;
-  const disputes = (plan.disputes as { column: string; sample: string; site: string }[] | undefined) ?? [];
+  const disputes = (plan.disputes as { label?: string; column: string | null; sample: string; site: string }[] | undefined) ?? [];
   return (
     <section className="max-w-[760px] rounded-lg border bg-sheet">
       <div className="px-5 pt-4 pb-3">
@@ -125,9 +125,16 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
         <div className="mx-5 mt-4 rounded-md border border-pencil-red/30 bg-red-wash px-4 py-3 text-[14px] text-red-ink">
           <p className="font-medium">Where the site disagrees with your sample</p>
           <ul className="mt-1 space-y-1 [overflow-wrap:anywhere]">
-            {disputes.map((d) => (
-              <li key={d.column}>
-                {d.column}: your sample has <q>{d.sample}</q>; the site shows <q>{d.site}</q>. Dapi delivers what the site shows.
+            {disputes.map((d, i) => (
+              <li key={i}>
+                {d.label && <span className="text-ink-2">{d.label}, </span>}
+                {d.column === null ? (
+                  <>this record isn&apos;t on the site. Dapi asked for it directly and got nothing back.</>
+                ) : (
+                  <>
+                    {d.column}: your sample has {d.sample ? <q>{d.sample}</q> : "it blank"}; the site shows {d.site ? <q>{d.site}</q> : "it blank"}. Dapi delivers what the site shows.
+                  </>
+                )}
               </li>
             ))}
           </ul>

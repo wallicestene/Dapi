@@ -95,10 +95,20 @@ export function verdict(report, findings = null) {
     problems.push(`robots.txt disallows ${s.url}, so the frame skipped it: request only URLs the findings give`);
   }
   for (const p of report.columnProblems) problems.push(p);
+  // A sample the test couldn't reach: on a big paged list it sits past the pages a test
+  // reads. The site part reaches it directly with sampleRequests, or says there's no
+  // way to (an empty list), and the sample is then "not reached", not failed.
+  const lookups = report.testMode?.sampleRequests ?? null;
   for (const s of report.samples) {
-    if (s.status === 'not found') problems.push(`sample "${s.label}" not found in the rows`);
+    if (s.status === 'not found' && heldBack && lookups === null) {
+      problems.push(`sample "${s.label}" not found: the test read only the start requests and ${report.testMode.limit} follow-ups (${report.testMode.skippedRequests} not run), so its record was never fetched. Export sampleRequests that reach each sample's record directly (the site's own search or filter by an ID or name the findings verified), or sampleRequests = [] if the site has no such way`);
+    } else if (s.status === 'not found' && lookups > 0) {
+      problems.push(`sample "${s.label}" not found, even with sampleRequests: check they ask for this sample's record and that handle emits rows from their responses`);
+    } else if (s.status === 'not found' && !(heldBack && lookups === 0)) {
+      problems.push(`sample "${s.label}" not found in the rows`);
+    }
     for (const c of s.checks.filter((check) => check.status === 'fail')) {
-      problems.push(`sample "${s.label}", column "${c.column}": expected ${JSON.stringify(c.expected)}, got ${JSON.stringify(String(c.actual))}`);
+      problems.push(`sample "${s.label}", column "${c.column}": expected ${JSON.stringify(c.expected)}, got ${JSON.stringify(String(c.actual))}${c.hint ? ` (${c.hint})` : ''}`);
     }
   }
   return { passed: problems.length === 0, problems };

@@ -10,7 +10,8 @@ import { createHash } from 'node:crypto';
 import { Actor } from 'apify';
 import * as cheerio from 'cheerio';
 import { HttpCrawler, NonRetryableError, RobotsTxtFile, log, LogLevel } from 'crawlee';
-import { compareSamples, formatReport } from '../compare.js';
+import { compareSamples, formatReport, settleWithEvidence, notOnSite } from '../compare.js';
+import { recordData, valuesIn } from './record-data.js';
 import { extractEmbedded } from '../embedded.js';
 import { select } from '../select.js';
 import { classifyBlock } from '../blocks.js';
@@ -72,6 +73,8 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   log.setLevel(LogLevel.WARNING);
   // Named, so the evidence outlives the run: unnamed stores expire after 7 days.
   const evidenceStore = await Actor.openKeyValueStore('dapi-evidence');
+  // A test's captures, so its samples can be judged against them.
+  const captured = [];
 
   const state = (await Actor.getValue(STATE_KEY)) ?? {
     expected: {}, // kind -> how many the source says exist
@@ -110,6 +113,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       await Actor.pushData(batch);
       for (const item of batch) {
         delivered.add(item['#request']);
+        if (item['#probe']) continue;
         state.emitted[item['#kind']] = (state.emitted[item['#kind']] ?? 0) + 1;
         if (item['#partial']) state.partial.push({ what: item['#partial'], row: Object.values(item).slice(0, 2) });
       }
@@ -178,6 +182,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     const key = `ev-${sha256(JSON.stringify(record))}`;
     await evidenceStore.setValue(key, record);
     state.captures++;
+    if (testLimit !== null) captured.push(key);
     return key;
   }
 
@@ -212,7 +217,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   // the row for the next push. With `unavailable` (a fallback row after a failed
   // detail request), columns the row doesn't have are left blank, and their receipts
   // say why.
-  function emit(requestKey, row, kind, unavailable = null) {
+  function emit(requestKey, row, kind, unavailable = null, probe = false) {
     const plain = {};
     const receipt = {};
     for (const [column, cell] of Object.entries(row)) {
@@ -242,6 +247,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       '#receipt': receipt,
       '#kind': kind,
       ...(unavailable && { '#partial': unavailable }),
+      ...(probe && { '#probe': true }),
       '#request': requestKey,
     };
     if (!buffer.length) bufferSince = Date.now();
@@ -277,6 +283,19 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   };
   let testBudget = testLimit;
   let testSkipped = 0;
+  // On a big paged list the samples' records sit far past the first pages a test reads,
+  // so the site part can name requests that reach them directly (the site's search by
+  // an ID). Tests only: their rows are checked against the samples but not counted,
+  // their totals are a search's, not the source's, and a full run never makes them.
+  const probes = testLimit === null ? [] : (site.sampleRequests ?? []).map((r) => ({ ...r, userData: { ...r.userData, sampleProbe: true } }));
+  // Per sample (userData.sample, its label): lookups made, rows they gave, lookups failed.
+  const probeStats = {};
+  const tally = (request, field) => {
+    const label = request.userData.sample;
+    if (!request.userData.sampleProbe || !label) return;
+    probeStats[label] ??= { requests: 0, rows: 0, failed: 0 };
+    probeStats[label][field]++;
+  };
 
   async function addRequests(requests) {
     if (testLimit === null) return crawler.addRequests(requests.map(toRequest));
@@ -331,6 +350,8 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       // already in, so it emits and counts nothing.
       const requestKey = keyOf(request);
       const again = delivered.has(requestKey);
+      const probe = request.userData.sampleProbe === true;
+      tally(request, 'requests');
       try {
       await site.handle({
         request,
@@ -343,12 +364,14 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
           return page.embedded;
         },
         trace: makeTracer(page, evidence),
-        enqueue: (...requests) => queued.push(...requests),
+        enqueue: (...requests) => queued.push(...(probe ? requests.map((r) => ({ ...r, userData: { sample: request.userData.sample, ...r.userData, sampleProbe: true } })) : requests)),
         emit: (row, kind) => {
-          if (!again) emit(requestKey, row, kind);
+          if (again) return;
+          emit(requestKey, row, kind, null, probe);
+          tally(request, 'rows');
         },
         expect: (kind, count) => {
-          if (again) return;
+          if (again || probe) return;
           state.expected[kind] = (state.expected[kind] ?? 0) + count;
           expectedChanged = true;
         },
@@ -383,9 +406,10 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
       const reason = error.message.split('\n')[0];
       const what = request.userData.note ?? request.url;
       state.failed.push({ what, error: reason });
+      tally(request, 'failed');
       const requestKey = keyOf(request);
       if (delivered.has(requestKey)) return;
-      for (const { row, kind } of request.userData.fallback ?? []) emit(requestKey, row, kind, `${what} failed: ${reason}`);
+      for (const { row, kind } of request.userData.fallback ?? []) emit(requestKey, row, kind, `${what} failed: ${reason}`, request.userData.sampleProbe === true);
       if (stopping) await flush();
       else flushIfFull();
     },
@@ -415,7 +439,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   status(true);
   // On a resurrected run Crawlee's request queue already knows which requests are
   // done, so the start requests are skipped and the queue carries on.
-  await crawler.run(site.start.map(toRequest));
+  await crawler.run([...probes, ...site.start].map(toRequest));
   clearInterval(timer);
   clearInterval(recover);
   await flush();
@@ -424,7 +448,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const rows = [];
   const receipts = [];
   await (await Actor.openDataset()).forEach((item) => {
-    const { '#receipt': receipt, '#kind': _kind, '#partial': _partial, '#request': _request, ...row } = item;
+    const { '#receipt': receipt, '#kind': _kind, '#partial': _partial, '#request': _request, '#probe': _probe, ...row } = item;
     rows.push(row);
     receipts.push(receipt);
   });
@@ -432,6 +456,12 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
   const kinds = [...new Set([...Object.keys(state.expected), ...Object.keys(state.emitted)])];
   const completeness = kinds.map((kind) => ({ kind, expected: state.expected[kind] ?? null, got: state.emitted[kind] ?? 0 }));
   const samples = compareSamples(rows, spec.samples);
+  // A sample that disagrees with a row is judged against the site's own data for that
+  // record: the code's mistake, or the sample's (see compare.js). Lookups elsewhere are
+  // searched in a test, where the responses are few.
+  const load = (key) => evidenceStore.getValue(key);
+  await settleWithEvidence(samples, spec.samples, (i) => recordData(receipts[i], load), testLimit === null ? new Set() : await valuesIn(captured, load));
+  notOnSite(samples, probeStats);
   // Rows identical in every column. If their receipts point to the same place in the
   // evidence too, the site part read the same data twice: a bug. If they come from
   // different places, the source itself lists the record twice: a fact to report,
@@ -463,7 +493,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     skipped: state.skipped,
     columnProblems: [...columnProblems],
     samples,
-    testMode: testLimit === null ? null : { limit: testLimit, skippedRequests: testSkipped },
+    testMode: testLimit === null ? null : { limit: testLimit, skippedRequests: testSkipped, sampleRequests: Array.isArray(site.sampleRequests) ? site.sampleRequests.length : null, probes: probeStats },
   };
   await Actor.setValue('REPORT', report);
 
