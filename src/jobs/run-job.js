@@ -175,7 +175,7 @@ try {
     findings,
     outPath: path.join(dir, 'site.js'),
     onEvent: (e) => {
-      if (e.kind === 'written') writerNotes = e.notes;
+      if (e.kind === 'written') writerNotes = e.forClient?.length ? e.forClient : e.notes;
       say('code', { ...e, text: describeAttempt(e) });
     },
   });

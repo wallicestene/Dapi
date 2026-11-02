@@ -8,6 +8,8 @@ import fs from 'node:fs';
 import { chat } from './meta.js';
 
 export const PLAYBOOK = fs.readFileSync(new URL('./prompts/extraction-playbook.md', import.meta.url), 'utf8');
+// How anything the client reads is written (summaries, reasons, risks, questions).
+export const VOICE = fs.readFileSync(new URL('./prompts/client-voice.md', import.meta.url), 'utf8');
 
 const PROMPT = `${PLAYBOOK}
 
@@ -22,7 +24,9 @@ Decide, following the playbook:
 - the risks, and the gaps: columns with no verified route.
 - checks: when a gap or risk could be settled by a quick look, ask for it (at most 4; none when the plan is settled). Tools: "list-values" (every distinct value of a list field, with counts: e.g. are there records that aren't approved?), "record-page" (open the page of a record whose list field equals a value, and read its values), "register" (ask the verified register about a record whose list field equals a value, or by ID), "fetch" (read a URL on the site or a register host). The checks run and you plan again with their results.
 Fewest requests wins when the values are the same: a verified register read in batches beats loading every record's page, even when a column needs a lookup through the site's own list (a parent unit's ID in the register to that unit's name in the list), and all the more on a slow or stalling site. Pages are for what nothing cheaper holds.
-Use only what the findings show; never invent an endpoint, selector or field. Write "summary" and "why" for the client: plain, short, specific.`;
+Use only what the findings show; never invent an endpoint, selector or field. For the client: "summary", "pace.why", "risks" and "gaps" follow the client voice below, and "renderedAt" says where on the site in the client's words ("each certificate's page, under Address"). "how" and "evidence" are for the code writer: exact keys, selectors and fields.
+
+${VOICE}`;
 
 export const SCHEMA = {
   type: 'object',

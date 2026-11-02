@@ -99,7 +99,8 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
     ["Time on Apify", `roughly ${plan.minutes} min`],
     ["How it's fetched", plan.proxy === "direct" ? "directly, no proxy" : `Apify ${plan.proxy} proxy`],
   ];
-  const reasoning = typeof plan.reasoning === "string" ? plan.reasoning.trim() : "";
+  // Muse Spark's lines for the client; older jobs carry its notes as one paragraph.
+  const reasoning = Array.isArray(plan.reasoning) ? (plan.reasoning as string[]) : typeof plan.reasoning === "string" && plan.reasoning.trim() ? [plan.reasoning.trim()] : [];
   const translate = plan.translate as { from: string; to: string; columns: string[] } | null;
   const disputes = (plan.disputes as { label?: string; column: string | null; sample: string; site: string }[] | undefined) ?? [];
   return (
@@ -140,11 +141,18 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
           </ul>
         </div>
       )}
-      {reasoning && (
-        <details className="mx-5 mt-4 rounded-md border border-rule bg-white px-4 py-2.5 text-[14px]">
-          <summary className="cursor-pointer font-medium">Why this way in and this pace</summary>
-          <p className="mt-2 leading-relaxed whitespace-pre-line text-ink-2">{reasoning}</p>
-        </details>
+      {reasoning.length > 0 && (
+        <div className="mx-5 mt-4 text-[14px]">
+          <p className="font-medium">Why this way in and this pace</p>
+          <ul className="mt-1.5 flex flex-col gap-1 text-ink-2">
+            {reasoning.map((line) => (
+              <li key={line} className="flex gap-2">
+                <span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-deliver" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {(plan.personalData as { column: string }[] | undefined)?.length ? (
         <p className="mx-5 mt-4 text-[14px] text-ink-2">

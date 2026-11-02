@@ -19,12 +19,12 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 
 // The rules Muse Spark writes under live in a document the owner can read and edit.
 // Kept first and unchanged so the API can cache it.
-const CONTRACT = fs.readFileSync(new URL('./prompts/site-part-rules.md', import.meta.url), 'utf8');
+const CONTRACT = `${fs.readFileSync(new URL('./prompts/site-part-rules.md', import.meta.url), 'utf8')}\n\n${fs.readFileSync(new URL('./prompts/client-voice.md', import.meta.url), 'utf8')}`;
 
 const SCHEMA = {
   type: 'object',
-  properties: { code: { type: 'string' }, notes: { type: 'string' } },
-  required: ['code', 'notes'],
+  properties: { code: { type: 'string' }, notes: { type: 'string' }, forClient: { type: 'array', items: { type: 'string' } } },
+  required: ['code', 'notes', 'forClient'],
   additionalProperties: false,
 };
 
@@ -34,7 +34,7 @@ async function writeSite({ spec, findings, previous }) {
     { role: 'user', content: JSON.stringify({ spec, findings }) },
   ];
   if (previous) {
-    messages.push({ role: 'assistant', content: JSON.stringify({ code: previous.code, notes: '' }) });
+    messages.push({ role: 'assistant', content: JSON.stringify({ code: previous.code, notes: '', forClient: [] }) });
     messages.push({
       role: 'user',
       content: `The frame ran this module and the checks failed. Fix it and return the full corrected module.\n${previous.feedback}`,
@@ -141,6 +141,7 @@ export async function writeAndTest({ spec, specPath, findings, outPath, onEvent 
       attempt,
       lines: written.code.split('\n').length,
       notes: written.notes,
+      forClient: written.forClient ?? [],
       tokens: { in: t.prompt_tokens ?? 0, out: t.completion_tokens ?? 0 },
       seconds: Math.round((Date.now() - started) / 1000),
     });
@@ -171,6 +172,7 @@ async function main() {
       if (e.kind === 'written') {
         console.log(`\nAttempt ${e.attempt}: wrote ${outPath} (${e.lines} lines, ${e.tokens.in} in / ${e.tokens.out} out tokens, ${e.seconds} s)`);
         if (e.notes) console.log(`  notes: ${e.notes}`);
+        for (const line of e.forClient ?? []) console.log(`  for the client: ${line}`);
         return;
       }
       if (e.report) {

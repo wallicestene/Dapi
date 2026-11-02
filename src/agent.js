@@ -6,7 +6,7 @@
 // keeps the conversation's state between steps.
 
 import { respond } from './meta.js';
-import { PLAYBOOK, SCHEMA } from './strategy.js';
+import { PLAYBOOK, SCHEMA, VOICE } from './strategy.js';
 import { makeTools } from './investigate/checks.js';
 
 export const AGENT = 'muse-wonder-1.0';
@@ -26,7 +26,9 @@ The first pass is code with assumptions; a new site can break them. When the fin
 
 Dapi tests the extraction against the spec's samples before any run, reading only the list's first pages. When the list runs to more pages than that, verify how to ask the site for one record directly (the feed's search or filter by a sample's ID or name: test_endpoint with that sample's values) and list it in "sources" as the sample lookup; the test reaches the samples through it. Without one, the samples go unchecked.
 
-Be efficient: a handful of tool calls, not dozens. Call submit_strategy once, when the plan is settled. Write "summary" and "why" for the client: plain, short, specific. In "sources", list every endpoint the plan uses beyond the findings' own, with how you verified it.`;
+Be efficient: a handful of tool calls, not dozens. Call submit_strategy once, when the plan is settled. In "sources", list every endpoint the plan uses beyond the findings' own, with how you verified it. For the client: "summary", "pace.why", "risks" and "gaps" follow the client voice below, and "renderedAt" says where on the site in the client's words ("each certificate's page, under Address"). "how" and "evidence" are for the code writer: exact keys, selectors and fields.
+
+${VOICE}`;
 
 const fn = (name, description, properties, required = Object.keys(properties)) => ({
   type: 'function',

@@ -227,9 +227,8 @@ function Strategy({ event }: { event: JobEvent }) {
               <tr key={c.column} className="border-b border-rule align-top last:border-0">
                 <td className="px-5 py-2 font-medium">{c.column}</td>
                 <td className="px-3 py-2 text-ink-2">{c.renderedAt}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2" title={c.how}>
                   {ROUTE[c.route] ?? c.route}
-                  <span className="block text-[12px] text-ink-2 [overflow-wrap:anywhere]">{c.how}</span>
                 </td>
                 <td className="px-3 py-2" title={c.evidence}>
                   <TickMark tick={c.route === "none" ? "missing" : /not verified/i.test(c.evidence) ? "near" : "traced"} />

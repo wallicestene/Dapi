@@ -266,7 +266,7 @@ Choose the cheapest way the evidence says will finish the whole run, not just th
 first page: a site that let one request through directly can still block the
 thousandth from the same IP, so when the measurements show blocks or 429s on any way,
 step up to the next way and say why. In `notes`, name the way you chose and the
-evidence behind it, in a sentence the user can read in the plan.
+evidence behind it; in `forClient`, say it in one plain line.
 
 The frame records in each receipt how its response was fetched. Never: CAPTCHA or
 challenge-solving services, Apify's `UNBLOCKER` group, logins or paywalls. A check
@@ -280,5 +280,8 @@ rule; whether a disallowed request runs is the user's decision, made per job.
 
 **Plain code.** No imports, no network calls of your own, no timers, no `eval`.
 
-Return the full module in `code`, and in `notes` any assumption you made and why
-you chose that `config`.
+Return the full module in `code`; in `notes`, for Dapi's engineers, any assumption
+you made and why you chose that `config`; and in `forClient`, two to four short lines
+the client reads on the plan before they press Go: the way in, the pace, and anything
+they should know (a column the site leaves blank, a sample the site disagrees with).
+Write them in the client voice below.
