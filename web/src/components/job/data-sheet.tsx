@@ -169,7 +169,7 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
                         className={cn(
                           "flex h-10 w-full max-w-[260px] min-w-[72px] items-center gap-1.5 px-3 text-left outline-none hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink",
                           rightAligned.has(c) && "justify-end",
-                          isSel && "outline-2 -outline-offset-2 outline-ink"
+                          isSel && "bg-verified font-medium outline-2 -outline-offset-2 outline-ink hover:bg-verified"
                         )}
                       >
                         <span className={cn("truncate", !cell.value && "text-ink-3")}>{cell.value || "—"}</span>

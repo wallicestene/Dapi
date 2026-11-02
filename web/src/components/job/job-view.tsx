@@ -8,6 +8,11 @@ import { Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { STAGE_TEXT, stageOf } from "@/lib/stage";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { NumberTicker } from "@/components/ui/number-ticker";
+
+// Which of the mark's four stages each step belongs to.
+const STEP_STAGE: Record<Tab, number> = { spec: 1, site: 1, code: 2, samples: 2, run: 3, footed: 4 };
 import { defaultTab, n, stepStates, type Report, type Tab } from "@/lib/steps";
 import type { Job, JobEvent } from "@/lib/types";
 import { SpecPanel } from "./spec-panel";
@@ -124,7 +129,7 @@ export function JobView({
           </div>
           <div className="text-right" aria-live="polite">
             <p className="text-[38px] leading-none font-bold tracking-[-0.03em]">
-              {job.runId ? n(job.rows ?? 0) : "–"}
+              {job.runId ? <NumberTicker value={job.rows ?? 0} /> : "–"}
               <span className="text-ink-3"> / </span>
               {expected !== null ? n(expected) : job.records ? <span className="text-ink-3">…</span> : "–"}
             </p>
@@ -141,21 +146,26 @@ export function JobView({
         </div>
 
         <TabsPrimitive.Root value={tab} onValueChange={(v) => setPicked(v as Tab)} className="flex flex-1 flex-col gap-4">
-          <TabsPrimitive.List aria-label="Steps" className="grid grid-cols-2 overflow-hidden rounded-lg border bg-sheet sm:grid-cols-3 xl:grid-cols-6">
+          {/* Each step carries the mark lit to its stage; the one under way has a beam running round it. */}
+          <TabsPrimitive.List aria-label="Steps" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             {steps.map((s) => (
               <TabsPrimitive.Trigger
                 key={s.tab}
                 value={s.tab}
                 className={cn(
-                  "relative border-r border-b border-rule px-3.5 py-3 text-left outline-none last:border-r-0 hover:bg-raised focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink xl:border-b-0",
-                  "data-[state=active]:bg-raised data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.75 data-[state=active]:after:bg-ink"
+                  "group relative overflow-hidden rounded-xl border bg-sheet px-3.5 pt-3 pb-3.5 text-left outline-none transition-[background-color,box-shadow,border-color] hover:border-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+                  "data-[state=active]:border-ink data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_24px_-12px_rgb(15_26_36/0.3)]",
+                  s.state === "todo" && "bg-transparent",
+                  s.state === "stopped" && "border-pencil-red/50"
                 )}
               >
-                <span className={cn("flex items-center gap-1.5 text-[13px] font-semibold", s.state === "todo" ? "text-ink-3" : "text-ink")}>
-                  {s.tick ? <TickMark tick={s.tick} /> : s.state === "now" ? <span role="img" aria-label="under way" className="size-2 shrink-0 rounded-full bg-ink" /> : null}
-                  {s.label}
+                {s.state === "now" && job.status === "running" && <BorderBeam size={70} duration={4} borderWidth={1.5} colorFrom="var(--source)" colorTo="var(--deliver)" />}
+                <span className="flex items-center gap-2">
+                  <Mark className="size-5 shrink-0" bg={s.tab === tab ? "#ffffff" : "var(--sheet)"} lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
+                  <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>
+                  {s.tick && <TickMark tick={s.tick} className="ml-auto" />}
                 </span>
-                <span className="mt-0.5 block truncate text-[12px] text-ink-2">{s.line}</span>
+                <span className="mt-1 block truncate pl-7 text-[12px] text-ink-2">{s.line}</span>
               </TabsPrimitive.Trigger>
             ))}
           </TabsPrimitive.List>

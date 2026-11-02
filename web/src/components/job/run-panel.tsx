@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { n } from "@/lib/steps";
+import { cn } from "@/lib/utils";
 import type { Job, JobEvent } from "@/lib/types";
 import { DataSheet, type Selection } from "./data-sheet";
 import { ReceiptPanel } from "./receipt-panel";
@@ -28,10 +29,13 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
 
   // What the watch saw during the run: easing off, a break and its repair, translation.
   const notes = events
-    .filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify", "following", "stopped", "apify-finished"].includes(e.kind))
+    .filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify", "following", "stopped"].includes(e.kind))
     .slice(-4);
+  // Apify's own account of the run, as figures.
+  const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
     <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      {finished && <RunFacts event={finished} runUrl={job.runUrl} />}
       {(notes.length > 0 || (job.status === "stopped" && !readOnly)) && (
         <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border bg-sheet px-5 py-2 lg:col-span-2">
           <ul className="text-[13px]" aria-label="During the run">
@@ -46,6 +50,36 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
       )}
       <DataSheet job={job} selected={selected} onSelect={setSelected} />
       <ReceiptPanel job={job} events={events} selected={selected} translatedFrom={(plan?.translate as { from: string } | null)?.from ?? null} />
+    </div>
+  );
+}
+
+function RunFacts({ event, runUrl }: { event: JobEvent; runUrl?: string }) {
+  const ok = event.status === "SUCCEEDED";
+  const seconds = event.seconds as number | null;
+  const facts = [
+    seconds !== null && ["Time", seconds < 90 ? `${Math.round(seconds)} s` : `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`],
+    event.computeUnits !== null && ["Compute units", (event.computeUnits as number).toFixed(2)],
+    event.usd !== null && ["Cost", `$${(event.usd as number).toFixed(2)}`],
+    event.migrations ? ["Moved servers", `${event.migrations}×`] : null,
+    event.resurrects ? ["Resurrected", `${event.resurrects}×`] : null,
+  ].filter(Boolean) as [string, string][];
+  return (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border bg-sheet px-5 py-3 lg:col-span-2">
+      <span className={cn("inline-flex items-center gap-2 text-[13.5px] font-semibold", ok ? "text-ink" : "text-pencil-red")}>
+        <span aria-hidden className={cn("size-2 rounded-full", ok ? "bg-deliver" : "bg-pencil-red")} />
+        Apify run {String(event.status).toLowerCase().replace("-", " ")}
+      </span>
+      {facts.map(([k, v]) => (
+        <span key={k} className="text-[13px] text-ink-2">
+          {k} <b className="font-semibold text-ink tabular-nums">{v}</b>
+        </span>
+      ))}
+      {runUrl && (
+        <a href={runUrl} target="_blank" rel="noreferrer" className="ml-auto text-[13px] font-medium underline">
+          Open the run on Apify
+        </a>
+      )}
     </div>
   );
 }

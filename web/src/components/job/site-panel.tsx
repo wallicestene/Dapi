@@ -1,3 +1,4 @@
+import { Ban, CircleDot, CornerLeftUp, Database, Download, Eye, FileSearch, FileText, FlaskConical, Gauge, Globe, Landmark, Layers, ListOrdered, MousePointerClick, Repeat, RotateCcw, Server, ShieldCheck, Sparkles, Table2, type LucideIcon } from "lucide-react";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import type { Job, JobEvent } from "@/lib/types";
@@ -15,6 +16,43 @@ interface Req {
 // The investigation as it happened: what the page loaded, the feed Dapi chose instead
 // of the visible page, the screenshot Muse Spark read to pick a control, and how the
 // site answers from Apify's servers.
+// The icon for each action, and which Meta model took it (the agent's tool calls are
+// Muse Wonder's; choosing what to click and going up to the list are Muse Spark's).
+const TOOL: Record<string, LucideIcon> = {
+  web_search: Globe,
+  look_at_page: Eye,
+  click_and_watch: MousePointerClick,
+  test_endpoint: FlaskConical,
+  fetch_url: Download,
+  search_page_source: FileSearch,
+  map_page_fields: Table2,
+  list_values: ListOrdered,
+  open_record_page: FileText,
+  call_register: Landmark,
+  resume: RotateCcw,
+};
+const KIND: Record<string, LucideIcon> = {
+  page: Globe,
+  up: CornerLeftUp,
+  source: Database,
+  paging: Layers,
+  pick: MousePointerClick,
+  detail: FileText,
+  robots: ShieldCheck,
+  replay: Repeat,
+  reach: Server,
+  pace: Gauge,
+  strategizing: Sparkles,
+  strategy: Sparkles,
+  declined: Ban,
+};
+function actor(e: JobEvent): { Icon: LucideIcon; model: "Muse Wonder" | "Muse Spark" | null } {
+  if (e.kind === "agent") return { Icon: TOOL[e.tool as string] ?? Sparkles, model: "Muse Wonder" };
+  if (e.kind === "strategizing" || e.kind === "strategy") return { Icon: Sparkles, model: "Muse Wonder" };
+  if (e.kind === "pick" || e.kind === "up") return { Icon: KIND[e.kind], model: "Muse Spark" };
+  return { Icon: KIND[e.kind] ?? CircleDot, model: null };
+}
+
 export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
   const site = events.filter((e) => e.step === "site" && e.kind !== "start");
   if (!site.length) return <Waiting>Dapi opens the page and watches its network traffic before reading any of it.</Waiting>;
@@ -69,17 +107,30 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
           />
         )}
 
-        <Panel title="What Dapi did">
-          <ol className="divide-y divide-rule">
-            {site.map((e) => (
-              <li key={e.n} className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 px-5 py-2.5 text-[14px]">
-                <span className="text-[12px] text-ink-3 tabular-nums">{clock(e.at)}</span>
-                <span className={cn(e.kind === "declined" && "text-pencil-red")}>{e.text}</span>
-              </li>
-            ))}
+        <Panel title="What Dapi did" action={<span className="text-[12px] text-ink-2">{site.filter((e) => e.kind === "agent").length} agent steps</span>}>
+          {/* A timeline: an icon per action, and the Meta model that took it. */}
+          <ol className="relative px-5 py-3 before:absolute before:top-5 before:bottom-5 before:left-[35px] before:w-px before:bg-rule">
+            {site.map((e) => {
+              const { Icon, model } = actor(e);
+              return (
+                <li key={e.n} className="relative grid grid-cols-[32px_minmax(0,1fr)_56px] items-start gap-3 py-1.5 text-[14px]">
+                  <span className={cn("relative grid size-8 place-items-center rounded-full border bg-sheet", model === "Muse Wonder" && "border-source/40 bg-[#f1eeff] text-source", model === "Muse Spark" && "border-deliver/40 bg-[#e6f7f5] text-[#0b6f65]", e.kind === "declined" && "border-pencil-red/40 bg-red-wash text-pencil-red")}>
+                    <Icon aria-hidden className="size-3.5" />
+                  </span>
+                  <span className={cn("pt-1.5 leading-snug", e.kind === "declined" && "text-pencil-red")}>
+                    {model && <span className={cn("mr-1.5 inline-block rounded-full px-1.5 py-px align-[1px] text-[11px] font-semibold", model === "Muse Wonder" ? "bg-source/12 text-source" : "bg-deliver/15 text-[#0b6f65]")}>{model}</span>}
+                    {model === "Muse Wonder" ? String(e.text).replace(/^Muse Wonder (\(muse-wonder-[\d.]+\) )?/, "") : e.text}
+                  </span>
+                  <span className="pt-2 text-right text-[11.5px] text-ink-3 tabular-nums">{clock(e.at)}</span>
+                </li>
+              );
+            })}
             {live && (
-              <li className="flex items-center gap-3 px-5 py-2.5 text-[14px] text-ink-2">
-                <span aria-hidden className="size-2 rounded-full bg-ink" /> Still looking…
+              <li className="relative grid grid-cols-[32px_minmax(0,1fr)] items-center gap-3 py-1.5 text-[14px] text-ink-2">
+                <span className="relative grid size-8 place-items-center rounded-full border border-source/40 bg-[#f1eeff]">
+                  <span aria-hidden className="size-2 animate-ping rounded-full bg-source" />
+                </span>
+                Still looking…
               </li>
             )}
           </ol>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { TICK_TEXT, TickMark } from "@/components/tick";
 import type { Job, JobEvent, Located, Receipt } from "@/lib/types";
 import type { Selection } from "./data-sheet";
@@ -40,7 +42,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
       ["Captured", started ? `from ${when(started.at)}` : "—"],
     ];
     return (
-      <aside aria-label="Receipt" className="rounded-lg border bg-sheet lg:sticky lg:top-4">
+      <aside aria-label="Receipt" className="rounded-xl border bg-sheet lg:sticky lg:top-4">
         <div className="px-5 pt-4 pb-3">
           <h2 className="text-[13px] font-semibold text-ink-2">Receipt</h2>
           <p className="mt-2 text-[14px] leading-relaxed">
@@ -61,7 +63,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
 
   return (
     <aside aria-label="Receipt" className="flex flex-col gap-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-15rem)] lg:overflow-y-auto">
-      <section className="rounded-lg border bg-sheet px-5 py-4">
+      <section className="rounded-xl border bg-sheet px-5 py-4">
         <h2 className="text-[13px] font-semibold text-ink-2">
           Row {selected.row + 1} · {selected.column}
         </h2>
@@ -72,7 +74,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
               {receipt ? (
                 <>
                   Traced to {receipt.request.method} {shortUrl(receipt.request.url)}, captured {when(receipt.capturedAt)}
-                  {receipt.via && receipt.via !== "direct" ? ` through Apify's ${receipt.via} proxy` : ""}.
+                  {receipt.via && receipt.via !== "direct" ? ` through Apify's ${receipt.via.replace(/^Apify Proxy /i, "").toLowerCase()} proxy` : ""}.
                 </>
               ) : (
                 TICK_TEXT.traced
@@ -103,7 +105,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
       </section>
 
       {cell.evidence && (
-        <section className="rounded-lg border bg-sheet px-5 py-4">
+        <section className="rounded-xl border bg-sheet px-5 py-4">
           <h2 className="text-[13px] font-semibold text-ink-2">The server&apos;s own words</h2>
           {state === "loading" && (
             <div className="mt-3 flex h-40 items-center justify-center rounded-md bg-raised px-4 text-center text-[13px] text-ink-2">
@@ -113,8 +115,9 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
           {state === "error" && <p className="mt-2 text-[13px] text-pencil-red">Couldn&apos;t load this receipt. The evidence store may be unreachable; try again.</p>}
           {receipt && (
             <>
-              <p className="mt-2 font-mono text-[11.5px] leading-relaxed break-all text-ink-2">
-                {receipt.request.method} {receipt.request.url}
+              <p className="mt-2.5 font-mono text-[11.5px] leading-relaxed break-all text-ink-2">
+                <span className="mr-1.5 rounded bg-deliver/15 px-1.5 py-0.5 font-semibold text-[#0b6f65]">{receipt.request.method}</span>
+                {receipt.request.url}
                 {receipt.request.payload ? <><br />{receipt.request.payload.slice(0, 200)}</> : null}
               </p>
               {receipt.located.map((l) => (
@@ -190,12 +193,23 @@ function Evidence({ located, evidenceKey }: { located: Located; evidenceKey: str
       {located.kind === "embedded" && located.context && (
         <figcaption className="mb-1.5 text-[12px] text-ink-2">A row of the table embedded in the page after …{located.context.slice(-48)}</figcaption>
       )}
-      <pre className="max-h-72 overflow-auto rounded-md border bg-white px-3 py-2.5 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-ink-2">
-        {lines.map((line, i) => (
-          <span key={i} className={isMarked(line, i) ? "-mx-3 block bg-green-wash px-3 text-green-ink" : "block"}>
-            {line}
-          </span>
-        ))}
+      {/* The response as the server sent it, the value's line lit in lime. */}
+      <pre className="max-h-72 overflow-auto rounded-lg bg-night px-3.5 py-3 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-[#c3cbc6]">
+        {lines.map((line, i) => {
+          const [, indent, key, rest] = line.match(/^(\s*)("[^"]*":)?(.*)$/) ?? [null, "", "", line];
+          return isMarked(line, i) ? (
+            <span key={i} className="relative -mx-3.5 block bg-verified px-3.5 font-medium text-night">
+              <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-night/30" />
+              {line}
+            </span>
+          ) : (
+            <span key={i} className="block">
+              {indent}
+              {key && <span className="text-[#8fa4b8]">{key}</span>}
+              <span className="text-[#e6e9da]">{rest}</span>
+            </span>
+          );
+        })}
       </pre>
     </figure>
   );
@@ -225,15 +239,19 @@ function Seal({ receipt }: { receipt: Receipt }) {
       </div>
       <div className="mt-2 flex items-center gap-2">
         {check === "match" ? (
-          <p className="flex items-center gap-1.5 text-pencil-green">
-            <TickMark tick="traced" /> Re-checked in your browser: the response is byte for byte what was captured.
+          <p className="flex items-start gap-2 rounded-lg bg-verified/25 px-3 py-2 text-green-ink">
+            <ShieldCheck aria-hidden className="mt-px size-4 shrink-0" />
+            <span>
+              <b className="font-semibold">Seal verified.</b> Your browser re-hashed the response: byte for byte what was captured.
+            </span>
           </p>
         ) : check === "mismatch" ? (
           <p className="text-pencil-red">The body no longer matches its seal.</p>
         ) : (
-          <button type="button" onClick={recheck} disabled={check === "checking"} className="rounded-md border border-control bg-white px-2.5 py-1 text-[12px] font-medium hover:bg-raised">
+          <Button type="button" variant="outline" onClick={recheck} disabled={check === "checking"} className="h-8 gap-1.5 px-3 text-[12.5px]">
+            <ShieldCheck aria-hidden className={check === "checking" ? "animate-pulse" : undefined} />
             {check === "checking" ? "Re-checking…" : check === "error" ? "Couldn't fetch the body; try again" : "Re-check the seal"}
-          </button>
+          </Button>
         )}
       </div>
       <p className="mt-2 text-[12px] text-ink-2">

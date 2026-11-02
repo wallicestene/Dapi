@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function Panel({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-lg border bg-sheet">
+    <section className="overflow-hidden rounded-xl border bg-sheet">
       <div className="flex items-center justify-between gap-3 border-b px-5 py-2.5">
         <h2 className="text-[14px] font-semibold">{title}</h2>
         {action}
@@ -14,8 +14,11 @@ export function Panel({ title, action, children }: { title: string; action?: Rea
 
 export function Waiting({ children }: { children: ReactNode }) {
   return (
-    <section className="flex items-center gap-3 rounded-lg border bg-sheet px-5 py-4 text-[14px] text-ink-2">
-      <span aria-hidden className="size-2 shrink-0 rounded-full bg-ink" />
+    <section className="flex items-center gap-3 rounded-xl border bg-sheet px-5 py-4 text-[14px] text-ink-2">
+      <span aria-hidden className="relative flex size-2 shrink-0">
+        <span className="absolute inset-0 animate-ping rounded-full bg-source/60" />
+        <span className="relative size-2 rounded-full bg-source" />
+      </span>
       {children}
     </section>
   );
