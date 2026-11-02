@@ -872,6 +872,11 @@ cut to the record: `certificates.3`, not the page of 15):
   Wonder's summary, risks and gaps and Muse Spark's new `forClient` plan lines follow
   it. On FSSC the plan went from a 150-word technical paragraph to three lines ("Dapi
   reads the register's own data feed, 15 records per request.").
+- **Job art and components:** each job card carries boring-avatars' Bauhaus art in the
+  mark's colours, seeded by the source's host (same site, same art; grey when it didn't
+  deliver). Chosen over marble and sunset (gradients) and pixel (too loud) after
+  rendering all six. 21st.dev's registry now needs an account key, so Magic UI's
+  NumberTicker and DotPattern came from Magic UI's own registry, restyled.
 
 ### Receipt view (2026-10-30)
 
