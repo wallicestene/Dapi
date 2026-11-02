@@ -586,7 +586,8 @@ async function translateRows({ translate, userSpec, report, disputes }) {
     };
   }
   const distinct = [...new Set(rows.flatMap((r) => translate.columns.map((c) => String(r[c] ?? ''))))].filter((v) => v.trim());
-  say('run', { kind: 'translating', text: `Your samples are in ${language(translate.to)}; the site is in ${language(translate.from)}. Muse Spark is translating ${distinct.length.toLocaleString('en-US')} distinct values in ${translate.columns.join(', ')}, following your samples' wording.` });
+  const why = translate.examples.length ? `Your samples are in ${language(translate.to)}` : `You asked for ${language(translate.to)}`;
+  say('run', { kind: 'translating', text: `${why}; the site is in ${language(translate.from)}. Muse Spark is translating ${distinct.length.toLocaleString('en-US')} distinct values in ${translate.columns.join(', ')}${translate.examples.length ? ", following your samples' wording" : ''}.` });
   let map;
   let failed = [];
   try {
