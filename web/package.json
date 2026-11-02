@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "boring-avatars": "^2.0.4",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.1",
     "lucide-react": "^1.66.0",
+    "motion": "^14.9.0",
     "next": "16.4.3",
     "radix-ui": "^1.8.1",
     "react": "19.3.0",

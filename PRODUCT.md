@@ -11,9 +11,10 @@ web
 Next.js for the front door (the owner's choice, 2026-10-31). The extraction pipeline is
 existing Node code in `src/` (spec reader, investigator, code writer, test loop, frame)
 and runs on Apify through the `dapi-runner` Actor. UI components: shadcn/ui on Radix
-primitives with Tailwind as the base, plus components from 21st.dev, all restyled to
-Dapi's own design; each is declared as a third-party dependency, never presented as
-built here.
+primitives with Tailwind as the base; Magic UI's NumberTicker and DotPattern (added
+from Magic UI's open registry; also listed on 21st.dev, whose registry needs an account
+key); and boring-avatars for each job's generated art. All restyled to Dapi's own design;
+each is declared as a third-party dependency, never presented as built here.
 
 ## Users
 

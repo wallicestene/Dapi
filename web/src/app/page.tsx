@@ -3,7 +3,10 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mark, Wordmark } from "@/components/shell";
 import { ReceiptDemo } from "@/components/home/receipt-demo";
+import { JobArt } from "@/components/job-art";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { READ_ONLY, getJob } from "@/lib/server/dapi";
+import { cost, took } from "@/lib/stage";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +33,6 @@ const WHY = [
   { title: "Counted, never quietly short", body: "Rows are footed against the source's own total. Anything missing is named, with the reason." },
   { title: "Your samples guide, the site decides", body: "When a sample disagrees with the site, you see both, and Dapi delivers what the site shows." },
 ];
-
-function took(seconds?: number | null) {
-  if (!seconds) return null;
-  return seconds < 90 ? `${Math.round(seconds)} s` : `${Math.round(seconds / 60)} min`;
-}
 
 export default function Home() {
   const proof = PROOF.map((p) => ({ ...p, job: getJob(p.id) })).filter((p) => p.job?.status === "done");
@@ -105,17 +103,20 @@ export default function Home() {
             <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs, real public sources. Open any of them to check the receipts yourself.</p>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {proof.map(({ id, label, note, job }) => (
-                <Link key={id} href={`/jobs/${id}`} className="group flex flex-col gap-3 rounded-xl border bg-sheet p-5 transition-colors hover:border-ink-3">
+                <Link key={id} href={`/jobs/${id}`} className="group flex flex-col overflow-hidden rounded-xl border bg-sheet transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-ink-3 hover:shadow-[0_10px_28px_-14px_rgb(15_26_36/0.35)]">
+                  <JobArt seed={job!.sourceUrl ? new URL(job!.sourceUrl).host.replace(/^www\./, "") : id} className="h-20" />
+                  <div className="flex flex-1 flex-col gap-3 p-5">
                   <span className="text-[32px] leading-none font-bold tracking-[-0.03em] tabular-nums">
-                    {(job!.rows ?? 0).toLocaleString("en-US")}
+                    <NumberTicker value={job!.rows ?? 0} />
                     <span className="text-[17px] font-semibold text-ink-2"> / {(job!.expected ?? job!.records ?? job!.rows ?? 0).toLocaleString("en-US")}</span>
                   </span>
                   <span className="text-[15px] font-semibold">{label}</span>
                   <span className="text-[14px] leading-snug text-ink-2">{note}</span>
                   <span className="mt-auto flex items-center gap-2 pt-2 text-[13px] text-ink-2">
-                    {[took(job!.apify?.seconds), job!.apify?.usd ? (job!.apify.usd < 0.01 ? "under $0.01 on Apify" : `$${job!.apify.usd.toFixed(2)} on Apify`) : null].filter(Boolean).join(" · ")}
+                    {[took(job!.apify?.seconds), job!.apify?.usd ? `${cost(job!.apify.usd)} on Apify` : null].filter(Boolean).join(" · ")}
                     <ArrowRight className="ml-auto size-4 text-ink-3 transition-transform group-hover:translate-x-0.5" />
                   </span>
+                  </div>
                 </Link>
               ))}
             </div>

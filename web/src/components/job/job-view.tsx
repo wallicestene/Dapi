@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
+import { STAGE_TEXT, stageOf } from "@/lib/stage";
 import { defaultTab, n, stepStates, type Report, type Tab } from "@/lib/steps";
 import type { Job, JobEvent } from "@/lib/types";
 import { SpecPanel } from "./spec-panel";
@@ -15,8 +16,6 @@ import { CodePanel } from "./code-panel";
 import { SamplesPanel } from "./samples-panel";
 import { RunPanel } from "./run-panel";
 import { FootedPanel } from "./footed-panel";
-
-const STAGE_TEXT = ["Stage 1 of 4: reading the spec and the site", "Stage 2 of 4: writing and testing the extraction", "Stage 3 of 4: running on Apify", "Delivered: every value traced"];
 
 export function JobView({
   initialJob,
@@ -77,7 +76,7 @@ export function JobView({
   const tab = picked ?? defaultTab(job, events);
   const live = !["done", "failed", "declined", "cancelled", "stopped"].includes(job.status);
   // The mark as the job's progress: source, extract, deliver, verified.
-  const stage = job.status === "done" ? 4 : { spec: 1, site: 1, code: 2, plan: 2, run: 3, footed: 4 }[job.step];
+  const stage = stageOf(job);
   const host = job.sourceUrl ? new URL(job.sourceUrl).host : null;
   const expected = job.expected ?? null;
 
