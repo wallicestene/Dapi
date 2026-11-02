@@ -778,6 +778,34 @@ so any spec gets a thorough investigation and the best strategy, not just this s
   from the list's first record, and the spec reader's `outputLanguage` ("in English")
   triggers translation of the text columns when the site's `<html lang>` differs.
 
+### A new site breaks the first pass: FSSC (2026-11-02)
+
+Owner's point: every new site seemed to need code changes; the agents should carry
+the loop. FSSC (43,020 certified organisations) showed why: the fixed first pass
+asked Muse Spark 8 times the same question (the answer, a link to
+`/public-register/{COID}`, was right, but the code only accepted a link written in a
+list field), then a click under a cookie banner timed out and the job died before the
+agent ever ran.
+
+- **The first pass can no longer end a job.** A failing step returns what's known
+  plus `stoppedShort`; one row's error is a note; each row is asked about once.
+- **Detail addresses built from a list field** (`/public-register/{COID}`) are found
+  in the click route too, via `urlTemplate`.
+- **Cookie banners** are dismissed (refuse first, else accept) in every session.
+- **Paging:** the biggest honoured page size is tried even for big lists. FSSC caps
+  `limit` at 15 whatever is asked: 2,868 list requests.
+- **The reach probe** judged the list by the sample's value, which isn't on a paged
+  list's first page: working 200 answers through Apify proxies were scored "no data"
+  and Dapi refused a reachable site. It now checks a value really on that page, and a
+  refusal needs every way in blocked (blocked, error or 4xx/5xx). FSSC from Apify:
+  list 403 direct, 200 via datacenter and residential.
+- **The agent finishes the investigation:** new tools `click_and_watch` (the requests
+  a click makes, or where it leads) and `map_page_fields` (verified selectors on any
+  page); its instructions say to finish whatever the first pass left. On FSSC it found
+  the feed's own `status=Suspended` filter and `search=<COID>` by itself.
+- Playbook: fetch details only for records that can hold the value (a suspension date
+  only for suspended certificates).
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
