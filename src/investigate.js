@@ -870,6 +870,8 @@ function report({ spec, session, list, detail, wanted, notes, tokens }) {
     sourceUrl: spec.sourceUrl,
     investigatedAt: new Date().toISOString(),
     pageStatus: session.status ?? null,
+    // The page the list was found on (its filters and config blocks often hold lookups).
+    listPage: list ? session.finalUrl ?? null : null,
     list: list && describe(list),
     detail: detailOut,
     constants: spec.columns.filter((c) => c.constant !== null).map((c) => ({ column: c.name, value: c.constant })),

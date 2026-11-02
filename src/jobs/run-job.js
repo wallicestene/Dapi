@@ -24,6 +24,7 @@ import { writeAndTest } from '../write-site.js';
 import { translateValues } from '../translate.js';
 import { compareSamples } from '../compare.js';
 import { planStrategy } from '../strategy.js';
+import { runAgent, AGENT } from '../agent.js';
 import { runChecks } from '../investigate/checks.js';
 
 // The run watch (see runOnApify). Declared up here: the job runs at the top level,
@@ -106,11 +107,19 @@ try {
   if (findings.sourceSamples) writeJson(dir, 'spec.source.json', runSpec);
   const runSpecPath = path.join(dir, findings.sourceSamples ? 'spec.source.json' : 'spec.json');
 
-  // The strategy: Muse Wonder reads every finding with the extraction playbook and
-  // plans each column's route and the run's pace before any code is written.
-  say('site', { kind: 'strategizing', text: 'Muse Wonder is reading everything the investigation found and planning the extraction column by column.' });
+  // The strategy: Muse Wonder, as an agent on Meta's Responses API, investigates what's
+  // still open with its tools (web search, a look at a page, counts, record pages, the
+  // register, endpoint tests) and submits the plan. If the agent fails, the
+  // code-driven loop below plans instead.
+  say('site', { kind: 'strategizing', text: `Muse Wonder (${AGENT}) is taking over the investigation as an agent: settling what's open with its tools, then planning the extraction column by column.` });
+  let agentPlan = null;
   try {
-    let strategy = await planStrategy({ spec, sourceSpec: runSpec, findings });
+    agentPlan = await runAgent({ spec, sourceSpec: runSpec, findings, onEvent: (e) => say('site', e) });
+  } catch (err) {
+    say('site', { kind: 'agent', tool: 'fallback', text: `The agent stopped (${err.message.split('\n')[0]}); Dapi plans with the step-by-step loop instead.` });
+  }
+  try {
+    let strategy = agentPlan ?? (await planStrategy({ spec, sourceSpec: runSpec, findings }));
     // The agent loop: checks Muse Wonder asks for to settle gaps, then a second plan.
     if (strategy.checks?.length) {
       say('site', { kind: 'checks', text: `Muse Wonder wants ${strategy.checks.length} more look${strategy.checks.length === 1 ? '' : 's'} before it settles the plan: ${strategy.checks.map((c) => c.why).join(' ')}`, checks: strategy.checks });

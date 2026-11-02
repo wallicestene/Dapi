@@ -94,6 +94,11 @@ sample is blank. A column with no verified route is a gap to name, not a guess t
   cheaper holds; never a browser where a plain request works. A verified register in
   batches beats every record's page even when a column needs a lookup through the
   site's own list (a parent unit's ID to its name), and all the more on a slow site.
+- **A missing piece doesn't sink a cheap route.** When the register lacks something
+  the page shows (the county name after an address), the piece is usually in the site's
+  own data: the list page's filters, facets or config block map codes to names
+  (Arbeidstilsynet's search page lists every county by number). Find it before falling
+  back to every record's page.
 - **Settle gaps before building.** When a route is only partly proven, look: count a
   list field's values (are any records not approved?), open a record that differs,
   ask the register about it. Building on a guess costs a broken run.

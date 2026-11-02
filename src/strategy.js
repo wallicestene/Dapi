@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import { chat } from './meta.js';
 
-const PLAYBOOK = fs.readFileSync(new URL('./prompts/extraction-playbook.md', import.meta.url), 'utf8');
+export const PLAYBOOK = fs.readFileSync(new URL('./prompts/extraction-playbook.md', import.meta.url), 'utf8');
 
 const PROMPT = `${PLAYBOOK}
 
@@ -24,7 +24,7 @@ Decide, following the playbook:
 Fewest requests wins when the values are the same: a verified register read in batches beats loading every record's page, even when a column needs a lookup through the site's own list (a parent unit's ID in the register to that unit's name in the list), and all the more on a slow or stalling site. Pages are for what nothing cheaper holds.
 Use only what the findings show; never invent an endpoint, selector or field. Write "summary" and "why" for the client: plain, short, specific.`;
 
-const SCHEMA = {
+export const SCHEMA = {
   type: 'object',
   properties: {
     summary: { type: 'string' },

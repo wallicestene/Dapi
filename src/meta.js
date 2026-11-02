@@ -76,3 +76,23 @@ async function post(path, body, timeoutMs, attempts = 3) {
     else await backoff(attempt);
   }
 }
+
+// One step of an agent loop on the Responses API: Meta keeps the conversation's state
+// (continue with `previous`), the model calls tools as it sees fit, and built-in tools
+// such as web_search run on Meta's side. Only tool_choice "auto" is supported.
+export async function respond({ model, instructions, input, tools, previous, reasoningEffort, timeoutMs = 300_000 }) {
+  return post(
+    '/responses',
+    {
+      model,
+      ...(instructions && { instructions }),
+      input,
+      // Kept on Meta's side, so the next step can continue from it.
+      store: true,
+      ...(tools && { tools }),
+      ...(previous && { previous_response_id: previous }),
+      ...(reasoningEffort && { reasoning: { effort: reasoningEffort } }),
+    },
+    timeoutMs
+  );
+}
