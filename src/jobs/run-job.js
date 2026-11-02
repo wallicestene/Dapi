@@ -559,7 +559,15 @@ async function translateRows({ translate, userSpec, report, disputes }) {
   const rows = fs.readFileSync(rowsPath, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
   const distinct = [...new Set(rows.flatMap((r) => translate.columns.map((c) => String(r[c] ?? ''))))].filter((v) => v.trim());
   say('run', { kind: 'translating', text: `Your samples are in ${language(translate.to)}; the site is in ${language(translate.from)}. Muse Spark is translating ${distinct.length.toLocaleString('en-US')} distinct values in ${translate.columns.join(', ')}, following your samples' wording.` });
-  const { map } = await translateValues({ values: distinct, from: translate.from, to: translate.to, examples: translate.examples });
+  let map;
+  let failed = [];
+  try {
+    ({ map, failed } = await translateValues({ values: distinct, from: translate.from, to: translate.to, examples: translate.examples }));
+  } catch (err) {
+    // The rows are delivered either way: they stay in the site's language.
+    say('run', { kind: 'watch', text: `Translation didn't finish (${err.message.split('\n')[0]}); the rows stay in ${language(translate.from)}, as the site has them.` });
+    return;
+  }
   for (const row of rows) {
     const original = {};
     for (const c of translate.columns) {
@@ -584,7 +592,11 @@ async function translateRows({ translate, userSpec, report, disputes }) {
     if (s.status === 'fail' && !s.checks.some((c) => c.status === 'fail')) s.status = 'warn';
   }
   report.translated = { from: translate.from, to: translate.to, columns: translate.columns, values: map.size };
-  say('run', { kind: 'translated', text: `Translated ${map.size.toLocaleString('en-US')} values into ${language(translate.to)}. Every receipt keeps the site's own words; the Apify dataset holds them as the site has them.` });
+  say('run', {
+    kind: 'translated',
+    text: `Translated ${map.size.toLocaleString('en-US')} values into ${language(translate.to)}${failed.length ? `; ${failed.length} couldn't be and stay in ${language(translate.from)}` : ''}. Every receipt keeps the site's own words; the Apify dataset holds them as the site has them.`,
+    untranslated: failed.slice(0, 20),
+  });
 }
 
 function sleep(ms) {

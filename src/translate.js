@@ -27,16 +27,20 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-const BATCH = 60;
+const BATCH = 40;
 
-// values: distinct strings. Returns a Map from each to its translation, and token use.
+// values: distinct strings. Returns a Map from each to its translation, token use, and
+// the values that couldn't be translated (they stay in the site's language). A batch
+// that times out or fails is tried again, then split in half, so one slow reply never
+// stops the job.
 export async function translateValues({ values, from, to, examples, onProgress = () => {} }) {
   const out = new Map();
   const tokens = { in: 0, out: 0 };
+  const failed = [];
   // Sorted, so a company and its branches land in the same batch.
   const todo = values.filter((v) => v && v.trim()).sort((a, b) => a.localeCompare(b));
-  for (let i = 0; i < todo.length; i += BATCH) {
-    const batch = todo.slice(i, i + BATCH);
+
+  async function translateBatch(batch) {
     // Earlier decisions for values that share a word with this batch.
     const words = new Set(batch.flatMap((v) => v.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2)));
     const decided = [...out]
@@ -46,7 +50,7 @@ export async function translateValues({ values, from, to, examples, onProgress =
     const { content, usage } = await chat({
       model: SPARK,
       reasoningEffort: 'low',
-      timeoutMs: 180_000,
+      timeoutMs: 240_000,
       messages: [
         { role: 'system', content: PROMPT },
         {
@@ -65,9 +69,28 @@ export async function translateValues({ values, from, to, examples, onProgress =
     tokens.in += usage?.prompt_tokens ?? 0;
     tokens.out += usage?.completion_tokens ?? 0;
     for (const { id, text } of content.values) if (batch[id] !== undefined) out.set(batch[id], text);
+  }
+
+  async function settle(batch, tries = 2) {
+    for (let attempt = 1; attempt <= tries; attempt++) {
+      try {
+        return await translateBatch(batch);
+      } catch {
+        // try again, then smaller
+      }
+    }
+    if (batch.length > 5) {
+      const half = Math.ceil(batch.length / 2);
+      await settle(batch.slice(0, half), 1);
+      await settle(batch.slice(half), 1);
+    } else failed.push(...batch);
+  }
+
+  for (let i = 0; i < todo.length; i += BATCH) {
+    await settle(todo.slice(i, i + BATCH));
     onProgress(Math.min(i + BATCH, todo.length), todo.length);
   }
   // The client's own examples win over the model for the exact same phrase.
   for (const e of examples) if (e.source) out.set(e.source, e.target);
-  return { map: out, tokens };
+  return { map: out, tokens, failed: failed.filter((v) => !out.has(v)) };
 }
