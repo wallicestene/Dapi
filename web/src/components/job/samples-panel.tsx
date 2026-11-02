@@ -45,7 +45,7 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
                       {String(c.actual) || <span className="text-ink-3">blank</span>}
                       {c.why && (
                         <span className="mt-0.5 block text-[12px] text-pencil-red">
-                          {c.why === "spacing" ? "spacing differs" : c.why === "typo" ? "likely a typo in your spec" : c.why === "site" ? "the site disagrees with your sample; delivered as the site has it" : `your value is this record's ${c.belongsTo}`}
+                          {c.why === "spacing" ? "spacing differs" : c.why === "typo" ? "likely a typo in your spec" : c.why === "site" || c.why === "dispute" ? "the site shows this for the record; delivered as the site has it" : `your value is this record's ${c.belongsTo}`}
                         </span>
                       )}
                     </td>

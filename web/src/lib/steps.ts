@@ -17,7 +17,7 @@ export interface SampleCheck {
   label: string;
   status: "pass" | "warn" | "fail" | "not found";
   row: number | null;
-  checks: { column: string; expected: string; actual: string; status: "exact" | "warn" | "fail"; why?: "spacing" | "typo" | "column" | "site"; belongsTo?: string }[];
+  checks: { column: string; expected: string; actual: string; status: "exact" | "warn" | "fail"; why?: "spacing" | "typo" | "column" | "site" | "dispute"; belongsTo?: string }[];
 }
 
 export interface Report {
@@ -142,7 +142,7 @@ function sampleLine(samples: SampleCheck[]) {
 
 // What the near matches are, in the user's terms: "1 spacing", "1 typo in the spec".
 function nearLine(samples: SampleCheck[]) {
-  const whys = samples.filter((s) => s.status === "warn").flatMap((s) => s.checks.filter((c) => c.status === "warn").map((c) => c.why ?? "spacing"));
+  const whys = samples.filter((s) => s.status === "warn").flatMap((s) => s.checks.filter((c) => c.status === "warn").map((c) => (c.why === "dispute" ? "site" : c.why ?? "spacing")));
   const words = { spacing: "spacing", typo: "typo", column: "misplaced", site: "site disagrees" };
   return (Object.keys(words) as (keyof typeof words)[])
     .filter((w) => whys.includes(w))
