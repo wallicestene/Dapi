@@ -169,6 +169,15 @@ the value IS in the site's data (the problem says where): read it from there. Ne
 add a condition, a mapping or a blank that only makes one sample's row match ("blank
 the city when the state is '.'", "write Netherlands as The Netherlands").
 
+**A list in the page's HTML.** When `findings.list.html` is set, the records are
+elements of the page itself: request `list.request.url`, take every item matching
+`list.item.selector`, and read each column with its key in `list.fields`, a selector
+inside the item (`a@href` reads an attribute). Trace each row's value from the page with
+`ctx.trace('css*:' + item + ' ' + field, (all) => all[i])` for the i-th item, so its
+receipt points at the element. When `list.paging.next` is set, follow it page by page;
+when the strategy names the request behind a "Load more", use that for the rest; count
+every item against the total the strategy found, and `expect` that total.
+
 **Record pages by address.** When `detail.urlTemplate` is set, each record's page is
 that template with the record's list field (`detail.urlFrom.listField`) filled in,
 e.g. `https://example.org/registry/{org.number}` with the record's `org.number`.

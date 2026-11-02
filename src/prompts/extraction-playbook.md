@@ -49,9 +49,17 @@ The examples come from real jobs; the lessons are general.
    per request with the addresses and parent unit the Arbeidstilsynet pages show.
    Prefer it when it verifiably holds the values. National business, charity and land
    registers, open-data portals and official bulk exports all count.
-4. **Server-rendered HTML.** Record pages fetched without a browser, read with
-   selectors anchored on labels ("Besøksadresse", "HQ LOCATION") rather than positions.
-5. **A browser**, only when nothing above exists: it is slow, heavy and fragile.
+4. **Server-rendered HTML.** A list or record pages fetched without a browser, read
+   with selectors anchored on labels ("Besøksadresse", "HQ LOCATION") or on the
+   repeating item around the sample, rather than positions.
+5. **The rest of a list the page doesn't show at first.** A "Load more" button or an
+   infinite scroll calls an endpoint: click it and watch the request (often JSON or an
+   HTML fragment, with a page or offset parameter). Content systems publish their own
+   indexes: WordPress answers `/wp-json/wp/v2/posts` (and other post types) with
+   `X-WP-Total`; `sitemap.xml` lists every page's URL; RSS and Atom feeds list the
+   newest. Check that such an index holds exactly the records the page lists (the same
+   category or post type) before relying on it.
+6. **A browser**, only when nothing above exists: it is slow, heavy and fragile.
 
 ## 3. Map the site's structure
 

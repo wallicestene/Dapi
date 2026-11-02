@@ -57,6 +57,26 @@ export function makeTools(findings) {
   async function all() {
     if (records) return records;
     const list = findings.list;
+    if (list?.html) {
+      // The list in the page's HTML: every item, each column read inside it.
+      const $ = cheerio.load(await getText(list.request.url, { timeoutMs: 120_000 }));
+      return (records = $(list.item.selector)
+        .toArray()
+        .map((item) =>
+          Object.fromEntries(
+            Object.entries(list.fields)
+              .filter(([, f]) => f.keys[0] !== undefined)
+              .map(([c, f]) => {
+                const key = f.keys[0];
+                const at = key.lastIndexOf('@');
+                const attr = at >= 0 && /^[\w-]+$/.test(key.slice(at + 1)) ? key.slice(at + 1) : null;
+                const path = attr ? key.slice(0, at) : key;
+                const el = path ? $(item).find(path).first() : $(item);
+                return [c, attr ? el.attr(attr) ?? '' : el.text().replace(/\s+/g, ' ').trim()];
+              })
+          )
+        ));
+    }
     if (!list || list.embedded) return (records = list?.sampleRecords ?? []);
     const r = list.paging?.bigPage?.request ?? list.request;
     const text = await getText(r.url, { method: r.method, body: r.payload ?? undefined, headers: r.contentType ? { 'content-type': r.contentType } : {}, timeoutMs: 120_000 });

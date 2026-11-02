@@ -156,7 +156,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
     }
   };
   const facts: [string, string][] = [
-    ["Records the source lists", n(plan.records as number)],
+    [plan.more ? "Records on the first page" : "Records the source lists", plan.records == null ? "—" : n(plan.records as number)],
     ["Requests", `≈ ${n(plan.requests as number)}`],
     ["Time on Apify", `≈ ${plan.minutes} min`],
     ["Way in", plan.proxy === "direct" ? "Direct" : `${String(plan.proxy).replace(/^\w/, (c) => c.toUpperCase())} proxy`],
@@ -165,6 +165,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
   const reasoning = Array.isArray(plan.reasoning) ? (plan.reasoning as string[]) : typeof plan.reasoning === "string" && plan.reasoning.trim() ? [plan.reasoning.trim()] : [];
   const translate = plan.translate as { from: string; to: string; columns: string[] } | null;
   const disputes = (plan.disputes as { label?: string; column: string | null; sample: string; site: string }[] | undefined) ?? [];
+  const unsettled = (plan.unsettled as string[] | undefined) ?? [];
   return (
     // The one moment Dapi hands over: a beam runs round the plan until you answer.
     <section className="relative overflow-hidden rounded-2xl border bg-white shadow-[0_12px_32px_-18px_rgb(15_26_36/0.35)]">
@@ -188,6 +189,19 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
         <p className="mx-6 mt-4 text-[14px]">
           Your samples are in {translate.to}; the site is in {translate.from}. Dapi extracts the site as it is, then Muse Spark translates {translate.columns.join(", ")} into {translate.to}, following your samples&apos; wording. Every receipt keeps the site&apos;s own words.
         </p>
+      )}
+      {unsettled.length > 0 && (
+        <div className="mx-6 mt-4 rounded-xl border border-source/30 bg-[#f4f2ff] px-4 py-3 text-[14px]">
+          <p className="font-semibold text-ink">Not settled yet</p>
+          <ul className="mt-1 space-y-1 text-ink-2">
+            {unsettled.map((g) => (
+              <li key={g} className="flex gap-2">
+                <span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-source" />
+                {g}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {disputes.length > 0 && (
         <div className="mx-6 mt-4 rounded-xl border border-pencil-red/30 bg-red-wash px-4 py-3 text-[14px] text-red-ink">

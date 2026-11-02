@@ -110,7 +110,16 @@ try {
   // 2. The site.
   step('site');
   say('site', { kind: 'start', text: `Investigating ${spec.sourceUrl}: watching what the page loads before reading any of it.` });
-  const findings = await investigate(spec, { onEvent: (e) => say('site', e) });
+  // The first pass never ends a job: if it breaks on something new, the agent takes over
+  // from the spec and what little is known.
+  let findings;
+  try {
+    findings = await investigate(spec, { onEvent: (e) => say('site', e) });
+  } catch (err) {
+    const where = String(err?.message ?? err).split('\n')[0];
+    say('site', { kind: 'stopped-short', text: `Dapi's first pass broke on this site (${where}); Muse Wonder investigates from the start.` });
+    findings = { spec: spec.title, sourceUrl: spec.sourceUrl, investigatedAt: new Date().toISOString(), list: null, detail: null, constants: spec.columns.filter((c) => c.constant !== null).map((c) => ({ column: c.name, value: c.constant })), unmapped: spec.columns.filter((c) => c.constant === null).map((c) => c.name), notes: [`The first pass broke: ${where}`], stoppedShort: where };
+  }
   writeJson(dir, 'findings.json', findings);
   const refusal = refuse(findings);
   if (refusal) {
@@ -244,9 +253,8 @@ function refuse(f) {
         ? `Every way Dapi may use (${tried.map((a) => a.way).join(', ')}) met ${human.what}: a check only a person can pass. Dapi sets those aside.`
         : `The site blocked every way Dapi tried (${tried.map((a) => a.way).join(', ')}), each from a fresh IP.`
     );
-  } else if (!f.list) {
-    reasons.push("Neither the site's own data requests nor its embedded data hold the records. Reading the visible page alone is a route Dapi doesn't run yet.");
   }
+  // No list from the first pass is not a refusal: the agent finishes the investigation.
   // A refusal from Apify's servers means every way in was refused (blocked, an error, or
   // HTTP 4xx/5xx), not that one answer lacked one record.
   const results = f.reachability?.results ?? [];
@@ -289,7 +297,10 @@ function testDisputes(report) {
 
 // What the run will do, from the findings and the extraction's own settings.
 function makePlan(f, config, notes, spec, tested = null) {
-  const records = Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0));
+  const records = f.list ? Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)) : null;
+  // An HTML list may show only its first items, with more behind a next page or a
+  // "Load more": the plan says so instead of passing the first page off as the total.
+  const more = f.list?.html && (f.list.paging?.next || f.list.paging?.loadMore);
   // With a register behind the record pages, its batches replace most page loads; pages
   // are still needed for columns it doesn't hold, once per record or once per shared value.
   const up = f.detail?.upstream;
@@ -300,14 +311,18 @@ function makePlan(f, config, notes, spec, tested = null) {
   const pageColumns = Object.keys(f.detail?.fields ?? {}).filter((c) => f.detail.fields[c].keys?.length && !up?.columns.includes(c));
   const perRecordPages = pageColumns.some((c) => !f.detail.fields[c].sameOnAllPages);
   // A paged list is a request per page (of the biggest size the server honours).
-  const paging = f.list.paging;
+  const paging = f.list?.paging;
   const listRequests = paging?.total && !paging.bigPage?.onePage ? Math.ceil(paging.total / (paging.bigPage?.size ?? paging.pageSize ?? paging.total)) : 1;
   const details = !f.detail || !usesDetail
     ? 0
     : up
-      ? up.apis.reduce((n, a) => n + (a.batch ? Math.ceil(records / a.batch.maxIds) : records), 0) + (perRecordPages ? records : pageColumns.length ? 3 : 0)
-      : records;
-  const requests = listRequests + details;
+      ? up.apis.reduce((n, a) => n + (a.batch ? Math.ceil((records ?? 0) / a.batch.maxIds) : records ?? 0), 0) + (perRecordPages ? records ?? 0 : pageColumns.length ? 3 : 0)
+      : records ?? 0;
+  // When the first page isn't the whole list, Muse Wonder's strategy knows the requests.
+  const requests = (more || !f.list) && f.strategy?.requests?.total ? f.strategy.requests.total : listRequests + details;
+  // When the first pass only saw part of the list (or none), the route is the one Muse
+  // Wonder found and verified: the plan says it in its words.
+  const agentRoute = (more || !f.list) && f.strategy?.summary;
   const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
   // The time estimate follows the measured pace at the chosen concurrency, when there is one.
   const level = (f.reachability?.pace?.levels ?? []).filter((l) => !l.errors && l.medianMs && l.concurrency <= (config.maxConcurrency ?? 4)).at(-1);
@@ -315,10 +330,12 @@ function makePlan(f, config, notes, spec, tested = null) {
   const groups = (config.proxy?.groups ?? []).map((g) => g.toLowerCase());
   const proxy = groups.length ? `${groups.join(' + ')}${config.proxy.countryCode ? ` (${config.proxy.countryCode})` : ''}` : 'direct';
   const minutes = Math.max(1, Math.ceil(requests / perMinute));
-  const route = f.list.embedded ? 'embedded' : 'feed';
+  const route = !f.list ? 'agent' : f.list.embedded ? 'embedded' : f.list.html ? 'html' : 'feed';
   const how = {
     feed: "the site's own data feed (JSON)",
     embedded: 'data embedded in the page',
+    html: "the page's own HTML",
+    agent: 'the sources Muse Wonder verified',
   }[route];
   const pagesHow = listRequests > 1 ? ` in ${listRequests.toLocaleString('en-US')} pages` : '';
   const detailHow = !f.detail || !usesDetail
@@ -330,6 +347,7 @@ function makePlan(f, config, notes, spec, tested = null) {
         : ', then one data request per record';
   return {
     records,
+    more: Boolean(more),
     requests,
     minutes,
     route,
@@ -337,11 +355,15 @@ function makePlan(f, config, notes, spec, tested = null) {
     proxy,
     pace: { concurrency: config.maxConcurrency ?? null, perMinute: rpm, retries: config.maxRetries ?? null },
     reasoning: notes,
-    robotsQuestion: f.list.robotsBlocked ? `robots.txt disallows ${f.list.request.url}. Fetch it anyway?` : null,
+    robotsQuestion: f.list?.robotsBlocked ? `robots.txt disallows ${f.list.request.url}. Fetch it anyway?` : null,
     personalData: spec.personalData ?? [],
     translate: f.samples?.translate ? { from: language(f.samples.translate.from), to: language(f.samples.translate.to), columns: f.samples.translate.columns } : null,
     disputes: [...(f.samples?.disputes ?? []), ...testDisputes(tested)],
-    text: `The source lists ${records.toLocaleString('en-US')} records. Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
+    // What Muse Wonder couldn't settle: the client sees it before pressing Go.
+    unsettled: (f.strategy?.gaps ?? []).slice(0, 3),
+    text: agentRoute
+      ? `${records === null ? '' : `The page shows ${records.toLocaleString('en-US')} records${more ? `, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}` : ''}. `}${f.strategy.summary} ${proxy === 'direct' ? 'Directly from Apify\'s servers.' : `Through Apify\'s ${proxy} proxy.`}`
+      : `${records === null ? "Muse Wonder's strategy sets the route." : more ? `The page shows ${records.toLocaleString('en-US')} records, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}.` : `The source lists ${records.toLocaleString('en-US')} records.`} Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }
 
@@ -598,7 +620,7 @@ async function finish({ apify, run, copied: copiedSoFar, copy, userSpec, transla
     kind: 'footed',
     text: short.length
       ? `Delivered ${report.rows.toLocaleString('en-US')} rows; short: ${short.map((c) => `${c.kind} ${c.got} of ${c.expected}`).join(', ')}. The missing ones are listed with reasons.`
-      : `Delivered ${report.rows.toLocaleString('en-US')} rows: every row the source's own counts call for, from ${records.toLocaleString('en-US')} records. ${report.failed.length === 1 ? '1 request failed; its row came with what the list had and says why.' : report.failed.length ? `${report.failed.length} requests failed; their rows came with what the list had and say why.` : 'No request failed.'}`,
+      : `Delivered ${report.rows.toLocaleString('en-US')} rows: every row the source's own counts call for, from ${(records ?? report.rows).toLocaleString('en-US')} records. ${report.failed.length === 1 ? '1 request failed; its row came with what the list had and says why.' : report.failed.length ? `${report.failed.length} requests failed; their rows came with what the list had and say why.` : 'No request failed.'}`,
     completeness: report.completeness,
     failed: report.failed,
     partial: report.partial.length,

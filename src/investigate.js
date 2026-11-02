@@ -8,6 +8,7 @@
 // Usage: node src/investigate.js <spec.json>
 
 import fs from 'node:fs';
+import { htmlList, replayHtml } from './investigate/html-list.js';
 import { pathToFileURL } from 'node:url';
 import { RobotsTxtFile } from 'crawlee';
 import { openPage, findRecordRow, clickablesIn } from './investigate/browser.js';
@@ -22,7 +23,18 @@ import { findUpstream, sameOnAllPages } from './investigate/upstream.js';
 import * as cheerio from 'cheerio';
 import { select } from './select.js';
 
-export async function investigate(spec, { onEvent = () => {} } = {}) {
+// One step of the first pass: a step that breaks on something this site does
+// differently is noted and skipped, and the rest carries on; the agent settles it.
+async function safely(what, notes, fn, fallback = null) {
+  try {
+    return await fn();
+  } catch (err) {
+    notes.push(`${what} didn't work on this site (${String(err?.message ?? err).split('\n')[0]}); the agent can settle it.`);
+    return fallback;
+  }
+}
+
+export async function investigate(spec, { onEvent = () => {}, checkReach = true } = {}) {
   const notes = [];
   const tokens = { in: 0, out: 0 };
   const count = (usage) => {
@@ -62,7 +74,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
     let candidates = pageCandidates(session, firstShot, onEvent);
 
     // 1. What the page loads by itself: JSON responses, and data embedded in its HTML.
-    let list = await chooseSource({ columns: wanted, samples: spec.samples, candidates, count });
+    let list = await safely('Reading the page\'s data', notes, () => chooseSource({ columns: wanted, samples: spec.samples, candidates, count }));
 
     // A spec often names one record's page (the one its sample came from) rather than
     // the list. Then: learn the sample's values in the site's own words from this page,
@@ -72,12 +84,15 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
     let shot = firstShot;
     for (let hop = 0; hop < 3 && !list && session.html; hop++) {
       const page = outline(session.html, session.finalUrl);
-      const up = await findListLink({ screenshot: shot, page, spec });
+      const up = await safely('Looking for the list from this page', notes, () => findListLink({ screenshot: shot, page, spec }));
+      if (!up) break;
       count(up.usage);
       if (up.recordPage && !recordPage) {
         recordPage = { url: session.finalUrl, html: session.html };
         if (spec.samples.length) {
-          alignment = await alignSamples({ page, spec });
+          alignment = await safely('Matching the samples to this page', notes, () => alignSamples({ page, spec }));
+        }
+        if (alignment) {
           count(alignment.usage);
           source = alignedSpec(spec, alignment, notes);
           onEvent({ kind: 'record-page', text: describeAlignment(spec, alignment), alignment: alignment.columns, pageLanguage: alignment.pageLanguage, sampleLanguage: alignment.sampleLanguage });
@@ -94,12 +109,50 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       if (!session.page) break;
       shot = await session.page.screenshot().catch(() => null);
       candidates = pageCandidates(session, shot, onEvent);
-      list = await chooseSource({ columns: wanted, samples: source.samples, candidates, count });
+      list = await safely('Reading the page\'s data', notes, () => chooseSource({ columns: wanted, samples: source.samples, candidates, count }));
+    }
+    // 3. The list in the page's own HTML: items like the sample's, read with selectors.
+    if (!list && session.html) {
+      list = await safely('Reading the list in the page\'s HTML', notes, () => htmlList({ html: session.html, url: session.finalUrl, spec: source }));
+      if (list) await safely('Checking robots.txt', notes, () => respectRobots(list, notes, onEvent));
+    }
+    if (list?.html) {
+      partial.list = list;
+      const missing = wanted.filter((c) => !list.fields[c.name]?.keys.length);
+      onEvent({
+        kind: 'source',
+        text: `The records are in the page's own HTML: ${list.recordCount} items like your sample's${list.paging.next ? ', with a next page' : list.paging.loadMore ? `, and a “${list.paging.loadMore}” control that loads more` : ''}. Dapi reads them with selectors checked against your sample.`,
+        route: 'html',
+        request: list.request,
+        recordCount: list.recordCount,
+        siblings: [],
+        total: null,
+        columns: Object.keys(list.fields).filter((c) => list.fields[c].keys.length),
+        missing: missing.map((c) => c.name),
+        reason: list.reason,
+        paging: list.paging,
+      });
+      list.replay = (await safely('Fetching the page without a browser', notes, () => replayHtml(list, request))) ?? { works: null };
+      onEvent({ kind: 'replay', text: `Fetched the page again without a browser: ${list.replay.works ? `the items are there (${list.replay.items})` : 'the items need the browser'}.`, works: Boolean(list.replay.works), timing: null });
+      if (missing.length) notes.push(`Not inside the list's items: ${missing.map((c) => c.name).join(', ')}. The agent looks for them (a record's page, a click).`);
+      if (list.paging.loadMore) notes.push(`More items load in place through “${list.paging.loadMore}”: the request it makes is the way to the rest (watch it with a click).`);
+      const reachability = checkReach && await safely('Checking from Apify\'s servers', notes, () => reach({ spec: source, list, detail: null, notes }));
+      if (reachability) {
+        const how = reachability.recommendation;
+        onEvent({
+          kind: 'reach',
+          text: how ? `Checked from Apify's servers, where the run happens: the site answers ${how === 'direct' ? 'directly, no proxy needed' : `through Apify's ${how} proxy`}.` : "Checked from Apify's servers: the site refused every way Dapi is allowed to ask.",
+          recommendation: how ?? null,
+          results: reachability.results ?? [],
+        });
+      }
+      return { ...report({ spec, session, list, detail: null, wanted, notes, tokens }), reachability, access: session.access, ...(missing.length || list.paging.loadMore ? { stoppedShort: 'the list is in the HTML; the rest of it (and any column outside its items) is for the agent to find' } : {}) };
     }
     if (!list) {
-      notes.push("Neither the page's JSON traffic nor its embedded data holds the spec's records: likely the HTML route.");
-      onEvent({ kind: 'no-source', text: "Neither the page's own data requests nor its embedded data hold your records." });
-      return report({ spec, session, list: null, detail: null, wanted, notes, tokens });
+      // Not a reason to refuse: the agent finishes the investigation.
+      notes.push("Neither the page's JSON traffic, its embedded data nor its HTML (around the sample) holds the spec's records in a form the first pass recognizes.");
+      onEvent({ kind: 'no-source', text: "The first pass didn't find your records in the page's data or its HTML; Muse Wonder takes over the investigation." });
+      return { ...report({ spec, session, list: null, detail: null, wanted, notes, tokens }), access: session.access, stoppedShort: 'no list found by the first pass' };
     }
     if (list.embedded) list.siblings = siblingsOf(list, candidates);
     partial.list = list;
@@ -120,7 +173,7 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       reason: list.reason,
     });
 
-    if (!list.embedded) list.paging = await paging(list, onEvent);
+    if (!list.embedded) list.paging = await safely('Working out the paging', notes, () => paging(list, onEvent));
 
     // 2. Columns the list doesn't have: from the record page the spec named, when it
     // did, else revealed from one record on the list page.
@@ -133,9 +186,11 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       : [];
     let detail = null;
     if (missing.length || weak.length) {
-      detail = recordPage
-        ? await recordPageDetail({ recordPage, list, missing: [...missing, ...weak], sample: source.samples[0] ?? { label: 'the page your spec names', values: {} }, count, notes, onEvent })
-        : await revealDetail({ spec: source, session, list, missing, count, notes, onEvent });
+      detail = await safely('Finding the columns the list lacks', notes, () =>
+        recordPage
+          ? recordPageDetail({ recordPage, list, missing: [...missing, ...weak], sample: source.samples[0] ?? { label: 'the page your spec names', values: {} }, count, notes, onEvent })
+          : revealDetail({ spec: source, session, list, missing, count, notes, onEvent })
+      );
       if (detail) missing = missing.filter((c) => !detail.fields[c.name]?.keys.length);
       partial.detail = detail;
       for (const c of weak) {
@@ -146,18 +201,18 @@ export async function investigate(spec, { onEvent = () => {} } = {}) {
       }
     }
 
-    await respectRobots(list, notes, onEvent);
-    list.replay = list.embedded
-      ? await replayEmbedded(list.capture.url, list.embedded.context, list.records.path, list.records.count)
-      : await replay(list.capture, list.records.path);
-    if (detail?.kind === 'json') detail.replay = await replay(detail.capture, detail.records.path);
+    await safely('Checking robots.txt', notes, () => respectRobots(list, notes, onEvent));
+    list.replay = await safely('Fetching the data without a browser', notes, () =>
+      list.embedded ? replayEmbedded(list.capture.url, list.embedded.context, list.records.path, list.records.count) : replay(list.capture, list.records.path)
+    );
+    if (detail?.kind === 'json') detail.replay = await safely('Fetching the detail without a browser', notes, () => replay(detail.capture, detail.records.path));
     onEvent({
       kind: 'replay',
       text: `Fetched the data again without a browser: ${list.replay?.works ? `works (${list.replay.works})` : 'did not work'}${detail?.replay ? `; detail ${detail.replay.works ? 'works too' : 'did not'}` : ''}.`,
       works: Boolean(list.replay?.works),
       timing: list.replay?.timing ?? null,
     });
-    const reachability = await reach({ spec: source, list, detail, notes });
+    const reachability = checkReach && await safely('Checking from Apify\'s servers', notes, () => reach({ spec: source, list, detail, notes }));
     if (reachability?.pace) {
       const p = reachability.pace;
       onEvent({
@@ -542,7 +597,9 @@ async function reach({ spec, list, detail, notes }) {
   const sampleValue = sample?.values[spec.columns[0].name];
   const onPage = (v) => v && JSON.stringify(list.records.records).includes(JSON.stringify(v).slice(1, -1));
   const anchor = Object.values(list.fields).find((f) => f.keys.length === 1 && String(at(list.records.records[0] ?? {}, f.keys[0]) ?? '').length >= 4);
-  const firstValue = onPage(sampleValue) ? sampleValue : anchor ? String(at(list.records.records[0], anchor.keys[0])) : undefined;
+  // An HTML list: the first item's own value (a link or text), as the page holds it.
+  const htmlValue = list.html ? Object.values(list.records.records[0] ?? {}).find((v) => v && v.length >= 4) : undefined;
+  const firstValue = list.html ? htmlValue : onPage(sampleValue) ? sampleValue : anchor ? String(at(list.records.records[0], anchor.keys[0])) : undefined;
   const detailValue = detail && Object.keys(detail.fields).map((c) => sample?.values[c]).find((v) => v && v.length >= 4);
   const header = (c) => (c.headers?.['content-type'] ? { 'content-type': c.headers['content-type'] } : {});
   const requests = [
@@ -943,12 +1000,28 @@ function findJoin(capture, record) {
 
 function describe(source) {
   const { capture } = source;
+  // A list in the page's HTML: the page, the item selector, each column inside an item.
+  if (source.html) {
+    return {
+      html: true,
+      request: source.request,
+      item: source.item,
+      recordCount: source.recordCount,
+      total: source.total,
+      fields: source.fields,
+      paging: source.paging,
+      replay: source.replay && { works: source.replay.works, items: source.replay.items },
+      ...(source.robotsBlocked && { robotsBlocked: true }),
+      reason: source.reason,
+      sampleRecords: source.records.records.slice(0, 3),
+    };
+  }
   return {
     request: {
       method: capture.method,
       url: capture.url,
       payload: capture.payload,
-      contentType: capture.headers['content-type'] ?? null,
+      contentType: capture.headers?.['content-type'] ?? null,
     },
     ...(source.embedded && { embedded: source.embedded }),
     recordsPath: tracePath(capture),
@@ -967,6 +1040,17 @@ function describe(source) {
   };
 }
 
+// The findings never fail to write: a list this code can't describe is passed on raw
+// enough for the agent to read.
+function describeSafely(list, notes) {
+  try {
+    return describe(list);
+  } catch (err) {
+    notes.push(`Describing the list broke (${err.message.split('\n')[0]}); the agent gets its request and count.`);
+    return { request: list.request ?? { method: list.capture?.method, url: list.capture?.url, payload: list.capture?.payload ?? null }, recordCount: list.recordCount ?? list.records?.count ?? null, fields: list.fields ?? {}, reason: list.reason };
+  }
+}
+
 function report({ spec, session, list, detail, wanted, notes, tokens }) {
   const mapped = (c) => list?.fields[c.name]?.keys.length || detail?.fields[c.name]?.keys.length;
   let detailOut = null;
@@ -981,7 +1065,7 @@ function report({ spec, session, list, detail, wanted, notes, tokens }) {
     siteLanguage: session.html?.match(/<html[^>]*\blang="([a-z]{2})/i)?.[1]?.toLowerCase() ?? null,
     // The page the list was found on (its filters and config blocks often hold lookups).
     listPage: list ? session.finalUrl ?? null : null,
-    list: list && describe(list),
+    list: list && describeSafely(list, notes),
     detail: detailOut,
     constants: spec.columns.filter((c) => c.constant !== null).map((c) => ({ column: c.name, value: c.constant })),
     unmapped: wanted.filter((c) => !mapped(c)).map((c) => c.name),

@@ -10,7 +10,7 @@ import { PLAYBOOK, SCHEMA, VOICE } from './strategy.js';
 import { makeTools } from './investigate/checks.js';
 
 export const AGENT = 'muse-wonder-1.0';
-const MAX_STEPS = 16;
+const MAX_STEPS = 24;
 
 const INSTRUCTIONS = `${PLAYBOOK}
 
