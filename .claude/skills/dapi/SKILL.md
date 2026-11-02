@@ -758,6 +758,26 @@ so any spec gets a thorough investigation and the best strategy, not just this s
 - The step-by-step plan + checks loop (`src/strategy.js`, `runChecks`) is the
   fallback if the agent fails.
 
+### Spoken specs (2026-11-02)
+
+- **Muse Voice Transcribe is not on the OpenAI paths** (`/audio/transcriptions` and
+  similar: 404; chat/responses: model_not_found). Meta's own web search found it in
+  Meta's cookbook (`meta-models/meta-model-cookbook`, `06_muse_voice`):
+  `POST /v1/asr/transcribe`, multipart: a JSON `request` part
+  (`{ mode: "PUSH_TO_TALK" | "ENDPOINTING" | "DIARIZATION", model:
+  "muse-voice-transcribe-1.0", audioEncoding: "WAV", keywords?, languageBias? }`) and
+  an `audio` file part; 10-minute / 32 MB cap; returns `{ sessionId, transcript,
+  audioDurationMs, turns }`. Live microphone: `wss://api.meta.ai/v1/asr/realtime`.
+- An 11 s clip transcribed exactly in ~6 s ("…from Arbeidstilsynet.no … in
+  English"); Muse Spark given the same audio dropped "in English".
+- Flow (`src/voice.js`, `/api/voice`, New job): the browser records, converts to
+  16 kHz mono WAV, Muse Voice Transcribe hears it, Muse Spark writes it up as a spec
+  (source, one row per, columns, rules, questions) the user edits before starting.
+- Spoken specs name a site's home page and carry no samples: the investigation now
+  follows links toward the list (up to three hops), maps a record's page by labels
+  from the list's first record, and the spec reader's `outputLanguage` ("in English")
+  triggers translation of the text columns when the site's `<html lang>` differs.
+
 ### Receipt view (2026-10-30)
 
 `node src/receipts/server.js` → http://localhost:4173, reading `storage/`. Every cell
