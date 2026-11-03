@@ -95,7 +95,8 @@ The name is Dapi. No logo or visual identity exists yet. Voice: plain, honest an
 - Real runs with real numbers, on reviewed sources only (re-run on Nov 3 after every
   earlier job was removed): Better Work 433 of 433 rows from 186 factories (one row per
   issue), 22 s and $0.025 on Apify; Arbeidstilsynet 291 of 291 approved services in one
-  request, 4 s and $0.001.
+  request, 4 s and $0.001; FDA warning letters 503 of 503 for 2026, from the table's own
+  data feed, at the 30 s between requests its robots.txt asks for.
 - Real artefacts: our demo specs (`specs/*.pdf`), findings files, generated site parts, the
   receipt view (JSON record with the source line marked, embedded row with the cell marked,
   the captured page with the element outlined).

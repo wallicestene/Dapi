@@ -927,6 +927,19 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### The evidence store belongs to the runner (2026-11-03)
+
+- The runner Actor runs with **limited permissions**: it can create storage and use
+  what it created, nothing else. Rebuilding `dapi-evidence` from outside (with the
+  owner's token) locked every run out: 403 insufficient-permissions at
+  `Actor.openKeyValueStore`, crash in 1-3 s, three times on FDA (repairs couldn't help).
+  Fixed without full permissions: the outside store renamed, the next run created its
+  own `dapi-evidence`, the demo records copied in. The web now finds the store by name
+  and never creates it. Keep limited permissions: users would have to approve a
+  full-permission Actor, and Apify's Store ranks those lower.
+- FDA warning letters 0003: 503 of 503, "1 at a time ... 30 s between requests
+  (robots.txt)". Receipts for all three demo jobs load and their seals check.
+
 ### Exposure audit, crawl delay, loading mark (2026-11-03)
 
 - **Apify cleaned** (owner's go): 60 dapi-runner runs deleted with their dataset,
