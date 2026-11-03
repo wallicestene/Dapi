@@ -126,7 +126,7 @@ function JobNotice({ job, events, steps, onOpen }: { job: Job; events: JobEvent[
       : ["failed", "declined"].includes(job.status) || (job.status === "stopped" && !job.paused)
         ? {
             tone: "stop" as const,
-            title: job.status === "declined" ? "Dapi can't extract this source" : `Stopped${stopped ? ` at ${stopped.label.toLowerCase()}` : ""}`,
+            title: job.status === "declined" ? "Dapi can't extract this source" : `Stopped${stopped ? ` at the ${SHORT[stopped.tab]} step` : ""}`,
             lines: [job.declined ?? job.failed ?? ""].filter(Boolean),
             action: "See why",
             tab: (stopped?.tab ?? "run") as Tab,
