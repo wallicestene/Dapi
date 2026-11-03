@@ -7,7 +7,7 @@ import { Mark } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { n } from "@/lib/steps";
 import { cn } from "@/lib/utils";
-import { ROUTE_WORD } from "@/lib/stage";
+import { ROUTE_WORD, took } from "@/lib/stage";
 import type { Job, JobEvent } from "@/lib/types";
 import { DataSheet, type Selection } from "./data-sheet";
 import { ReceiptPanel } from "./receipt-panel";
@@ -41,14 +41,15 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   // What happened during the run that you'd want to know: the site struggling and the
   // run easing off, a repair, Apify moving the run, translation. Pauses, resumes and
   // stops are the strip's to show.
-  // Only the current run's: once a later run starts (or is followed again), earlier
-  // attempts' crashes and repairs are history, not news (FDA, Nov 3: a run that
-  // succeeded still showed the two crashes before it).
+  // Every run, one line each, once there's a story (more than one run, or one that
+  // failed): why it failed, what Muse Spark fixed, how the last one went. Then what the
+  // current run said along the way (easing off, translation, Apify moving it).
+  const history = runHistory(events, job);
   let current = 0;
   events.forEach((e, i) => {
     if (e.step === "run" && (e.kind === "started" || e.kind === "following")) current = i;
   });
-  const notes = events.slice(current).filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify"].includes(e.kind)).slice(-4);
+  const notes = events.slice(current).filter((e) => e.step === "run" && ["watch", "translating", "translated", "apify"].includes(e.kind)).slice(-3);
 
   // Apify's own account of the run, as figures.
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
@@ -57,9 +58,25 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
     // strip's row and pushes the sheet down the page.
     <div className="grid flex-1 content-start items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <ApifyStrip job={job} finished={finished} readOnly={readOnly} />
-      {notes.length > 0 && (
+      {(history.length > 0 || notes.length > 0) && (
         <div className="rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">
-          <ul className="text-[13px]" aria-label="During the run">
+          {history.length > 0 && (
+            <ol className="text-[13px]" aria-label="Runs">
+              {history.map((r) => (
+                <li key={r.n} className="flex gap-2 py-1">
+                  <TickMark tick={r.bad ? "fail" : "traced"} className="mt-0.5" />
+                  <span>
+                    <span className={cn("font-medium", r.bad ? "text-pencil-red" : "text-ink")}>
+                      Run {r.n} {r.outcome}
+                    </span>
+                    {r.why && <span className="text-ink-2">: {r.why}{r.after ? "." : ""}</span>}
+                    {r.after && <span className="text-ink-2"> {r.after}</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <ul className={cn("text-[13px]", history.length > 0 && notes.length > 0 && "border-t border-rule")} aria-label="During the run">
             {notes.map((e) => (
               <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" || e.kind === "stopped" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
                 {e.text}
@@ -72,6 +89,34 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
       <ReceiptPanel job={job} events={events} selected={selected} translatedFrom={(plan?.translate as { from: string } | null)?.from ?? null} readOnly={readOnly} />
     </div>
   );
+}
+
+// The job's runs in order, from its events: each run's outcome, why one failed, and what
+// came after (a repair that passed its tests, a stop). Empty when one run went cleanly.
+function runHistory(events: JobEvent[], job: Job) {
+  const runs: { n: number; outcome: string; bad: boolean; why?: string; after?: string }[] = [];
+  for (const e of events) {
+    if (e.step !== "run") continue;
+    if (e.kind === "started") runs.push({ n: runs.length + 1, outcome: "running", bad: false });
+    const r = runs.at(-1);
+    if (!r) continue;
+    if (e.kind === "apify-finished") {
+      const status = String(e.status ?? "").toLowerCase();
+      const time = took(e.seconds as number | null) ?? "";
+      r.outcome = status === "succeeded" ? `succeeded${time ? ` in ${time}` : ""}` : status === "aborted" ? "was stopped" : `${status.replace("-", " ")}${time ? ` after ${time}` : ""}`;
+      r.bad = status !== "succeeded" && status !== "aborted";
+    }
+    if (e.kind === "paused") Object.assign(r, { outcome: "paused by you", bad: false });
+    if (e.kind === "repairing" || e.kind === "broken") {
+      r.bad = true;
+      r.why = String(e.reason ?? String(e.text).split(" Dapi stopped the run")[0].split(" Stopped after")[0]).replace(/^The run /, "the run ").replace(/\.$/, "");
+    }
+    if (e.kind === "restarting") r.after = "Muse Spark fixed the extraction and it passed its tests.";
+    if (e.kind === "broken") r.after = String(e.after ?? (String(e.text).match(/Stopped after.*$/)?.[0] ?? ""));
+  }
+  const last = runs.at(-1);
+  if (last && !last.bad && last.outcome.startsWith("succeeded") && job.status === "done") last.why = `${(job.rows ?? 0).toLocaleString("en-US")} rows`;
+  return runs.length > 1 || runs.some((r) => r.bad) ? runs : [];
 }
 
 // The run on Apify, credited: Apify's mark, the run's state, its rows at this moment, and

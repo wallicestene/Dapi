@@ -554,11 +554,11 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records, 
         : outcome.noRepair
           ? 'Dapi sets this site aside.'
           : `Stopped after ${REPAIRS} repairs; the log is in the run on Apify.`;
-      say('run', { kind: 'broken', text: `${outcome.reason} ${after}`, log: outcome.log });
+      say('run', { kind: 'broken', text: `${outcome.reason} ${after}`, reason: outcome.reason, after, log: outcome.log });
       updateJob(dir, { status: 'failed', failed: outcome.reason });
       return;
     }
-    say('run', { kind: 'repairing', text: `${outcome.reason} Dapi stopped the run (the rows so far stay in its dataset) and gave Muse Spark the run's log to fix it.`, log: outcome.log });
+    say('run', { kind: 'repairing', text: `${outcome.reason} Dapi stopped the run (the rows so far stay in its dataset) and gave Muse Spark the run's log to fix it.`, reason: outcome.reason, log: outcome.log });
     const fixed = await writeAndTest({
       spec,
       specPath,

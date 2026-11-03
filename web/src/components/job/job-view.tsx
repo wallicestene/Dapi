@@ -230,8 +230,17 @@ export function JobView({
         crumb={job.title ?? `Job ${job.id}`}
         actions={
           <>
-            <Button variant="ghost" size="icon" onClick={alerts.toggle} aria-pressed={alerts.on} title={alerts.on ? "Alerts on: a chime, the tab title and a notification when this job needs you or finishes" : "Alerts off"} aria-label={alerts.on ? "Turn alerts off" : "Turn alerts on"} className="text-ink-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={alerts.toggle}
+              aria-pressed={alerts.on}
+              title={alerts.needsPermission ? "Allow desktop alerts: a notification when this job needs your Go or finishes, even in another tab" : alerts.on ? "Alerts on: a chime, the tab title and a notification when this job needs you or finishes" : "Alerts off"}
+              aria-label={alerts.needsPermission ? "Allow desktop alerts" : alerts.on ? "Turn alerts off" : "Turn alerts on"}
+              className="relative text-ink-2"
+            >
               {alerts.on ? <Bell /> : <BellOff />}
+              {alerts.needsPermission && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-deliver ring-2 ring-sheet" />}
             </Button>
             {/* Apify's console is the owner's: the public copy doesn't link into it. */}
             {job.runUrl && !readOnly && (

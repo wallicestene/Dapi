@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Job } from "./types";
 
 // The moments a job needs you or is done: its plan waits for your Go, it's delivered,
@@ -26,7 +26,7 @@ export function useAlerts(job: Job) {
     if (!on || before === job.status) return;
     const moment: [string, string, boolean] | null =
       job.status === "waiting"
-        ? ["Ready to run", "The plan is ready. Dapi needs your Go.", false]
+        ? ["Ready to run", "Samples checked: your Go starts the run on Apify.", false]
         : job.status === "done"
           ? ["Delivered", `${(job.rows ?? 0).toLocaleString("en-US")} rows, counted against the source.`, false]
           : job.status === "held"
@@ -41,7 +41,26 @@ export function useAlerts(job: Job) {
     notify(title, body);
   }, [job.status, job.rows, job.failed, job.declined, on]);
 
+  // Alerts are on by default, but a desktop notification needs the browser's permission,
+  // and a browser only asks after a click: the bell offers that click first.
+  const [, rerender] = useState(0);
+  const permission = useSyncExternalStore(
+    (changed) => {
+      window.addEventListener("focus", changed);
+      return () => window.removeEventListener("focus", changed);
+    },
+    () => (typeof Notification === "undefined" ? "unsupported" : Notification.permission),
+    () => "unsupported"
+  );
+  const needsPermission = on && permission === "default";
+
   const toggle = async () => {
+    if (needsPermission) {
+      await Notification.requestPermission().catch(() => {});
+      rerender((n) => n + 1);
+      chime(false);
+      return;
+    }
     const next = !on;
     if (next && typeof Notification !== "undefined" && Notification.permission === "default") {
       await Notification.requestPermission().catch(() => {});
@@ -54,7 +73,7 @@ export function useAlerts(job: Job) {
     }
     if (next) chime(false);
   };
-  return { on, toggle };
+  return { on, toggle, needsPermission };
 }
 
 function chime(sad: boolean) {
