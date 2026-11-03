@@ -465,7 +465,9 @@ function makePlan(f, config, notes, spec, tested = null) {
   const perMinute = Math.min(rpm, level ? (level.concurrency * 60_000) / level.medianMs : rpm);
   const groups = (config.proxy?.groups ?? []).map((g) => g.toLowerCase());
   const proxy = groups.length ? `${groups.join(' + ')}${config.proxy.countryCode ? ` (${config.proxy.countryCode})` : ''}` : 'direct';
-  const minutes = Math.max(1, Math.ceil(requests / perMinute));
+  // robots.txt's Crawl-delay sets the pace when it's slower: one request at a time.
+  const delay = f.list?.crawlDelaySecs ?? null;
+  const minutes = Math.max(1, Math.ceil(requests / (delay ? Math.min(perMinute, 60 / delay) : perMinute)));
   const route = !f.list ? 'agent' : f.list.embedded ? 'embedded' : f.list.html ? 'html' : 'feed';
   const how = {
     feed: "the site's own data feed (JSON)",

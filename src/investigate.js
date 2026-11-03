@@ -710,8 +710,12 @@ async function respectRobots(list, notes, onEvent) {
     onEvent({ kind: 'robots', allowed: true, text: 'The site has no robots.txt: nothing is off limits.' });
     return; // no robots.txt: everything is allowed
   }
+  // A Crawl-delay is kept too (the frame spaces its requests to the same site by it).
+  // Crawlee's parser holds it but doesn't expose it, hence the reach inside.
+  const delay = Number(robots.robots?.getCrawlDelay?.('*')) || null;
+  if (delay) list.crawlDelaySecs = Math.min(delay, 60);
   if (robots.isAllowed(url)) {
-    onEvent({ kind: 'robots', allowed: true, text: "robots.txt allows these requests." });
+    onEvent({ kind: 'robots', allowed: true, crawlDelaySecs: list.crawlDelaySecs ?? null, text: delay ? `robots.txt allows these requests and asks for ${delay} s between them: the run keeps to that.` : "robots.txt allows these requests." });
     return;
   }
 

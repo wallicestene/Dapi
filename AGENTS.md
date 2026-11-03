@@ -109,6 +109,10 @@ in `.claude/skills/dapi/SKILL.md`. Reviewed:
 - **Better Work Transparency Portal:** published so anyone can see factory findings; no
   clause on automated access; ILO and IFC hold copyright and ask to be consulted before
   material is reproduced. Asking them is the open step.
+- **FDA Warning Letters** (fda.gov): the FDA's website policy says its content is "in the
+  public domain and may be republished, reprinted and otherwise used freely by anyone
+  without the need to obtain permission"; no clause on automated access. robots.txt
+  allows the list and asks for 30 s between requests, which the run keeps.
 - **books.toscrape.com, quotes.toscrape.com** (made for practising extraction) and
   **Wikipedia** (CC BY-SA).
 - **Not to be used:** FSSC (its terms bar "high volume automated means", and it sells the

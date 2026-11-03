@@ -53,7 +53,14 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     timeoutSecs: clamp(proposed.timeoutSecs, 15, 300, 120),
     retryPauseSecs: clamp(proposed.retryPauseSecs, 0, 60, 0),
   };
-  console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries, ${tuning.timeoutSecs} s timeout${tuning.retryPauseSecs ? `, ${tuning.retryPauseSecs} s pause before a retry` : ''}`);
+  // robots.txt's Crawl-delay is kept: one request at a time to that site, that far apart.
+  // (Crawlee's parser holds the delay but doesn't expose it, hence the reach inside.)
+  if (!robotsOverride && spec.sourceUrl) {
+    const robots = await RobotsTxtFile.find(spec.sourceUrl).catch(() => null);
+    const delay = Math.min(60, Number(robots?.robots?.getCrawlDelay?.('*')) || 0);
+    if (delay) Object.assign(tuning, { maxConcurrency: 1, sameDomainDelaySecs: delay });
+  }
+  console.log(`Speed: ${tuning.maxConcurrency} at a time, at most ${tuning.maxRequestsPerMinute}/min, ${tuning.maxRetries} retries, ${tuning.timeoutSecs} s timeout${tuning.retryPauseSecs ? `, ${tuning.retryPauseSecs} s pause before a retry` : ''}${tuning.sameDomainDelaySecs ? `, ${tuning.sameDomainDelaySecs} s between requests (robots.txt)` : ''}`);
 
   // Apify Proxy, when the site part asks for it (the investigation showed the site
   // blocks cloud IPs or serves content by country). Recorded in every receipt.
@@ -312,6 +319,7 @@ export async function runFrame({ site, spec, testLimit = null, maxConcurrency = 
     proxyConfiguration,
     maxConcurrency: tuning.maxConcurrency,
     maxRequestsPerMinute: tuning.maxRequestsPerMinute,
+    ...(tuning.sameDomainDelaySecs && { sameDomainDelaySecs: tuning.sameDomainDelaySecs }),
     maxRequestRetries: tuning.maxRetries,
     navigationTimeoutSecs: tuning.timeoutSecs,
     requestHandlerTimeoutSecs: 120,
