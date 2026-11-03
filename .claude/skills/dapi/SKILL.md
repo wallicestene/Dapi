@@ -927,6 +927,35 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Rules and rights check before submitting (2026-11-03)
+
+- **Repo:** commits run 27 Oct to 3 Nov, one author. No key value (MODEL_API_KEY,
+  APIFY_TOKEN) appears anywhere in `git log -p --all` or in tracked files; `.env` was
+  never tracked. (Checked by searching history for the actual values, printing only
+  names.) Scraped content in the repo is small: 4 FSSC rows in `showcase.json`, a few
+  sample records in `specs/*.findings.json`. Exports carry only the spec's columns:
+  no hashes, receipts, URLs or headers.
+- **How Dapi treats sites:** public pages only; robots.txt obeyed
+  (`respectRobotsTxtFile`); CAPTCHAs and "verify you are human" checks set aside, never
+  solved; Apify's UNBLOCKER group never used. The one grey edge: FSSC answered 403 to
+  direct requests from Apify's servers and 200 through Apify's datacenter proxy, and
+  the run went through the proxy (allowed by our own rules, but it is going round an
+  IP-level refusal).
+- **Sites' terms, read 3 Nov:**
+  - FSSC (fssc.com/terms-of-use, v1 Oct 2021): an authorised user "shall not" use
+    "any high volume automated means (including robots, spiders, scripts, or similar
+    data gathering or extraction methods) to access the Platform". FSSC also sells the
+    register as "Public Register Plus" (automated updates). Risky as the public example.
+  - Better Work (betterwork.org/copyright): ILO and IFC hold copyright; "To request
+    permission to reproduce materials ... consult the Better Work programme". No
+    scraping clause. The portal's stated purpose is to make assessment findings public.
+  - Arbeidstilsynet: the same register (approved occupational health services) was
+    published on data.norge.no under NLOD 2.0, the Norwegian open government data
+    licence (reuse allowed with attribution). Now marked "avpublisert" there (no
+    longer maintained as of 9 Oct 2025), but released under that licence.
+- **The home page's receipt** now says where, when and sealed in plain words; the
+  request, the proxy and the whole SHA-256 stay on the job's receipt.
+
 ### Nothing moves, round two; card art from the job's own data (2026-11-03)
 
 - **Export menu shifted the page:** Radix menus are modal by default and lock the

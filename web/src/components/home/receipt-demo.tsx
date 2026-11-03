@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import showcase from "@/lib/showcase.json";
 import { cn } from "@/lib/utils";
+import { TickMark } from "@/components/tick";
 
 // The home page's live receipt: FSSC's first delivered rows (job 0024) and the response
 // they were read from, as captured on Apify. Click a value to see where it came from.
@@ -17,7 +18,9 @@ const COLUMNS: [string, string][] = [
 ];
 
 const captured = new Date(showcase.capturedAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC" });
-const via = showcase.via.replace(/^Apify Proxy /, "Apify ").toLowerCase().replace(/^apify/, "Apify");
+const site = showcase.host.replace(/^www\./, "");
+// The seal, short: enough to recognise it; the whole fingerprint is on hover and in the job.
+const seal = `${showcase.sha256.slice(0, 8)}…${showcase.sha256.slice(-6)}`;
 
 export function ReceiptDemo() {
   const [at, setAt] = useState({ row: 1, column: "City" });
@@ -75,17 +78,20 @@ export function ReceiptDemo() {
       <div className="border-t bg-raised px-4 py-4">
         <div className="flex min-w-0 items-baseline gap-x-2">
           <span className="truncate text-[15px] font-semibold">{cell.value}</span>
-          <span className="shrink-0 text-[13px] text-ink-2">traced to the server&apos;s own response</span>
+          <span className="shrink-0 text-[13px] text-ink-2">traced to the site&apos;s own data</span>
         </div>
+        {/* What a visitor needs: where it came from, when, and that it can't have changed.
+            The request, the proxy and the whole SHA-256 are one click away, on the job. */}
         <dl className="mt-2.5 grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px]">
-          <dt className="text-ink-2">Request</dt>
-          <dd className="font-mono text-[11.5px] [overflow-wrap:anywhere]">{showcase.request}</dd>
+          <dt className="text-ink-2">From</dt>
+          <dd title={showcase.request}>{site}&apos;s own data feed, the one its public register page loads</dd>
           <dt className="text-ink-2">Captured</dt>
-          <dd>
-            {captured} UTC, via {via} proxy
+          <dd>{captured} UTC</dd>
+          <dt className="text-ink-2">Sealed</dt>
+          <dd className="flex items-center gap-1.5" title={`SHA-256 ${showcase.sha256}: a fingerprint of the response. Change one character and it no longer matches.`}>
+            <TickMark tick="traced" /> the moment it was captured
+            <span className="font-mono text-[11px] text-ink-3">{seal}</span>
           </dd>
-          <dt className="text-ink-2">SHA-256</dt>
-          <dd className="font-mono text-[11.5px] [overflow-wrap:anywhere]">{showcase.sha256}</dd>
         </dl>
         <pre className="mt-3 h-[calc(7lh+22px)] overflow-x-auto rounded-lg border bg-sheet px-3 py-2.5 font-mono text-[12px] leading-[1.7]">
           <span className="text-ink-2">{`${cell.path.split(".").slice(0, -1).join(".")} {`}</span>
