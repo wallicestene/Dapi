@@ -927,6 +927,42 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### One vocabulary, plain first, nothing moves (2026-11-03)
+
+- **Layout shift, measured.** Two causes, both fixed and re-measured with Playwright:
+  the page's scrollbar came and went between short and long steps (11 px each time, so
+  every card stretched), fixed with `scrollbar-gutter: stable` on `<html>`; the home
+  demo's receipt changed height per cell (1 to 5 JSON lines), fixed with one height
+  (`h-[calc(7lh+22px)]`). A picked cell no longer turns bold (an auto-width table
+  widens the column). The job header's count reserves its final width while it ticks.
+  Headless Chromium hides scrollbars: launch with `ignoreDefaultArgs: ['--hide-scrollbars']`
+  to see this kind of shift.
+- **Intro without an inline script.** React 19 warns on `<script>` rendered by a
+  component. The home page now reads a session cookie (`dapi-intro`) on the server and
+  only renders the intro when it's absent; the intro sets the cookie on mount and
+  `<html data-seen>` when it ends (so a client-side return home doesn't replay it).
+- **Vocabulary** lives in `src/prompts/client-voice.md` (a "say / not" table) so Muse and
+  the screens use the same words: the site's data feed, counted (not footed), missing
+  (not short). States: Running, Ready to run, Paused, Delivered, Stopped, Declined.
+  Steps: Spec, Site, Extraction, Samples, Run, Count. Tick letters S and F became icons
+  (the S read as a dollar sign).
+- **Plain first, details on demand.** The strategy event now carries Muse Wonder's own
+  words as `raw` beside the client text; the screen shows the client text and folds the
+  raw reasoning, each column's route and the pace reasoning under Technical details.
+  A failed attempt reads "Attempt 1 didn't pass: 3 values didn't match your samples";
+  the exact problems (written for Muse Spark) sit under Details. Muse Spark's
+  `forClient` lines lead its notes; the working notes fold away.
+- **`forClient` keeps only the numbers that matter.** "Keep every number" made Muse
+  Spark carry page sizes and proof dates into the client summary. Now: keep a number
+  only when it tells the client something about their dataset; drop the working.
+- **Older jobs reworded.** The example jobs (0002, 0006, 0017, 0024, 0026) and recent
+  ones were given the same rewrite a new job gets, by a one-off script outside the repo
+  (job folders are gitignored): `forClient` on the strategy, client lines from Muse
+  Spark's notes, the new attempt and investigation wording. Nothing was deleted: raw
+  text moved to `raw`, problems stay on their events.
+- **Footer** on every page; the hackathon line went (Dapi is built to outlast it).
+  Stopped attempts on the jobs list are a compact list, not 14 art cards.
+
 ### Identity, front door and the client voice (2026-11-02)
 
 - **The mark** (owner's sketch, redrawn): a D in four flat parts, one per stage of a

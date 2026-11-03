@@ -165,9 +165,10 @@ background) and `dapi-mark-animated.svg` (draws, holds, fades, loops). In the ap
   on the line of a response it came from.
 
 ### State
-- **Pencil Green** (#3d7a12): the tick beside a traced value, the "S" of a value that
-  agrees with a sample, the "F" of a footed total. A deeper cut of the lime, because a
-  12 px icon in brand lime fails contrast.
+- **Pencil Green** (#3d7a12): the tick beside a traced value, the double tick of a value
+  that agrees with a sample, the ringed tick of a complete count. Icons, never letters:
+  a mark has to read without its legend. A deeper cut of the lime, because a 12 px icon
+  in brand lime fails contrast.
 - **Pencil Red** (#c42b1c): an exception: a mismatch, a value that never arrived, a
   refused source, a failed request, a sample the site disagrees with. Washes: red wash
   (#fbe3df) with #8a1c12; green wash (#e9f5d3) with #2c5a0d.
@@ -194,7 +195,7 @@ Plex Mono. Tabular figures everywhere, so counts and dates line up.
 
 ### Hierarchy
 - **Hero** (700, clamp 44-78 px, 0.95, -0.045em): the home page's one line.
-- **Display** (700, 38px, -0.03em): the footing figure, "43,037 / 43,037".
+- **Display** (700, 38px, -0.03em): the count figure, "43,037 / 43,037".
 - **Headline** (700, 28px, -0.03em): the one h1 per app screen.
 - **Section** (700, 30-44px, -0.03em): home page section heads.
 - **Title** (600, 14-19px), **Body** (400, 13-17px), **Label** (400, 12px).
@@ -212,10 +213,22 @@ Everything the client reads, from the home page to the plan Muse writes, follows
 code, field names or paths. Muse prompts that write for the client include that file.
 Headlines are 2 to 6 words; a subhead is one sentence.
 
+**One word for each thing** (the table in `client-voice.md`): the site's data feed, not
+API or endpoint; counted, not footed; missing, not short. Job states, the same on every
+screen: Running, Ready to run, Paused (at the plan, on Apify), Delivered, Stopped,
+Declined.
+
+**Plain first, details on demand.** What a model wrote for itself (Muse Wonder's
+reasoning and each column's exact route, Muse Spark's working notes, the test's exact
+problems) folds under "Technical details" or "Details". The client reads the line Muse
+wrote for them. The same screen serves someone who never wants the detail and a
+developer who does.
+
 ## Layout
 
 App screens: fluid canvas, 28px side padding (24 on tablets, 16 on phones). A job reads
-top to bottom: title row (h1 and source left, footing figure right), the
+top to bottom: title row (h1 and source left, the count figure right once there is a
+run; a long title wraps beside it, never pushing it off its line), the
 six-step strip, then the step's content; on Run, the data sheet with a 360px receipt rail
 to its right (below 1024px, under it). The jobs list sits in a centred 1120px column.
 
@@ -232,7 +245,7 @@ receipt; otherwise shadows only on what floats (the code sheet, over a 20% ink s
 ## Shapes
 
 6px on panels, buttons and inputs; 12px on home page cards; a full pill only for the
-table's scope chips. Rules do the structuring: row rules, the footing's double rule.
+table's scope chips. Rules do the structuring: row rules, the count's double rule.
 
 ## Components
 
@@ -257,9 +270,10 @@ didn't deliver goes grey. The status sits top left in a white pill with the prog
 mark. The class lives in `web/src/lib/glass.ts`.
 
 ### The Step Strip (signature)
-Six steps as cards: Spec, Site, Extraction, Samples, Run on Apify, Footed. Each carries
-the mark lit to its stage (Spec and Site: source; Extraction and Samples: extract; Run:
-deliver; Footed: verified), its tick, and a one-line result. The selected step sits on
+Six steps as cards: Spec, Site, Extraction, Samples, Run, Count (on phones, those words;
+wider, "Site investigated", "Samples checked", "Counted"). Each carries the mark lit to
+its stage (Spec and Site: source; Extraction and Samples: extract; Run: deliver; Count:
+verified), its tick, and a one-line result. The selected step sits on
 white with an ink edge; a stopped step's name turns pencil red; the Run card carries
 Apify's logomark, and Apify's colours blended while it runs.
 
@@ -278,7 +292,9 @@ run is done, its time and cost); notes below it appear only for what you'd want 
 ### The Agent Timeline (signature)
 The Site tab's "What Dapi did": a vertical rule, an icon per action (web search, looked
 at a page, tested an endpoint, searched the source…), and a chip naming the Meta model
-that acted: Muse Wonder in violet, Muse Spark in teal.
+that acted: Muse Wonder in violet, Muse Spark in teal. Each run of Muse Wonder's checks
+folds into one row ("checked 18 things on the site to settle the plan") that opens to
+every step; addresses show as their path in mono, the full address on hover.
 
 ### The Ticked Data Sheet (signature)
 Delivered rows in a ruled table, every value followed by its tick; each cell opens its
@@ -290,16 +306,29 @@ badge, and the response in a night panel (keys and values in two tones, the valu
 line in lime); then the SHA-256 seal and "Re-check the seal", which hashes the body in
 the browser and confirms in lime ("Seal verified").
 
-### The Footing (signature)
-The Footed tab opens on night: the mark, "43,037 delivered of 43,037 the source lists",
-and a bar that fills lime when every count is met (pencil red, with the gap named, when
-it isn't).
+### The Count (signature)
+The Count tab opens on night: the mark, "Complete. Every row the source lists is here.",
+"43,037 delivered of 43,037 the source lists", and a bar that fills lime when every
+count is met (pencil red, with the missing rows named, when it isn't). Beside it, what
+the run came to; a line that would read 0 is left out.
+
+### The Footer
+One footer on every page, on night: the mark and a line on what Dapi is, Product links,
+what it's built with (Meta's Muse models, Apify), and the one rule (public data only).
+On a job page it spans the page's full width, like the job.
+
+### Stopped jobs
+On the jobs list, delivered and in-progress jobs are art cards; stopped attempts are a
+compact list (title, site, Stopped or Declined in red, date). They're for looking up.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** show the real product and real numbers from finished jobs.
-- **Do** foot every dataset against the source's own count and name every gap.
+- **Do** count every dataset against the source's own total and name every gap.
+- **Do** keep things still when someone picks: the page keeps its scrollbar's room, a
+  panel that changes with a selection keeps one height, a picked item changes colour,
+  never weight or size.
 - **Do** keep the mark's colours for the four stages, and lime for evidence.
 - **Do** write short: the answer first, one idea per line.
 
