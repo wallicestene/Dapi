@@ -119,8 +119,11 @@ in `.claude/skills/dapi/SKILL.md`. Reviewed:
   register as Public Register Plus). Great Place to Work India, the Climate Litigation
   Database, CnVerify and B Corporation stay out until their terms are reviewed.
 
-Every earlier job and its local data was removed on Nov 3; the demo runs on reviewed
-sources only. Data a job delivers belongs to the account that ran it; Dapi never resells
+Every earlier job was removed on Nov 3, locally and on Apify (60 runs with their
+storage; the evidence store rebuilt with only the demo jobs' records); the demo runs on
+reviewed sources only. **Receipts show only what a job delivers:** other fields a site
+sends (Better Work's responses carry assessor notes about workers) are counted, never
+sent to the browser, and the public copy checks seals on the server. Data a job delivers belongs to the account that ran it; Dapi never resells
 or pools it (today one owner account; user accounts are the production path).
 
 Blocks are worked through with what Apify provides: fresh IPs, datacenter and

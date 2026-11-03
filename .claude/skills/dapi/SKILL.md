@@ -927,6 +927,35 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Exposure audit, crawl delay, loading mark (2026-11-03)
+
+- **Apify cleaned** (owner's go): 60 dapi-runner runs deleted with their dataset,
+  key-value store and queue; `dapi-evidence` rebuilt with only the demo jobs' 137
+  records (copied to a new store, old deleted, new renamed). The evidence loader now
+  looks the store up again when a record is missing, and in development `pipeline()`
+  reloads a changed module (Node otherwise keeps the first copy until a restart).
+- **What a visitor could see:** scanned the demo jobs' 137 captured responses, events
+  and generated code: no credentials, cookies or tokens; no emails. But Better Work's
+  detail responses carry `PersonalNotes`: assessor narratives about individual workers
+  (one gives a child worker's birth date). A receipt showed the whole record, and the
+  seal check sent the whole body to the browser. Now a receipt shows only the fields
+  the job delivers (the rest counted: "11 other fields the site sent aren't shown"),
+  the public copy (`DAPI_READ_ONLY=1`) refuses whole bodies and checks seals on the
+  server (`/api/evidence/verify`), and hides links into the owner's Apify console.
+  Verified on a production build.
+- **Crawl-delay:** FDA's robots.txt asks for 30 s between requests. The investigation
+  records it (Crawlee's parser hides it: `robots.robots.getCrawlDelay('*')`), the plan's
+  time counts it, and the frame spaces requests to the site with `sameDomainDelaySecs`
+  at one at a time (runner redeployed). The investigation's own few scouting requests
+  don't wait 30 s yet: open gap.
+- **Third source: FDA Warning Letters** (public domain by FDA's own policy). Muse Wonder
+  found the table's feed (`/datatables/views/ajax`), 503 letters for 2026.
+- **Loading mark:** `app/loading.tsx` (and `jobs/[id]/loading.tsx`, since the root one
+  only covers a change at the top of the address) draws the mark on a loop while a page
+  is on its way, after 0.25 s so a fast page never flashes it. Only shows in production
+  (dev doesn't prefetch the boundary). The intro replays after 12 hours away.
+- **Phone and tablet:** every page at 390, 768 and 1024 px: nothing scrolls sideways.
+
 ### Clean slate on reviewed sources; a sleeping Mac (2026-11-03)
 
 - Every earlier job and its local evidence was removed (31 jobs, `storage/`); the old
