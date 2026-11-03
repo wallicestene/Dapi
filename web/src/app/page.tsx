@@ -31,6 +31,7 @@ const STEPS = [
 const PROOF = [
   { host: "www.arbeidstilsynet.no", label: "Occupational health services, Norway", note: "A Norwegian register, delivered in English" },
   { host: "portal.betterwork.org", label: "Better Work factory compliance", note: "One row per issue, from the details behind each View button" },
+  { host: "www.fda.gov", label: "FDA warning letters, 2026", note: "A public-domain list, read at the 30 s pace its robots.txt asks for" },
 ];
 
 const WHY = [
@@ -41,7 +42,7 @@ const WHY = [
 ];
 
 export default async function Home() {
-  // The intro plays once per visit; its cookie lasts the browser session.
+  // The intro plays on a first visit and again after 12 hours away (its cookie's life).
   const seen = (await cookies()).has("dapi-intro");
   const delivered = listJobs().filter((j) => j.status === "done" && j.sourceUrl);
   const proof = PROOF.map((p) => ({ ...p, job: delivered.find((j) => new URL(j.sourceUrl!).host === p.host) })).filter((p) => p.job);
@@ -115,10 +116,10 @@ export default async function Home() {
           <section id="examples" className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
             <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">Delivered in full</h2>
             <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs on public sources. Open any of them to check the receipts yourself.</p>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {proof.map(({ host, label, note, job }) => (
                 <Link key={host} href={`/jobs/${job!.id}`} className="group relative block h-[320px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
-                  <JobArt shape={dataShape(job!.id)} ratio={600 / 320} className="absolute inset-0" />
+                  <JobArt shape={dataShape(job!.id)} ratio={400 / 320} className="absolute inset-0" />
                   {/* As on the jobs list: the art above, everything to read on the glass. */}
                   <div className={cn(GLASS, "absolute inset-x-3 bottom-3 flex flex-col gap-1.5 px-4 pt-3.5 pb-4")}>
                     <span className="text-[15.5px] leading-snug font-semibold">{label}</span>

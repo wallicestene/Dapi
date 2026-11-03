@@ -168,13 +168,31 @@
   1% { opacity: 1; }
   to { stroke-dashoffset: 0; opacity: 1; }
 }
+/* The loading mark: the same drawing on a loop (draw, hold, fade, again). The loader
+   itself appears only after 0.25 s, so a quick page never flashes it. */
+.dapi-loading { animation: dapi-loading-in 0.2s ease-out 0.25s both; }
+@keyframes dapi-loading-in { from { opacity: 0; } }
+.mark-loop path {
+  stroke-dasharray: 1 2;
+  animation: mark-loop 2.4s cubic-bezier(0.6, 0, 0.2, 1) infinite both;
+}
+.mark-loop .mark-extract { animation-delay: 0.15s; }
+.mark-loop .mark-deliver { animation-delay: 0.3s; }
+.mark-loop .mark-tick { animation-delay: 0.55s; }
+@keyframes mark-loop {
+  0% { stroke-dashoffset: 1; opacity: 0; }
+  1% { opacity: 1; }
+  30%, 78% { stroke-dashoffset: 0; opacity: 1; }
+  95%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
 /* The stage a job is in: its segment breathes until the stage is done. */
 .mark-now { animation: mark-now 1.6s ease-in-out infinite; }
 @keyframes mark-now {
   50% { opacity: 0.35; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mark-draw path, .mark-now { animation: none; stroke-dashoffset: 0; opacity: 1; }
+  .mark-draw path, .mark-loop path, .mark-now { animation: none; stroke-dashoffset: 0; opacity: 1; }
 }
 
 /* The first-visit intro: the mark draws itself in the middle of the screen, holds, then the page opens
