@@ -391,6 +391,7 @@ function describeAttempt(e) {
   const notes = Object.keys(words).filter((w) => whys.includes(w)).map((w) => words[w]);
   const unreached = samples.filter((s) => s.status === 'not found').length;
   const missing = samples.filter((s) => s.why === 'not on the site').length;
+  if (!samples.length) return e.passed ? `Attempt ${e.attempt} passed: ${e.report.rows} rows in the test run, every check held (the spec has no sample rows to compare).` : `Attempt ${e.attempt} didn't pass: ${problemsInBrief(e.problems)}. Muse Spark is fixing it.`;
   const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(' and ')}` : ''}${missing ? `; ${missing} ${missing === 1 ? "isn't" : "aren't"} on the site: Dapi asked the site for ${missing === 1 ? 'it' : 'them'} directly and got nothing back` : ''}${unreached ? `; ${unreached} couldn't be reached in a test, so the run's first rows are the check` : ''}`;
   return e.passed
     ? `Attempt ${e.attempt} passed: ${sampleText}.`
@@ -498,7 +499,7 @@ function makePlan(f, config, notes, spec, tested = null) {
     unsettled: (f.strategy?.client?.gaps ?? f.strategy?.gaps ?? []).slice(0, 3),
     text: agentRoute
       ? `${records === null ? '' : `The page shows ${records.toLocaleString('en-US')} records${more ? `, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}` : ''}. `}${agentSummary} ${proxy === 'direct' ? 'Directly from Apify\'s servers.' : `Through Apify\'s ${proxy} proxy.`}`
-      : `${records === null ? "Muse Wonder's strategy sets the route." : more ? `The page shows ${records.toLocaleString('en-US')} records, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}.` : `The source lists ${records.toLocaleString('en-US')} records.`} Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} requests, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
+      : `${records === null ? "Muse Wonder's strategy sets the route." : more ? `The page shows ${records.toLocaleString('en-US')} records, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}.` : `The source lists ${records.toLocaleString('en-US')} records.`} Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} request${requests === 1 ? '' : 's'}, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }
 
@@ -834,7 +835,15 @@ async function translateRows({ translate, userSpec, report, disputes }) {
   report.translated = { from: translate.from, to: translate.to, columns: translate.columns, values: map.size };
   say('run', {
     kind: 'translated',
-    text: `Translated ${map.size.toLocaleString('en-US')} values into ${language(translate.to)}${failed.length ? `; ${failed.length} couldn't be and stay in ${language(translate.from)}` : ''}. Every receipt keeps the site's own words; the Apify dataset holds them as the site has them.`,
+    // What actually changed: names and codes come back as they are, and saying they were
+    // "translated" would claim work that didn't happen.
+    text: (() => {
+      const changed = [...map].filter(([from, to]) => from !== to).length;
+      const kept = map.size - changed;
+      return changed
+        ? `Translated ${changed.toLocaleString('en-US')} values into ${language(translate.to)}${kept ? `; ${kept.toLocaleString('en-US')} names and codes stay as the site writes them` : ''}${failed.length ? `; ${failed.length} couldn't be and stay in ${language(translate.from)}` : ''}. Every receipt keeps the site's own words.`
+        : `Nothing needed translating: the values are names and codes, kept as the site writes them.`;
+    })(),
     untranslated: failed.slice(0, 20),
   });
 }
