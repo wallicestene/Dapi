@@ -10,3 +10,16 @@ storage/
 /jobs/
 # Design-check output (taste-skill inspector)
 .taste-skill/
+
+# Working files: the project notebook, design and product notes, agent context, early
+# probes and prototypes. Kept on disk to build with, not part of the product.
+.claude/
+.impeccable/
+AGENTS.md
+PRODUCT.md
+DESIGN.md
+web/AGENTS.md
+web/README.md
+spike/
+sites/
+specs/*.findings.json

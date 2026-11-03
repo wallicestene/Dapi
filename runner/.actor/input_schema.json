@@ -7,7 +7,7 @@
       "title": "Site part",
       "type": "string",
       "editor": "textarea",
-      "description": "ES module source exporting `start` and `handle`, as in sites/betterwork.js."
+      "description": "ES module source exporting `start` and `handle`: the extraction Muse Spark writes for each site."
     },
     "spec": {
       "title": "Spec",
