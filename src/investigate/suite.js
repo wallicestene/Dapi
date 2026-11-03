@@ -1,7 +1,9 @@
 // The investigation's test suite: sites built in different ways, each run through the
 // first pass, so a change is checked against every kind of site rather than the last
-// spec. Five are real client jobs; the rest are sites made for practising extraction
-// (toscrape.com) and a Wikipedia table. Pass = the first pass never crashes, and finds
+// spec. Only sources we may use: two public registers whose data is published for
+// anyone (Better Work's Transparency Portal; Arbeidstilsynet's register, released as
+// NLOD open data), sites made for practising extraction (toscrape.com) and a Wikipedia
+// table (CC BY-SA). Pass = the first pass never crashes, and finds
 // the list where one of its routes can (a site it can't read must hand over to the agent,
 // not fail).
 //
@@ -12,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { investigate } from '../investigate.js';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const fromJob = (id) => JSON.parse(fs.readFileSync(`${root}jobs/${id}/spec.json`, 'utf8'));
+const fromSpecs = (name) => JSON.parse(fs.readFileSync(`${root}specs/${name}.spec.json`, 'utf8'));
 const spec = (title, sourceUrl, rowUnit, sample) => ({
   title,
   sourceUrl,
@@ -26,11 +28,8 @@ const spec = (title, sourceUrl, rowUnit, sample) => ({
 // expect: the route a good first pass takes ('feed', 'embedded', 'html'), or 'agent' when
 // the first pass is expected to hand over.
 export const CASES = [
-  { name: 'betterwork', kind: 'JSON feed (POST), detail behind a click', spec: () => fromJob('0006'), expect: 'feed' },
-  { name: 'gptw', kind: 'tables embedded in the page', spec: () => fromJob('0002'), expect: 'embedded' },
-  { name: 'arbeidstilsynet', kind: "one record's page, list above it", spec: () => fromJob('0016'), expect: 'feed' },
-  { name: 'fssc', kind: 'paged JSON feed (WordPress ajax)', spec: () => fromJob('0024'), expect: 'feed' },
-  { name: 'climate', kind: 'HTML list with Load more (WordPress)', spec: () => fromJob('0027'), expect: 'html' },
+  { name: 'betterwork', kind: 'JSON feed (POST), detail behind a click', spec: () => fromSpecs('betterwork-compliance'), expect: 'feed' },
+  { name: 'arbeidstilsynet', kind: 'a register behind a search page', spec: () => fromSpecs('norway-health-services'), expect: 'feed' },
   { name: 'books', kind: 'HTML list with next pages', spec: () => spec('Books to Scrape', 'https://books.toscrape.com/', 'book', { Title: 'A Light in the Attic', Price: '£51.77' }), expect: 'html' },
   {
     name: 'quotes-scroll',

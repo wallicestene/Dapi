@@ -99,6 +99,26 @@ asks for it and the site shows it, Dapi collects it, people's names, emails and
 websites included (owner's call, Nov 1). No logins, no paywalls, no terms-of-service
 violations.
 
+**Sources we may use (owner's call, Nov 3).** Only sites whose data is public *and*
+whose terms let us collect and show it. Before a source is used anywhere (a demo, a
+test, the investigation suite, a job we show), read its terms and record what they say
+in `.claude/skills/dapi/SKILL.md`. Reviewed:
+
+- **Arbeidstilsynet**, the register of approved occupational health services: released
+  as open data under NLOD 2.0 (reuse allowed, with the credit line NLOD asks for).
+- **Better Work Transparency Portal:** published so anyone can see factory findings; no
+  clause on automated access; ILO and IFC hold copyright and ask to be consulted before
+  material is reproduced. Asking them is the open step.
+- **books.toscrape.com, quotes.toscrape.com** (made for practising extraction) and
+  **Wikipedia** (CC BY-SA).
+- **Not to be used:** FSSC (its terms bar "high volume automated means", and it sells the
+  register as Public Register Plus). Great Place to Work India, the Climate Litigation
+  Database, CnVerify and B Corporation stay out until their terms are reviewed.
+
+Every earlier job and its local data was removed on Nov 3; the demo runs on reviewed
+sources only. Data a job delivers belongs to the account that ran it; Dapi never resells
+or pools it (today one owner account; user accounts are the production path).
+
 Blocks are worked through with what Apify provides: fresh IPs, datacenter and
 residential proxies, sessions and fingerprints, and waiting out a check that clears
 itself. **The one line: a check that wants a person to act** (a CAPTCHA, a "verify
