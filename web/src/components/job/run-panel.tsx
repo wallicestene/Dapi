@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/shell";
+import { TickMark } from "@/components/tick";
 import { n } from "@/lib/steps";
 import { cn } from "@/lib/utils";
 import { ROUTE_WORD } from "@/lib/stage";
@@ -48,8 +49,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
     if (e.step === "run" && (e.kind === "started" || e.kind === "following")) current = i;
   });
   const notes = events.slice(current).filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify"].includes(e.kind)).slice(-4);
-  // Whether this run started on its own (nothing in the plan needed the client).
-  const autoStarted = [...events].reverse().find((e) => e.kind === "plan" || e.kind === "auto-go")?.kind === "auto-go";
+
   // Apify's own account of the run, as figures.
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
@@ -57,10 +57,9 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
     // strip's row and pushes the sheet down the page.
     <div className="grid flex-1 content-start items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <ApifyStrip job={job} finished={finished} readOnly={readOnly} />
-      {(notes.length > 0 || autoStarted) && (
+      {notes.length > 0 && (
         <div className="rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">
           <ul className="text-[13px]" aria-label="During the run">
-            {autoStarted && <li className="py-1 text-ink-2">The run started on its own: nothing in the plan needed you.</li>}
             {notes.map((e) => (
               <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" || e.kind === "stopped" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
                 {e.text}
@@ -199,10 +198,14 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
           <p className="mt-1 text-[14.5px] leading-relaxed text-ink-2">{plan.text}</p>
         </div>
       </div>
-      {/* Why this plan waited for you; small things Dapi handled itself aren't listed. */}
-      {needsYou.length > 0 && (
+      {/* What's worth a look before Go; small things Dapi handled itself aren't listed. */}
+      {needsYou.length === 0 ? (
+        <p className="mx-6 mb-4 flex items-center gap-2 text-[14px] text-ink-2">
+          <TickMark tick="traced" /> Nothing needs a closer look. Small differences in your samples, like spacing or a typo, are handled.
+        </p>
+      ) : (
         <div className="mx-6 mb-4 rounded-xl border border-deliver/40 bg-[#e6f7f5] px-4 py-3 text-[14px]">
-          <p className="font-semibold">Dapi needs your Go because</p>
+          <p className="font-semibold">Worth a look before you run</p>
           <ul className="mt-1 flex flex-col gap-1 text-ink-2">
             {needsYou.map((r) => (
               <li key={r} className="flex gap-2">

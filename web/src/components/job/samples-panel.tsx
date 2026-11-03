@@ -1,5 +1,5 @@
 import { TickMark } from "@/components/tick";
-import { latestSamples, type Report } from "@/lib/steps";
+import { latestSamples, smallDifference, type Report } from "@/lib/steps";
 import type { JobEvent } from "@/lib/types";
 import { Panel, Waiting } from "./panel";
 
@@ -11,7 +11,7 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[14px] text-ink-2">
-        Each sample row from your spec, found in {report ? "the delivered rows" : "the test run"} and compared column by column. Where they differ, Dapi delivers what the site shows.
+        Each sample row from your spec, found in {report ? "the delivered rows" : "the test run"} and compared column by column. Small differences (spacing, a typo) are handled; where the site shows something else, Dapi delivers what the site shows.
       </p>
       <div className="grid items-start gap-4 xl:grid-cols-2">
         {samples.map((s) => (
@@ -21,7 +21,7 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
             action={
               <span className="flex items-center gap-1.5 text-[13px] text-ink-2">
                 {s.status === "not found" ? "not found in the rows" : s.row === null ? "" : `row ${s.row + 1}`}
-                <TickMark tick={s.status === "pass" ? "sample" : s.status === "warn" ? "near" : "fail"} />
+                <TickMark tick={s.status === "pass" || (s.status === "warn" && s.checks.every((c) => c.status === "exact" || smallDifference(c.why))) ? "sample" : s.status === "warn" ? "near" : "fail"} />
               </span>
             }
           >
@@ -44,13 +44,13 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
                     <td className="px-3 py-2 break-words">
                       {String(c.actual) || <span className="text-ink-3">blank</span>}
                       {c.why && (
-                        <span className="mt-0.5 block text-[12px] text-pencil-red">
-                          {c.why === "spacing" ? "spacing differs" : c.why === "typo" ? "likely a typo in your spec" : c.why === "site" || c.why === "dispute" ? "the site shows this; delivered as the site shows it" : `your value is this record's ${c.belongsTo}`}
+                        <span className={smallDifference(c.why) ? "mt-0.5 block text-[12px] text-ink-3" : "mt-0.5 block text-[12px] text-pencil-red"}>
+                          {c.why === "spacing" ? "spacing differs: handled" : c.why === "typo" ? "likely a typo in your spec: handled" : c.why === "site" || c.why === "dispute" ? "the site shows this; delivered as the site shows it" : `your value is this record's ${c.belongsTo}: handled`}
                         </span>
                       )}
                     </td>
                     <td className="px-3 py-2">
-                      <TickMark tick={TICK[c.status]} />
+                      <TickMark tick={c.status === "warn" && smallDifference(c.why) ? "sample" : TICK[c.status]} />
                     </td>
                   </tr>
                 ))}

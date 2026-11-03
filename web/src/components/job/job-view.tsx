@@ -118,7 +118,7 @@ function JobNotice({ job, events, steps, onOpen }: { job: Job; events: JobEvent[
     job.status === "waiting"
       ? {
           tone: "go" as const,
-          title: "Dapi needs your Go",
+          title: "Ready to run: your Go starts it on Apify",
           lines: (plan?.needsYou as string[] | undefined) ?? [],
           action: "Review the plan",
           tab: "run" as Tab,

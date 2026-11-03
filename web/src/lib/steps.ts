@@ -36,6 +36,12 @@ export interface Report {
   samples: SampleCheck[];
 }
 
+// A small difference between a sample and the site, the kind Dapi handles without
+// asking: spacing, a likely typo in the spec, a value typed under another column. It
+// counts as a match. A value the site shows differently is not small: the client sees it.
+export const smallDifference = (why?: string) => why === "spacing" || why === "typo" || why === "column";
+const matches = (c: SampleCheck["checks"][number]) => c.status === "exact" || (c.status === "warn" && smallDifference(c.why));
+
 const last = (events: JobEvent[], kind: string, step?: string) =>
   [...events].reverse().find((e) => e.kind === kind && (!step || e.step === step));
 
@@ -74,7 +80,7 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
   const tested = last(events, "tested");
   const samples = latestSamples(events, report);
   const exact = samples.filter((s) => s.status === "pass").length;
-  const near = samples.filter((s) => s.status === "warn").length;
+  const near = samples.filter((s) => s.status === "warn" && !s.checks.every(matches)).length;
   const bad = samples.filter((s) => s.status === "fail" || s.status === "not found").length;
   const expected = job.expected ?? null;
 
@@ -145,7 +151,7 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
 // The samples' values in one short line: how many match; the why is on the tab.
 function sampleLine(samples: SampleCheck[]) {
   const checks = samples.flatMap((s) => s.checks);
-  const matching = checks.filter((c) => c.status === "exact").length;
+  const matching = checks.filter(matches).length;
   const missingSamples = samples.filter((s) => s.status === "not found").length;
   return [`${matching} of ${checks.length} values match`, missingSamples && `${missingSamples} sample${missingSamples === 1 ? "" : "s"} not found`].filter(Boolean).join(", ");
 }

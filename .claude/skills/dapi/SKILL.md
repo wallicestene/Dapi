@@ -927,6 +927,25 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Go is always the client's; small sample differences are handled (owner's call, Nov 3)
+
+- **The run always waits for Go.** Tried starting clean runs on their own, then reverted:
+  a run spends the client's Apify account and acts on someone else's site, and the home
+  page promises "Dapi shows you the plan, the time and the cost before anything runs".
+  Products that spend money show a plan and wait for a confirm (Terraform's plan/apply,
+  a checkout's total, Apify's own Start). Automation belongs later, opt-in (schedules,
+  "run automatically next time"). `--go` stays for scripted runs.
+- **The plan lists only what's worth a look** (`needsYou`): a column that won't be
+  delivered, open points, a sample record not on the site, values the site shows
+  differently, robots.txt, people's data, a run over 30 min or 5,000 requests. With
+  none: "Nothing needs a closer look."
+- **Small sample differences are matches** (`smallDifference`: spacing, a likely typo,
+  a value under another column): green tick, a grey "handled" note, not counted as an
+  exception or on the step card (Better Work: 1 exception, a spacing difference, now 0).
+  A value the site shows differently stays red.
+- A notice under the job title says what each state needs (ready to run, stopped,
+  can't extract, rows missing) with a button to the step that explains it.
+
 ### The evidence store belongs to the runner (2026-11-03)
 
 - The runner Actor runs with **limited permissions**: it can create storage and use

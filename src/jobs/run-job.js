@@ -115,15 +115,11 @@ try {
   const plan = makePlan(findings, config, writerNotes, spec, written.report);
   plan.needsYou = needsYou(plan, findings);
   say('plan', { kind: 'plan', text: plan.text, ...plan });
-  // Nothing that needs the client: the run starts on its own (spacing, a typo in the
-  // spec, a value under another column, dates and translation are Dapi's to handle). A
-  // plan the client brought back after "Not now" always waits: they chose to look.
-  if (autoGo || (!plan.needsYou.length && from !== 'plan')) {
-    if (!autoGo) say('plan', { kind: 'auto-go', text: "Nothing in the plan needs you, so the run starts on its own. Small differences, like spacing or a typo in a sample, Dapi handles itself." });
-    writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString(), auto: !autoGo });
-  } else {
-    updateJob(dir, { status: 'waiting', records: plan.records });
-  }
+  // The run always waits for the client's Go: it spends their Apify account and acts on
+  // someone else's site, and the plan (time, cost, anything worth a look) is the promise
+  // Dapi makes before it does. (--go is for scripted runs only.)
+  updateJob(dir, { status: 'waiting', records: plan.records });
+  if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
   let approval;
   while (!(approval = readJson(dir, 'approve.json'))) await sleep(1000);
   if (!approval.go) {
@@ -393,14 +389,18 @@ function describeAttempt(e) {
   if (e.kind === 'unwritten') return `Attempt ${e.attempt}: Muse Spark didn't answer (${e.error}), so this attempt is spent.`;
   if (!e.report) return `Attempt ${e.attempt}: the test run crashed.`;
   const samples = e.report.samples;
-  const pass = samples.filter((s) => s.status === 'pass').length;
+  // Small differences (spacing, a typo in the spec, a value under another column) count
+  // as matches; only what the site shows differently is called out.
+  const small = (c) => c.status === 'exact' || (c.status === 'warn' && ['spacing', 'typo', 'column', undefined].includes(c.why));
+  const pass = samples.filter((s) => s.status === 'pass' || (s.status === 'warn' && s.checks.every(small))).length;
   const whys = samples.flatMap((s) => s.checks.filter((c) => c.status === 'warn').map((c) => c.why ?? 'spacing'));
-  const words = { spacing: 'spacing', typo: 'a likely typo in your spec', column: 'a value under another column', dispute: 'values the site shows differently' };
-  const notes = Object.keys(words).filter((w) => whys.includes(w)).map((w) => words[w]);
+  const handled = whys.some((w) => ['spacing', 'typo', 'column'].includes(w));
+  const disputed = whys.filter((w) => w === 'dispute' || w === 'site').length;
+  const notes = [handled && 'small differences in your samples handled', disputed && `the site shows something else for ${disputed} value${disputed === 1 ? '' : 's'}`].filter(Boolean);
   const unreached = samples.filter((s) => s.status === 'not found').length;
   const missing = samples.filter((s) => s.why === 'not on the site').length;
   if (!samples.length) return e.passed ? `Attempt ${e.attempt} passed: ${e.report.rows} rows in the test run, every check held (the spec has no sample rows to compare).` : `Attempt ${e.attempt} didn't pass: ${problemsInBrief(e.problems)}. Muse Spark is fixing it.`;
-  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(' and ')}` : ''}${missing ? `; ${missing} ${missing === 1 ? "isn't" : "aren't"} on the site: Dapi asked the site for ${missing === 1 ? 'it' : 'them'} directly and got nothing back` : ''}${unreached ? `; ${unreached} couldn't be reached in a test, so the run's first rows are the check` : ''}`;
+  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match${notes.length ? `; ${notes.join('; ')}` : ''}${missing ? `; ${missing} ${missing === 1 ? "isn't" : "aren't"} on the site: Dapi asked the site for ${missing === 1 ? 'it' : 'them'} directly and got nothing back` : ''}${unreached ? `; ${unreached} couldn't be reached in a test, so the run's first rows are the check` : ''}`;
   return e.passed
     ? `Attempt ${e.attempt} passed: ${sampleText}.`
     : `Attempt ${e.attempt} didn't pass: ${problemsInBrief(e.problems)}. Muse Spark is fixing it.`;
@@ -438,9 +438,9 @@ function testDisputes(report) {
   );
 }
 
-// Why the plan waits for the client's Go, in their words: anything that changes what
-// they'll get, spends a lot of their Apify account, or is their call. Empty: the run
-// starts on its own.
+// What's worth a look before the client presses Go, in their words: anything that
+// changes what they'll get, spends a lot of their Apify account, or is their call.
+// Small sample differences (spacing, a typo) never appear: Dapi handles those.
 const BIG_RUN = { minutes: 30, requests: 5000 };
 function needsYou(plan, f) {
   const reasons = [];

@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import { jobPath, pipeline, readJson } from "@/lib/server/dapi";
 import type { Cell, Row, RowsPage, Tick, Why } from "@/lib/types";
+import { smallDifference } from "@/lib/steps";
 
 interface Item {
   [column: string]: unknown;
@@ -81,7 +82,8 @@ async function load(id: string) {
       const check = sample?.checks.find((c) => c.column === column);
       if (check) {
         cell.sample = { label: sample!.label, expected: check.expected, why: check.why, belongsTo: check.belongsTo };
-        if (tick !== "missing") cell.tick = check.status === "exact" ? "sample" : check.status === "warn" ? "near" : "fail";
+        // A small difference (spacing, a typo in the spec) is a match: not an exception.
+        if (tick !== "missing") cell.tick = check.status === "exact" || (check.status === "warn" && smallDifference(check.why)) ? "sample" : check.status === "warn" ? "near" : "fail";
       }
       cells[column] = cell;
     }
