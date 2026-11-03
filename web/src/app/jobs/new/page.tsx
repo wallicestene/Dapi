@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { TopBar } from "@/components/shell";
+import { Footer, TopBar } from "@/components/shell";
 import { READ_ONLY } from "@/lib/server/dapi";
 import { NewJobForm } from "./form";
 
@@ -42,6 +42,7 @@ export default function NewJob() {
           <p className="border-t pt-3.5 text-[13px] text-ink-2">Public data only. No logins, no paywalls, no CAPTCHA solving.</p>
         </aside>
       </main>
+      <Footer />
     </div>
   );
 }

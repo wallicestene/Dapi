@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Mark, Wordmark } from "@/components/shell";
+import { Footer, Mark, Wordmark } from "@/components/shell";
 import { ReceiptDemo } from "@/components/home/receipt-demo";
 import { Intro } from "@/components/home/intro";
 import { JobArt } from "@/components/job-art";
@@ -18,23 +18,23 @@ export const dynamic = "force-dynamic";
 // Every number here comes from a finished job's own record.
 
 const STEPS = [
-  { n: 1, name: "Source", title: "Finds the data behind the page", body: "Dapi's agent opens the site, watches its traffic and finds the feed the page itself uses." },
+  { n: 1, name: "Source", title: "Finds the site's data feed", body: "Muse Wonder opens the site, watches what it loads, and finds the feed behind the page." },
   { n: 2, name: "Extract", title: "Writes the extraction and tests it", body: "Muse Spark writes the code and checks it against your sample rows before anything runs." },
-  { n: 3, name: "Deliver", title: "Runs on Apify at the site's pace", body: "You approve the plan. Rows stream into your dataset as they're found." },
-  { n: 4, name: "Verified", title: "Proves every value", body: "Each value links to the server response it came from, hashed the moment it was captured." },
+  { n: 3, name: "Deliver", title: "Runs on Apify", body: "You approve the plan, the time and the cost. Rows land in your dataset as they're found." },
+  { n: 4, name: "Verified", title: "Proves every value", body: "Every value links to the response it came from, sealed the moment it was captured." },
 ];
 
 const PROOF = [
   { id: "0024", label: "FSSC certified organisations", note: "A 43,037-record register, read from its own data feed" },
   { id: "0002", label: "Great Place to Work India", note: "Four tables embedded in one page, plus a profile per company" },
-  { id: "0006", label: "Better Work factory compliance", note: "One row per issue, from a request behind a View button" },
+  { id: "0006", label: "Better Work factory compliance", note: "One row per issue, from the details behind each View button" },
   { id: "0017", label: "Occupational health services, Norway", note: "Spoken spec, delivered in English from a Norwegian site" },
 ];
 
 const WHY = [
-  { title: "Calls the API, not the page", body: "Most sites load their data from a feed. Dapi reads that feed: faster, steadier, and in the server's own words." },
-  { title: "Receipts, not logs", body: "Open any value to see the exact response, when it was captured, and its SHA-256." },
-  { title: "Counted, never quietly short", body: "Rows are footed against the source's own total. Anything missing is named, with the reason." },
+  { title: "Reads the data feed, not the page", body: "Most sites load their data from a feed. Dapi reads that feed: faster, steadier, and in the site's own words." },
+  { title: "Receipts, not logs", body: "Open any value to see the exact response it came from, when it was captured, and its SHA-256 seal." },
+  { title: "Counted, never quietly short", body: "Rows are counted against the source's own total. Anything missing is named, with the reason." },
   { title: "Your samples guide, the site decides", body: "When a sample disagrees with the site, you see both, and Dapi delivers what the site shows." },
 ];
 
@@ -52,8 +52,8 @@ export default async function Home() {
           <a href="#how" className="hover:text-ink">
             How it works
           </a>
-          <a href="#proof" className="hover:text-ink">
-            Delivered
+          <a href="#examples" className="hover:text-ink">
+            Examples
           </a>
           <Link href="/jobs" className="hover:text-ink">
             Jobs
@@ -81,11 +81,10 @@ export default async function Home() {
               </Button>
               <Button asChild variant="outline" className="h-11 bg-sheet px-5 text-[15px]">
                 <Link href="/jobs/0024">
-                  See a delivered job <ArrowRight className="size-4" />
+                  See an example <ArrowRight className="size-4" />
                 </Link>
               </Button>
             </div>
-            <p className="text-[13px] text-ink-2">Runs on Apify. Built with Meta&apos;s Muse Spark, Muse Wonder and Muse Voice Transcribe.</p>
           </div>
           <ReceiptDemo />
         </section>
@@ -93,7 +92,7 @@ export default async function Home() {
         <section id="how" className="bg-night text-[#e6e9da]">
           <div className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
             <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em] text-white">From a spec to a proven dataset</h2>
-            <p className="mt-3 max-w-[560px] text-[17px] text-[#b8c0b9]">Write the spec the way you&apos;d brief a freelancer: the site, the columns, a few sample rows. PDF, text, or say it out loud.</p>
+            <p className="mt-3 max-w-[560px] text-[17px] text-[#b8c0b9]">Write the spec the way you&apos;d brief a freelancer: the site, the columns, a few sample rows. Upload a PDF, paste text, or say it out loud.</p>
             <ol className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((s) => (
                 <li key={s.n} className="flex flex-col gap-3">
@@ -110,9 +109,9 @@ export default async function Home() {
         </section>
 
         {proof.length > 0 && (
-          <section id="proof" className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
-            <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">Delivered, and counted against the source</h2>
-            <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs, real public sources. Open any of them to check the receipts yourself.</p>
+          <section id="examples" className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
+            <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">Delivered in full</h2>
+            <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs on public sources. Open any of them to check the receipts yourself.</p>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {proof.map(({ id, label, note, job }) => (
                 <Link key={id} href={`/jobs/${id}`} className="group relative block h-[320px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
@@ -136,6 +135,7 @@ export default async function Home() {
         )}
 
         <section className="mx-auto w-full max-w-[1240px] px-5 pb-20 sm:px-8">
+          <h2 className="mb-8 max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">Data you can stand behind</h2>
           <div className="grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2">
             {WHY.map((w) => (
               <div key={w.title} className="flex flex-col gap-2 bg-sheet p-7">
@@ -144,14 +144,13 @@ export default async function Home() {
               </div>
             ))}
           </div>
-          <p className="mt-5 text-[14px] text-ink-2">Public data only. No logins, no paywalls, and no CAPTCHA solving.</p>
         </section>
 
         <section className="mx-auto w-full max-w-[1240px] px-5 pb-24 sm:px-8">
           <div className="flex flex-col items-start gap-5 rounded-2xl bg-sheet px-7 py-10 sm:flex-row sm:items-center sm:px-10">
             <div className="flex flex-col gap-1">
               <h2 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">Have a spec? See it run.</h2>
-              <p className="text-[15px] text-ink-2">Dapi shows you the plan, the cost and the time before anything runs.</p>
+              <p className="text-[15px] text-ink-2">Dapi shows you the plan, the time and the cost before anything runs.</p>
             </div>
             <Button asChild className="h-11 px-5 text-[15px] sm:ml-auto">
               <Link href={start.href}>{start.label}</Link>
@@ -160,13 +159,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-6 text-[13px] text-ink-2 sm:px-8">
-          <Wordmark />
-          <span>Built for the Meta Global AI Developer Hackathon, 2026</span>
-          <span className="sm:ml-auto">Muse Spark · Muse Wonder · Muse Voice Transcribe · Apify</span>
-        </div>
-      </footer>
+      <Footer readOnly={READ_ONLY} />
     </div>
   );
 }

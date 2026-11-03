@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CheckCircle2, Plus } from "lucide-react";
+import { ArrowRight, CheckCircle2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Mark, TopBar } from "@/components/shell";
+import { Footer, Mark, TopBar } from "@/components/shell";
 import { JobArt } from "@/components/job-art";
 import { GLASS } from "@/lib/glass";
 import { READ_ONLY, listJobs } from "@/lib/server/dapi";
@@ -12,15 +12,16 @@ import type { Job } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Jobs · Dapi" };
 
+// One word per state, the same on every screen (DESIGN.md, Voice).
 const STATUS: Record<Job["status"], string> = {
   running: "Running",
-  waiting: "Waiting for your Go",
-  held: "Paused between steps",
+  waiting: "Ready to run",
+  held: "Paused",
   done: "Delivered",
-  failed: "Stopped: failed a check",
-  declined: "Refused",
+  failed: "Stopped",
+  declined: "Declined",
   cancelled: "Paused at the plan",
-  stopped: "Run stopped",
+  stopped: "Stopped",
 };
 const statusOf = (j: Job) => (j.status === "stopped" && j.paused ? "Paused on Apify" : STATUS[j.status]);
 
@@ -30,7 +31,7 @@ const FILTERS = [
   { key: "all", label: "All", has: () => true },
   { key: "delivered", label: "Delivered", has: (j: Job) => j.status === "done" },
   { key: "active", label: "In progress", has: (j: Job) => j.status === "running" || j.status === "waiting" },
-  { key: "paused", label: "Paused by you", has: (j: Job) => pausedByYou(j) },
+  { key: "paused", label: "Paused", has: (j: Job) => pausedByYou(j) },
   { key: "stopped", label: "Stopped", has: (j: Job) => stoppedItself(j) },
 ];
 
@@ -45,10 +46,10 @@ export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
     filter.key === "all"
       ? [
           { title: null, jobs: shown.filter((j) => !pausedByYou(j) && !stoppedItself(j)) },
-          { title: "Paused by you", jobs: shown.filter(pausedByYou) },
-          { title: "Stopped", jobs: shown.filter(stoppedItself) },
+          { title: "Paused", jobs: shown.filter(pausedByYou) },
+          { title: "Stopped", jobs: shown.filter(stoppedItself), compact: true },
         ]
-      : [{ title: null, jobs: shown }];
+      : [{ title: null, jobs: shown, compact: filter.key === "stopped" }];
   return (
     <div className="flex min-h-screen flex-col">
       <TopBar />
@@ -90,13 +91,24 @@ export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
             .map((g) => (
               <section key={g.title ?? "main"} className="flex flex-col gap-3">
                 {g.title && <h2 className="mt-4 text-[15px] font-semibold text-ink-2">{g.title}</h2>}
-                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {g.jobs.map((job) => (
-                    <li key={job.id}>
-                      <JobCard job={job} />
-                    </li>
-                  ))}
-                </ul>
+                {/* Stopped attempts are a short list, not cards: they're for looking up, not for show. */}
+                {"compact" in g && g.compact ? (
+                  <ul className="divide-y divide-rule overflow-hidden rounded-xl border bg-sheet">
+                    {g.jobs.map((job) => (
+                      <li key={job.id}>
+                        <JobRow job={job} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {g.jobs.map((job) => (
+                      <li key={job.id}>
+                        <JobCard job={job} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
             ))
         ) : (
@@ -111,7 +123,25 @@ export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
           </div>
         )}
       </main>
+      <Footer readOnly={READ_ONLY} />
     </div>
+  );
+}
+
+// A stopped job, on one line: what it was, where, why it stopped, when.
+function JobRow({ job }: { job: Job }) {
+  const host = job.sourceUrl ? new URL(job.sourceUrl).host.replace(/^www\./, "") : null;
+  return (
+    <Link href={`/jobs/${job.id}`} className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-0.5 px-5 py-3 hover:bg-raised sm:grid-cols-[minmax(0,1fr)_160px_120px_72px_16px]">
+      <span className="min-w-0">
+        <span className="block truncate text-[14.5px] font-medium">{job.title ?? `Job ${job.id}`}</span>
+        {host && <span className="block truncate text-[13px] text-ink-2 sm:hidden">{host}</span>}
+      </span>
+      <span className="hidden truncate text-[13px] text-ink-2 sm:block">{host}</span>
+      <span className="text-[13px] font-medium text-pencil-red">{statusOf(job)}</span>
+      <span className="hidden text-right text-[13px] text-ink-2 tabular-nums sm:block">{new Date(job.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+      <ArrowRight aria-hidden className="hidden size-4 text-ink-3 transition-transform group-hover:translate-x-0.5 sm:block" />
+    </Link>
   );
 }
 
@@ -137,7 +167,7 @@ function JobCard({ job }: { job: Job }) {
             <span className="inline-flex items-center gap-1.5 text-[21px] leading-none font-bold tracking-[-0.02em] tabular-nums">
               {(job.rows ?? 0).toLocaleString("en-US")}
               {job.expected != null && <span className="text-[13px] font-medium text-white/60">/ {job.expected.toLocaleString("en-US")}</span>}
-              {job.status === "done" && (short ? <span className="text-[12px] font-semibold text-[#ffb4a3]">short</span> : <CheckCircle2 aria-label="Footed to the source's total" className="size-4 text-verified" />)}
+              {job.status === "done" && (short ? <span className="text-[12px] font-semibold text-[#ffb4a3]">{(job.expected! - (job.rows ?? 0)).toLocaleString("en-US")} missing</span> : <CheckCircle2 aria-label="Every row the source lists" className="size-4 text-verified" />)}
             </span>
           ) : (
             <span className="text-[13px] text-white/60">No run yet</span>

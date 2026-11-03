@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-// One grotesk with a width axis: the condensed cut sets titles and the footing figure,
+// One grotesk with a width axis: the condensed cut sets titles and the count figure,
 // the normal cut everything else. A mono only for requests, responses and seals.
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -18,7 +18,7 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Dapi",
-  description: "Web data you can stand behind: every value with its receipt, the dataset footed against the source's own count.",
+  description: "Web data you can prove: send a spec, get the dataset, with a receipt for every value and every row counted against the source.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
