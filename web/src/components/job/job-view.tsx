@@ -8,6 +8,8 @@ import { Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { STAGE_TEXT, stageOf } from "@/lib/stage";
+import { useAlerts } from "@/lib/alerts";
+import { Bell, BellOff } from "lucide-react";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
@@ -41,6 +43,7 @@ export function JobView({
   readOnly: boolean;
 }) {
   const [job, setJob] = useState(initialJob);
+  const alerts = useAlerts(job);
   const [events, setEvents] = useState(initialEvents);
   const [report, setReport] = useState(initialReport);
   const [picked, setPicked] = useState<Tab | null>(null);
@@ -98,6 +101,9 @@ export function JobView({
         crumb={job.title ?? `Job ${job.id}`}
         actions={
           <>
+            <Button variant="ghost" size="icon" onClick={alerts.toggle} aria-pressed={alerts.on} title={alerts.on ? "Alerts on: a chime, the tab title and a notification when this job needs you or finishes" : "Alerts off"} aria-label={alerts.on ? "Turn alerts off" : "Turn alerts on"} className="text-ink-2">
+              {alerts.on ? <Bell /> : <BellOff />}
+            </Button>
             {job.runUrl && (
               <Button variant="outline" asChild className="hidden h-8 border-control bg-sheet sm:inline-flex">
                 <a href={job.runUrl} target="_blank" rel="noreferrer">
@@ -144,7 +150,7 @@ export function JobView({
               {job.status === "done"
                 ? `rows delivered · footed against the source's count`
                 : job.runId
-                  ? `rows delivered · ${live ? "streaming" : job.status}`
+                  ? `rows delivered · ${live ? "streaming" : job.paused && job.status === "stopped" ? "paused" : job.status}`
                   : job.status === "declined"
                     ? "nothing run: the source refused"
                     : "rows delivered once the run starts"}
@@ -164,14 +170,18 @@ export function JobView({
                   "data-[state=active]:border-ink data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_24px_-12px_rgb(15_26_36/0.3)]",
                   s.state === "todo" && "bg-transparent",
                   s.state === "stopped" && "border-pencil-red/50",
-                  s.state === "now" && job.status === "waiting" && "border-deliver ring-3 ring-deliver/20"
+                  s.state === "now" && job.status === "waiting" && "border-deliver ring-3 ring-deliver/20",
+                  // The run is Apify's: its colours, blended, while it runs.
+                  s.tab === "run" && s.state === "now" && job.status === "running" && "bg-[linear-gradient(115deg,rgb(36_109_255/0.12),rgb(32_163_78/0.08)_50%,rgb(248_102_6/0.10))]"
                 )}
               >
-                {s.state === "now" && job.status === "running" && <BorderBeam size={80} duration={4} borderWidth={2} colorFrom={BEAM[STEP_STAGE[s.tab]][0]} colorTo={BEAM[STEP_STAGE[s.tab]][1]} />}
+                {s.state === "now" && job.status === "running" && (s.tab === "run" ? <BorderBeam size={80} duration={4} borderWidth={2} colorFrom="#246DFF" colorTo="#20A34E" /> : <BorderBeam size={80} duration={4} borderWidth={2} colorFrom={BEAM[STEP_STAGE[s.tab]][0]} colorTo={BEAM[STEP_STAGE[s.tab]][1]} />)}
                 <span className="flex items-center gap-2">
                   <Mark className="size-5 shrink-0" lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
                   <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>
-                  {s.tick && <TickMark tick={s.tick} className="ml-auto" />}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {s.tab === "run" && <img src="/brand/apify-logomark.svg" alt="on Apify" className={cn("ml-auto size-3.5", s.state === "todo" && "opacity-40 grayscale")} />}
+                  {s.tick && <TickMark tick={s.tick} className={s.tab === "run" ? undefined : "ml-auto"} />}
                 </span>
                 <span className="mt-1 block truncate pl-7 text-[12px] text-ink-2">{s.line}</span>
               </TabsPrimitive.Trigger>

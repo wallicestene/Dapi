@@ -49,6 +49,7 @@ if (id === '--new') {
 }
 const autoGo = args.includes('--go');
 const follow = args.includes('--follow');
+const fromCode = args.includes('--from-code');
 const dir = jobDir(id);
 const job = readJson(dir, 'job.json');
 if (!job) {
@@ -89,6 +90,85 @@ try {
     await followExisting();
     process.exit(0);
   }
+  // Steps 1 and 2, or, when the extraction is tried again, what they saved.
+  const { spec, findings } = fromCode ? restartAtCode() : await specAndSite();
+  const runSpec = findings.sourceSamples ? { ...spec, samples: findings.sourceSamples } : spec;
+  const runSpecPath = path.join(dir, findings.sourceSamples ? 'spec.source.json' : 'spec.json');
+
+  // 3. The extraction: written by Muse Spark, tested against the spec's samples.
+  step('code');
+  say('code', { kind: 'start', text: 'Writing the extraction and testing it against your sample rows.' });
+  let writerNotes = '';
+  const written = await writeAndTest({
+    spec: runSpec,
+    specPath: runSpecPath,
+    findings,
+    outPath: path.join(dir, 'site.js'),
+    onEvent: (e) => {
+      if (e.kind === 'written') writerNotes = e.forClient?.length ? e.forClient : e.notes;
+      say('code', { ...e, text: describeAttempt(e) });
+    },
+  });
+  if (!written.passed) {
+    say('code', { kind: 'failed', text: `The extraction still failed its checks after ${written.attempts} attempts, so Dapi stopped before running it.` });
+    updateJob(dir, { status: 'failed', failed: 'The extraction did not pass its checks.' });
+    process.exit(1);
+  }
+
+  // 4. The plan, and the user's Go.
+  step('plan');
+  // The extraction's own settings: the way in and the pace Muse Spark chose for this site.
+  const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
+  const plan = makePlan(findings, config, writerNotes, spec, written.report);
+  say('plan', { kind: 'plan', text: plan.text, ...plan });
+  updateJob(dir, { status: 'waiting', records: plan.records });
+  if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
+  let approval;
+  while (!(approval = readJson(dir, 'approve.json'))) await sleep(1000);
+  if (!approval.go) {
+    say('plan', { kind: 'cancelled', text: 'You stopped the job before it ran.' });
+    updateJob(dir, { status: 'cancelled' });
+    process.exit(0);
+  }
+  if (approval.robotsOverride) say('plan', { kind: 'robots-override', text: 'You approved fetching what robots.txt disallows. Every such request is marked in its receipt.' });
+
+  // 5. The run.
+  step('run');
+  // Translation: from samples written through a translation, or from a language the
+  // client asked for (a spoken "in English") that isn't the site's own.
+  const asked = spec.outputLanguage && findings.siteLanguage && spec.outputLanguage !== findings.siteLanguage
+    ? { from: findings.siteLanguage, to: spec.outputLanguage, columns: 'text', examples: [] }
+    : null;
+  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? asked, robotsOverride: Boolean(approval.robotsOverride), records: plan.more ? null : plan.records, findings, specPath: runSpecPath });
+} catch (err) {
+  console.error(err);
+  // A run left going on Apify with nothing watching it is stopped (its rows stay).
+  const { runId, runStatus } = readJson(dir, 'job.json') ?? {};
+  if (runId && !['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(runStatus)) {
+    const { apify } = await import('../apify/client.js');
+    await apify.run(runId).abort({ gracefully: true }).catch(() => {});
+  }
+  say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${err.message.split('\n')[0]}` });
+  updateJob(dir, { status: 'failed', failed: err.message.split('\n')[0] });
+  process.exit(1);
+}
+
+function describeCheck(c) {
+  if (c.tool === 'list-values') return `Counted every value of ${c.field} in the list`;
+  if (c.tool === 'record-page') return `Opened the page of a record with ${c.field} = ${c.equals}`;
+  if (c.tool === 'register') return `Asked the register about ${c.id || `a record with ${c.field} = ${c.equals}`}`;
+  return `Read ${c.url}`;
+}
+
+// A plain no, before any code is written. Owner's line (2026-11-01): whatever the spec
+// asks for and the site shows, Dapi collects, people's names and contacts included;
+// blocks are worked through with fresh IPs and Apify's datacenter and residential
+// proxies; a check that wants a person to click, solve or hold something is set aside.
+
+// Steps 1 and 2: the spec, then the site (the first pass, Muse Wonder's investigation
+// and its strategy). Their results are saved in the job folder, so the extraction can be
+// tried again from them without redoing either.
+async function specAndSite() {
   // 1. The spec.
   step('spec');
   say('spec', { kind: 'start', text: 'Reading your spec.' });
@@ -175,76 +255,32 @@ try {
   } catch (err) {
     say('site', { kind: 'strategy-skipped', text: `Planning the strategy failed (${err.message.split('\n')[0]}); the code writer works from the findings directly.` });
   }
-
-  // 3. The extraction: written by Muse Spark, tested against the spec's samples.
-  step('code');
-  say('code', { kind: 'start', text: 'Writing the extraction and testing it against your sample rows.' });
-  let writerNotes = '';
-  const written = await writeAndTest({
-    spec: runSpec,
-    specPath: runSpecPath,
-    findings,
-    outPath: path.join(dir, 'site.js'),
-    onEvent: (e) => {
-      if (e.kind === 'written') writerNotes = e.forClient?.length ? e.forClient : e.notes;
-      say('code', { ...e, text: describeAttempt(e) });
-    },
-  });
-  if (!written.passed) {
-    say('code', { kind: 'failed', text: `The extraction still failed its checks after ${written.attempts} attempts, so Dapi stopped before running it.` });
-    updateJob(dir, { status: 'failed', failed: 'The extraction did not pass its checks.' });
-    process.exit(1);
-  }
-
-  // 4. The plan, and the user's Go.
-  step('plan');
-  // The extraction's own settings: the way in and the pace Muse Spark chose for this site.
-  const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
-  const plan = makePlan(findings, config, writerNotes, spec, written.report);
-  say('plan', { kind: 'plan', text: plan.text, ...plan });
-  updateJob(dir, { status: 'waiting', records: plan.records });
-  if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
-  let approval;
-  while (!(approval = readJson(dir, 'approve.json'))) await sleep(1000);
-  if (!approval.go) {
-    say('plan', { kind: 'cancelled', text: 'You stopped the job before it ran.' });
-    updateJob(dir, { status: 'cancelled' });
-    process.exit(0);
-  }
-  if (approval.robotsOverride) say('plan', { kind: 'robots-override', text: 'You approved fetching what robots.txt disallows. Every such request is marked in its receipt.' });
-
-  // 5. The run.
-  step('run');
-  // Translation: from samples written through a translation, or from a language the
-  // client asked for (a spoken "in English") that isn't the site's own.
-  const asked = spec.outputLanguage && findings.siteLanguage && spec.outputLanguage !== findings.siteLanguage
-    ? { from: findings.siteLanguage, to: spec.outputLanguage, columns: 'text', examples: [] }
-    : null;
-  await runOnApify({ spec: runSpec, userSpec: spec, translate: findings.samples?.translate ?? asked, robotsOverride: Boolean(approval.robotsOverride), records: plan.more ? null : plan.records, findings, specPath: runSpecPath });
-} catch (err) {
-  console.error(err);
-  // A run left going on Apify with nothing watching it is stopped (its rows stay).
-  const { runId, runStatus } = readJson(dir, 'job.json') ?? {};
-  if (runId && !['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(runStatus)) {
-    const { apify } = await import('../apify/client.js');
-    await apify.run(runId).abort({ gracefully: true }).catch(() => {});
-  }
-  say(readJson(dir, 'job.json')?.step ?? 'spec', { kind: 'error', text: `Something broke: ${err.message.split('\n')[0]}` });
-  updateJob(dir, { status: 'failed', failed: err.message.split('\n')[0] });
-  process.exit(1);
+  return { spec, findings };
 }
 
-function describeCheck(c) {
-  if (c.tool === 'list-values') return `Counted every value of ${c.field} in the list`;
-  if (c.tool === 'record-page') return `Opened the page of a record with ${c.field} = ${c.equals}`;
-  if (c.tool === 'register') return `Asked the register about ${c.id || `a record with ${c.field} = ${c.equals}`}`;
-  return `Read ${c.url}`;
+// Trying the extraction again: the spec, the findings and Muse Wonder's strategy, as
+// saved; Muse Spark writes the extraction afresh from them.
+function restartAtCode() {
+  const spec = readJson(dir, 'spec.json');
+  const findings = readJson(dir, 'findings.json');
+  if (!spec || !findings) throw new Error('nothing saved to start again from');
+  updateJob(dir, { failed: null });
+  say('code', { kind: 'restart', text: "Starting again from the extraction. The spec, the investigation and Muse Wonder's strategy are kept." });
+  return { spec, findings };
 }
 
-// A plain no, before any code is written. Owner's line (2026-11-01): whatever the spec
-// asks for and the site shows, Dapi collects, people's names and contacts included;
-// blocks are worked through with fresh IPs and Apify's datacenter and residential
-// proxies; a check that wants a person to click, solve or hold something is set aside.
+// A run that ended without finishing: paused by the client (it continues with Resume),
+// or stopped some other way (it continues with Resurrect). Either keeps the dataset,
+// the queue and the saved state on Apify.
+function endedEarly(outcome) {
+  const paused = Boolean(readJson(dir, 'pause.json'));
+  const rows = outcome.copied.toLocaleString('en-US');
+  say('run', paused
+    ? { kind: 'paused', text: `Paused with ${rows} rows delivered. Resume to carry on where it stopped: the dataset, the queue and the saved state are kept.` }
+    : { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${rows} rows. Resurrect it to continue where it stopped.` });
+  updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus, paused });
+}
+
 function refuse(f) {
   const reasons = [];
   const tried = f.access?.attempts ?? [];
@@ -380,11 +416,7 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records, 
   for (let attempt = 1; ; attempt++) {
     const outcome = await runOnce({ apify, actor: `${username}/${RUNNER}`, spec, robotsOverride, attempt });
     if (outcome.status === 'succeeded') return finish({ apify, ...outcome, userSpec, translate, records, disputes: findings.samples?.disputes ?? [] });
-    if (outcome.status === 'stopped') {
-      say('run', { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${outcome.copied.toLocaleString('en-US')} rows. Resurrect it on Apify to continue where it stopped.` });
-      updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus });
-      return;
-    }
+    if (outcome.status === 'stopped') return endedEarly(outcome);
     // Broken. Some breaks aren't the code's to fix: a site that asks for a person.
     if (outcome.noRepair || attempt > REPAIRS) {
       say('run', { kind: 'broken', text: `${outcome.reason} ${outcome.noRepair ? 'Dapi sets this site aside.' : `Stopped after ${REPAIRS} repairs; the log is in the run on Apify.`}`, log: outcome.log });
@@ -561,8 +593,7 @@ async function followExisting() {
     return finish({ apify, ...outcome, userSpec: spec, translate: findings?.samples?.translate ?? null, records: current.records ?? outcome.copied, disputes: findings?.samples?.disputes ?? [] });
   }
   if (outcome.status === 'stopped') {
-    say('run', { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${outcome.copied.toLocaleString('en-US')} rows. Resurrect it to continue where it stopped.` });
-    updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus });
+    endedEarly(outcome);
     return;
   }
   say('run', { kind: 'broken', text: outcome.reason, log: outcome.log });

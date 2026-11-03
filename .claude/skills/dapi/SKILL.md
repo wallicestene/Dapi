@@ -881,6 +881,27 @@ the agent ever looked).
   took all posts (the agent ran out of steps mid-check); the plan now shows what Muse
   Wonder couldn't settle ("Not settled yet") before Go.
 
+### Restart, pause and alerts (2026-11-03)
+
+Owner asked for restarting a step with its context, pausing, and alerts. Decided:
+- **Restart at one step, the extraction.** That's where jobs fail (every attempt
+  spent), and what comes before it (the investigation, minutes of Muse Wonder) is the
+  expensive part. `run-job.js --from-code` loads the saved spec, findings and strategy
+  and writes the extraction afresh; the job page shows "Try the extraction again" when
+  the extraction failed. Restarting earlier steps is a new job, so no button for them.
+  Tested on job 0022 (FSSC, failed 3 attempts on Nov 2): passed on attempt 1.
+- **Pause at one step, the run on Apify,** where the time and money go. Pause aborts the
+  run gracefully (a `pause.json` marker tells the runner it was the client's stop);
+  Resume resurrects it on Apify: same dataset, request queue and saved state. Tested on
+  job 0022: 900 rows, paused (990 after the flush), resumed to 1,485, paused at 1,515.
+- **Alerts** when a job needs you (Ready to run) or finishes (delivered, stopped): a
+  soft chime (rising / falling), the tab title flashing until you look, a desktop
+  notification when the tab is in the background; a bell in the job's top bar turns
+  them off, remembered per browser.
+- **Apify credit:** Apify's own logomark and colours (blue #246DFF, green #20A34E,
+  orange #F86606, from apify.com) on the Run step card and the run strip, blended
+  while the run is live, with Apify's blue-green beam.
+
 ### Identity, front door and the client voice (2026-11-02)
 
 - **The mark** (owner's sketch, redrawn): a D in four flat parts, one per stage of a

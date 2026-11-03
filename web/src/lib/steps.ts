@@ -48,7 +48,9 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
   const order: Tab[] = ["spec", "site", "code", "samples", "run", "footed"];
   const at = (t: Tab) => order.indexOf(t);
   const jobTab: Tab = job.step === "plan" ? "run" : job.step === "code" && last(events, "tested") ? "samples" : (job.step as Tab);
-  const stoppedHere = ["failed", "declined", "cancelled", "stopped"].includes(job.status);
+  // A pause is the client's own stop: the run waits to resume, nothing failed.
+  const paused = job.status === "stopped" && Boolean(job.paused);
+  const stoppedHere = ["failed", "declined", "cancelled", "stopped"].includes(job.status) && !paused;
   const finished = job.status === "done";
 
   const state = (t: Tab): StepState["state"] => {
@@ -103,14 +105,16 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
     },
     {
       tab: "run",
-      label: job.status === "waiting" ? "Ready to run" : label("run", "Run on Apify", "Running on Apify", "Ran on Apify"),
+      label: job.status === "waiting" ? "Ready to run" : paused ? "Paused on Apify" : label("run", "Run on Apify", "Running on Apify", "Ran on Apify"),
       line:
         job.status === "waiting"
           ? "waiting for your Go"
-          : job.runId
+          : paused
+            ? `${n(job.rows ?? 0)} rows · resume to carry on`
+            : job.runId
             ? `${n(job.rows ?? 0)} rows · ${n(job.failedRequests ?? 0)} failed requests`
             : notRun ?? "on your Apify account",
-      tick: finished ? "traced" : job.status === "stopped" ? "missing" : null,
+      tick: finished ? "traced" : job.status === "stopped" && !paused ? "missing" : null,
       state: state("run"),
     },
     {

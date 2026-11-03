@@ -1,6 +1,7 @@
 // Resurrect a stopped run on Apify: it keeps its dataset, saved state and queue and
 // carries on where it stopped; a runner follows it to the end.
 
+import fs from "node:fs";
 import { READ_ONLY, getJob, jobPath, pipeline, validId } from "@/lib/server/dapi";
 import { runnerAlive, startRunner } from "@/lib/server/runner";
 
@@ -12,8 +13,10 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
   if (runnerAlive(job.runnerPid)) return Response.json({ error: "The run is already being followed." }, { status: 409 });
   const { apify } = await pipeline<{ apify: { run: (id: string) => { resurrect: () => Promise<{ status: string }> } } }>("src/apify/client.js");
   const run = await apify.run(job.runId).resurrect();
+  // A paused run resumes: the pause marker goes.
+  fs.rmSync(jobPath(id, "pause.json"), { force: true });
   const { updateJob } = await pipeline<{ updateJob: (dir: string, changes: object) => void }>("src/jobs/store.js");
-  updateJob(jobPath(id), { status: "running", step: "run", runStatus: run.status });
+  updateJob(jobPath(id), { status: "running", step: "run", runStatus: run.status, paused: false });
   startRunner(id, ["--follow"]);
   return Response.json({ status: run.status });
 }

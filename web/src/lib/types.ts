@@ -27,6 +27,8 @@ export interface Job {
   failed?: string;
   runnerPid?: number;
   runAttempt?: number;
+  // Paused by the client on Apify; Resume carries on where it stopped.
+  paused?: boolean;
   // What Apify itself reports about the run.
   apify?: {
     status: string;
