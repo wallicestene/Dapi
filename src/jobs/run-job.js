@@ -518,7 +518,12 @@ async function runOnApify({ spec, userSpec, translate, robotsOverride, records, 
     if (outcome.status === 'stopped') return endedEarly(outcome);
     // Broken. Some breaks aren't the code's to fix: a site that asks for a person.
     if (outcome.noRepair || attempt > REPAIRS) {
-      say('run', { kind: 'broken', text: `${outcome.reason} ${outcome.noRepair ? 'Dapi sets this site aside.' : `Stopped after ${REPAIRS} repairs; the log is in the run on Apify.`}`, log: outcome.log });
+      const after = outcome.platform
+        ? "The extraction isn't at fault, so Dapi didn't repair it; this needs fixing on Apify, then try the run again."
+        : outcome.noRepair
+          ? 'Dapi sets this site aside.'
+          : `Stopped after ${REPAIRS} repairs; the log is in the run on Apify.`;
+      say('run', { kind: 'broken', text: `${outcome.reason} ${after}`, log: outcome.log });
       updateJob(dir, { status: 'failed', failed: outcome.reason });
       return;
     }
@@ -666,6 +671,12 @@ async function watchRun({ apify, run, fresh }) {
   }
   recordFinish(current);
   if (current.status === 'FAILED' || current.status === 'TIMED-OUT') {
+    // Apify's own platform refusing the run (storage it may not use, memory) isn't the
+    // extraction's to fix: repairing code that never got to run spends Muse Spark's time
+    // and tells the client the wrong story (FDA, Nov 3: a storage permission error, sent
+    // for repair twice).
+    const platform = current.status === 'FAILED' && platformError(log);
+    if (platform) return { status: 'broken', reason: `The run couldn't start on Apify: ${platform}.`, noRepair: true, platform: true, ...evidence(log, null, platform) };
     const reason = current.status === 'FAILED' ? 'The run crashed on Apify.' : 'The run hit its time limit on Apify.';
     return { status: 'broken', reason, ...evidence(log, null, reason) };
   }
@@ -711,6 +722,15 @@ async function followExisting() {
   }
   say('run', { kind: 'broken', text: outcome.reason, log: outcome.log });
   updateJob(dir, { status: 'failed', failed: outcome.reason });
+}
+
+// An error from Apify's platform in a run's log, in plain words, or null.
+function platformError(log) {
+  const text = log.join('\n');
+  if (/insufficient-permissions|Insufficient permissions/.test(text)) return `Apify refused it access to its ${/key-value store/i.test(text) ? 'evidence store' : 'storage'} (the Actor runs with limited permissions and may only use storage it created)`;
+  if (/out of memory|memory limit|OOMKilled/i.test(text)) return 'it ran out of memory';
+  const api = log.find((l) => /ApifyApiError/.test(l));
+  return api ? api.replace(/^.*ApifyApiError:\s*/, '').slice(0, 160) : null;
 }
 
 // Whether a running extraction is broken, from its saved state and its log.
