@@ -33,8 +33,8 @@ import { RunPanel } from "./run-panel";
 import { FootedPanel } from "./footed-panel";
 
 // A step's own control, in its card's corner, with a tooltip saying what it does: pause
-// after the step under way (spec, site), resume the step a job paused before, and pause
-// or resume the run on Apify. One place for each action.
+// after the step under way (spec, site), resume the step a job paused before, and go
+// back to a plan paused with "Not now". The run's own pause is in the Apify strip.
 type Control = { icon: "pause" | "play"; label: string; tip: string; pending?: boolean; run: () => Promise<void> };
 
 const post = async (url: string, body?: object) => {
@@ -54,12 +54,6 @@ function controlFor(job: Job, s: { tab: Tab; state: string }): Control | null {
   }
   if (s.tab === "run" && job.status === "cancelled") {
     return { icon: "play", label: "Back to the plan", tip: "Back to the plan. The extraction is written and tested; the time and cost are worked out fresh, then you press Go.", run: () => post(`/api/jobs/${job.id}/reopen`).then(reload) };
-  }
-  if (s.tab === "run" && job.runId && job.status === "running" && job.step === "run") {
-    return { icon: "pause", label: "Pause the run on Apify", tip: "Pause the run on Apify. It stops cleanly and keeps the dataset, queue and saved state; Resume carries on from there.", run: () => post(`/api/jobs/${job.id}/pause`).then(reload) };
-  }
-  if (s.tab === "run" && job.runId && job.status === "stopped") {
-    return { icon: "play", label: job.paused ? "Resume the run on Apify" : "Resurrect the run on Apify", tip: "Resume the run on Apify where it stopped: the same dataset, queue and saved state.", run: () => post(`/api/jobs/${job.id}/resurrect`).then(reload) };
   }
   return null;
 }

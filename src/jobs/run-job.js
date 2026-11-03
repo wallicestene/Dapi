@@ -302,7 +302,7 @@ function endedEarly(outcome) {
   say('run', paused
     ? { kind: 'paused', text: `Paused with ${rows} rows delivered. Resume to carry on where it stopped: the dataset, the queue and the saved state are kept.` }
     : { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${rows} rows. Resurrect it to continue where it stopped.` });
-  updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus, paused });
+  updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus, paused, rows: outcome.copied });
 }
 
 
@@ -586,7 +586,7 @@ async function watchRun({ apify, run, fresh }) {
       const facts = apifyFacts(current);
       if (facts.migrations > seen.migrations) say('run', { kind: 'apify', text: `Apify moved the run to another server (${facts.migrations}×); it carried on where it was, nothing lost.` });
       if (facts.restarts > seen.restarts) say('run', { kind: 'apify', text: 'The run restarted on Apify and carried on from its saved state.' });
-      if (facts.resurrects > seen.resurrects) say('run', { kind: 'apify', text: 'The run was resurrected on Apify and carried on where it stopped.' });
+      if (facts.resurrects > seen.resurrects) say('run', { kind: 'resurrected', text: 'The run was resurrected on Apify and carried on where it stopped.' });
       Object.assign(seen, { migrations: facts.migrations, restarts: facts.restarts, resurrects: facts.resurrects });
       updateJob(dir, { apify: facts });
       // The frame's saved state holds the rows the source says exist (it learns them as
@@ -629,7 +629,12 @@ async function watchRun({ apify, run, fresh }) {
     const reason = current.status === 'FAILED' ? 'The run crashed on Apify.' : 'The run hit its time limit on Apify.';
     return { status: 'broken', reason, ...evidence(log, null, reason) };
   }
-  if (current.status !== 'SUCCEEDED') return { status: 'stopped', runStatus: current.status, copied };
+  if (current.status !== 'SUCCEEDED') {
+    // A graceful stop pushes the rows it already had before it ends: copy those too, so
+    // the count matches the dataset (it read 1,965 against 2,865 on job 0022).
+    await copy().catch(() => {});
+    return { status: 'stopped', runStatus: current.status, copied };
+  }
   return { status: 'succeeded', run, copied, copy };
 }
 

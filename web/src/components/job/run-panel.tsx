@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/shell";
 import { n } from "@/lib/steps";
@@ -37,17 +37,15 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   }
 
   // What the watch saw during the run: easing off, a break and its repair, translation.
-  // Once a run carries on again, its pause or stop is history.
-  const carriedOn = job.status === "running";
-  const notes = events
-    .filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify", "following", "stopped", "paused"].includes(e.kind))
-    .filter((e) => !(carriedOn && (e.kind === "paused" || e.kind === "stopped")))
-    .slice(-4);
+  // What happened during the run that you'd want to know: the site struggling and the
+  // run easing off, a repair, Apify moving the run, translation. Pauses, resumes and
+  // stops are the strip's to show.
+  const notes = events.filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify"].includes(e.kind)).slice(-4);
   // Apify's own account of the run, as figures.
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
     <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <ApifyStrip job={job} finished={finished} />
+      <ApifyStrip job={job} finished={finished} readOnly={readOnly} />
       {notes.length > 0 && (
         <div className="rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">
           <ul className="text-[13px]" aria-label="During the run">
@@ -65,30 +63,39 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   );
 }
 
-// The run on Apify, credited: Apify's mark, the run's state and its figures. Pause and
-// Resume live on the Run step's card.
+// The run on Apify, credited: Apify's mark, the run's state, its rows at this moment, and
+// its own control (Pause run, Resume run). Pausing the run stops it inside the last
+// working step; it is not the pipeline's pause between steps, which lives on the step
+// cards. When the run is done: its rows, time and cost (the rest is on the Footed tab).
 const APIFY_BLEND = "bg-[linear-gradient(115deg,rgb(36_109_255/0.12),rgb(32_163_78/0.08)_50%,rgb(248_102_6/0.10))]";
 
-function ApifyStrip({ job, finished }: { job: Job; finished?: JobEvent }) {
+function ApifyStrip({ job, finished, readOnly }: { job: Job; finished?: JobEvent; readOnly: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const running = job.status === "running" && job.step === "run";
   const stopped = job.status === "stopped";
+  const done = !running && !stopped && finished;
   const seconds = finished?.seconds as number | null | undefined;
-  const facts = running
-    ? ([["Rows so far", n(job.rows ?? 0)]] as [string, string][])
-    : finished
-    ? ([
-        seconds != null && ["Time", seconds < 90 ? `${Math.round(seconds)} s` : `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`],
-        finished.computeUnits != null && ["Compute units", (finished.computeUnits as number).toFixed(2)],
-        finished.usd != null && ["Cost", `$${(finished.usd as number).toFixed(2)}`],
-        finished.migrations ? ["Moved servers", `${finished.migrations}×`] : null,
-        finished.resurrects ? ["Resurrected", `${finished.resurrects}×`] : null,
-      ].filter(Boolean) as [string, string][])
-    : [];
   const ok = finished?.status === "SUCCEEDED";
   const label = running ? "Running on Apify" : stopped ? (job.paused ? "Paused on Apify" : "Run stopped on Apify") : finished ? `Apify run ${String(finished.status).toLowerCase().replace("-", " ")}` : "On Apify";
+  const facts = [
+    `${n(job.rows ?? 0)} rows`,
+    done && seconds != null ? (seconds < 90 ? `${Math.round(seconds)} s` : `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`) : null,
+    done && finished.usd != null ? `$${(finished.usd as number).toFixed(2)}` : null,
+  ].filter(Boolean);
+  const act = async (what: "pause" | "resurrect") => {
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/jobs/${job.id}/${what}`, { method: "POST" });
+    if (res.ok) window.location.reload();
+    else {
+      setError((await res.json().catch(() => ({}))).error ?? "Couldn't reach Apify. Try again.");
+      setBusy(false);
+    }
+  };
   return (
-    <div className={cn("relative flex flex-wrap items-center gap-x-6 gap-y-2 overflow-hidden rounded-xl border px-5 py-3 lg:col-span-2", running || stopped ? APIFY_BLEND : "bg-sheet")}>
-      <span className="inline-flex items-center gap-2.5 text-[13.5px] font-semibold">
+    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-5 py-2.5 lg:col-span-2", running || stopped ? APIFY_BLEND : "bg-sheet")}>
+      <span className="inline-flex items-center gap-2.5 text-[14px] font-semibold">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/apify-logomark.svg" alt="Apify" className="size-5" />
         <span className={cn(finished && !ok && !stopped && !running && "text-pencil-red")}>{label}</span>
@@ -99,11 +106,21 @@ function ApifyStrip({ job, finished }: { job: Job; finished?: JobEvent }) {
           </span>
         )}
       </span>
-      {facts.map(([k, v]) => (
-        <span key={k} className="text-[13px] text-ink-2">
-          {k} <b className="font-semibold text-ink tabular-nums">{v}</b>
+      <span className="text-[14px] text-ink-2 tabular-nums">{facts.join(" · ")}</span>
+      {!readOnly && (running || stopped) && (
+        <span className="ml-auto flex items-center gap-2">
+          {error && <span className="text-[13px] text-pencil-red">{error}</span>}
+          {running ? (
+            <Button variant="outline" disabled={busy} onClick={() => act("pause")} className="h-8 gap-1.5 px-3" title="Stops the run on Apify cleanly; the dataset, queue and saved state are kept for Resume run.">
+              <Pause aria-hidden className="size-3.5" /> {busy ? "Pausing…" : "Pause run"}
+            </Button>
+          ) : (
+            <Button disabled={busy} onClick={() => act("resurrect")} className="h-8 gap-1.5 px-3" title="Carries the run on where it stopped, on Apify: same dataset, queue and saved state.">
+              <Play aria-hidden className="size-3.5 fill-current" /> {busy ? "Resuming…" : "Resume run"}
+            </Button>
+          )}
         </span>
-      ))}
+      )}
     </div>
   );
 }

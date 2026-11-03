@@ -261,10 +261,13 @@ Apify's logomark, and Apify's colours blended while it runs.
 stage's colour (Apify's blue to green on the Run card). Nothing else gets a beam; the
 plan's quiet teal ring, the code card's shimmer and the run strip's live dot do the rest.
 
-**Each step's control lives in its card's corner**, a 28px round icon button with a
-tooltip that says what it does: ⏸ "Pause after this step" on Spec or Site while they
-run (pending: a violet ring, click to keep going), ▶ "Resume" on the step a job paused
-before, and ⏸ / ▶ for the run itself on the Run card.
+**Two kinds of pause, two places.** The pipeline's controls live in a step card's
+corner, a 28px round icon button with a tooltip that says what it does: ⏸ "Pause after
+this step" on Spec or Site while they run (pending: a violet ring, click to keep going),
+▶ "Resume" on the step a job paused before, ▶ "Back to the plan" on the Run card after
+"Not now". The run's own control lives in the Apify strip, labelled: "Pause run" /
+"Resume run". The strip shows only the state and the rows at that moment (and, when the
+run is done, its time and cost); notes below it appear only for what you'd want to know.
 
 ### The Agent Timeline (signature)
 The Site tab's "What Dapi did": a vertical rule, an icon per action (web search, looked
