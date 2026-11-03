@@ -4,12 +4,13 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Footer, Mark, Wordmark } from "@/components/shell";
 import { ReceiptDemo } from "@/components/home/receipt-demo";
+import showcase from "@/lib/showcase.json";
 import { Intro } from "@/components/home/intro";
 import { JobArt } from "@/components/job-art";
 import { GLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { READ_ONLY, getJob } from "@/lib/server/dapi";
+import { READ_ONLY, listJobs } from "@/lib/server/dapi";
 import { dataShape } from "@/lib/server/shape";
 import { cost, took } from "@/lib/stage";
 
@@ -25,11 +26,11 @@ const STEPS = [
   { n: 4, name: "Verified", title: "Proves every value", body: "Every value links to the response it came from, sealed the moment it was captured." },
 ];
 
+// Only sources we may show (AGENTS.md, Sources we may use): each card is the newest job
+// on that source that delivered, so a fresh run takes its place without a code change.
 const PROOF = [
-  { id: "0024", label: "FSSC certified organisations", note: "A 43,037-record register, read from its own data feed" },
-  { id: "0002", label: "Great Place to Work India", note: "Four tables embedded in one page, plus a profile per company" },
-  { id: "0006", label: "Better Work factory compliance", note: "One row per issue, from the details behind each View button" },
-  { id: "0017", label: "Occupational health services, Norway", note: "Spoken spec, delivered in English from a Norwegian site" },
+  { host: "www.arbeidstilsynet.no", label: "Occupational health services, Norway", note: "A Norwegian register, delivered in English" },
+  { host: "portal.betterwork.org", label: "Better Work factory compliance", note: "One row per issue, from the details behind each View button" },
 ];
 
 const WHY = [
@@ -42,7 +43,8 @@ const WHY = [
 export default async function Home() {
   // The intro plays once per visit; its cookie lasts the browser session.
   const seen = (await cookies()).has("dapi-intro");
-  const proof = PROOF.map((p) => ({ ...p, job: getJob(p.id) })).filter((p) => p.job?.status === "done");
+  const delivered = listJobs().filter((j) => j.status === "done" && j.sourceUrl);
+  const proof = PROOF.map((p) => ({ ...p, job: delivered.find((j) => new URL(j.sourceUrl!).host === p.host) })).filter((p) => p.job);
   const start = READ_ONLY ? { href: "/jobs", label: "Explore finished jobs" } : { href: "/jobs/new", label: "Start a job" };
   return (
     <div className="flex min-h-screen flex-col">
@@ -81,7 +83,7 @@ export default async function Home() {
                 <Link href={start.href}>{start.label}</Link>
               </Button>
               <Button asChild variant="outline" className="h-11 bg-sheet px-5 text-[15px]">
-                <Link href="/jobs/0024">
+                <Link href={`/jobs/${showcase.job}`}>
                   See an example <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -113,10 +115,10 @@ export default async function Home() {
           <section id="examples" className="mx-auto w-full max-w-[1240px] px-5 py-20 sm:px-8">
             <h2 className="max-w-[640px] text-[clamp(30px,3.6vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">Delivered in full</h2>
             <p className="mt-3 max-w-[560px] text-[17px] text-ink-2">Real jobs on public sources. Open any of them to check the receipts yourself.</p>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {proof.map(({ id, label, note, job }) => (
-                <Link key={id} href={`/jobs/${id}`} className="group relative block h-[320px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
-                  <JobArt shape={dataShape(id)} ratio={290 / 320} className="absolute inset-0" />
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+              {proof.map(({ host, label, note, job }) => (
+                <Link key={host} href={`/jobs/${job!.id}`} className="group relative block h-[320px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
+                  <JobArt shape={dataShape(job!.id)} ratio={600 / 320} className="absolute inset-0" />
                   {/* As on the jobs list: the art above, everything to read on the glass. */}
                   <div className={cn(GLASS, "absolute inset-x-3 bottom-3 flex flex-col gap-1.5 px-4 pt-3.5 pb-4")}>
                     <span className="text-[15.5px] leading-snug font-semibold">{label}</span>

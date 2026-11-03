@@ -1,428 +1,628 @@
 {
-  "job": "0024",
-  "title": "FSSC certified organisations",
-  "host": "www.fssc.com",
-  "request": "GET https://www.fssc.com/wp-admin/admin-ajax.php?action=certificate_getCertificates&offset=0&limit=15",
-  "capturedAt": "2026-11-02T19:14:28.895Z",
-  "sha256": "ceff8ca9b95875d5a9fc4da9b60d9605c3831206a19600b67c36557eee30b775",
-  "via": "Apify Proxy DATACENTER",
-  "total": 43037,
-  "rows": [
-    {
-      "Organization name": {
-        "value": "\"A POLYMER INDUSTRIES\" LLC",
-        "path": "certificates.0.organisation.name",
-        "field": "name",
-        "lines": [
-          {
-            "key": "name",
-            "value": "\"\\\"A POLYMER INDUSTRIES\\\" LLC\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation"
-      },
-      "City": {
-        "value": "Tashkent",
-        "path": "certificates.0.organisation.address.city",
-        "field": "city",
-        "lines": [
-          {
-            "key": "street",
-            "value": "\"45 Oltintopgan St., Bektemir district\"",
-            "hit": false
-          },
-          {
-            "key": "zipcode",
-            "value": "\"100033\"",
-            "hit": false
-          },
-          {
-            "key": "city",
-            "value": "\"Tashkent\"",
-            "hit": true
-          },
-          {
-            "key": "state",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Uzbekistan\"",
-            "hit": false
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Country": {
-        "value": "Uzbekistan",
-        "path": "certificates.0.organisation.address.country",
-        "field": "country",
-        "lines": [
-          {
-            "key": "city",
-            "value": "\"Tashkent\"",
-            "hit": false
-          },
-          {
-            "key": "state",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Uzbekistan\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Certificate valid until": {
-        "value": "17-07-2027",
-        "path": "certificates.0.validUntil",
-        "field": "validUntil",
-        "lines": [
-          {
-            "key": "issued",
-            "value": "\"11-05-2026\"",
-            "hit": false
-          },
-          {
-            "key": "status",
-            "value": "\"Valid\"",
-            "hit": false
-          },
-          {
-            "key": "validUntil",
-            "value": "\"17-07-2027\"",
-            "hit": true
-          },
-          {
-            "key": "lastStatusDecision",
-            "value": "\"18-07-2024\"",
-            "hit": false
-          },
-          {
-            "key": "gfsi",
-            "value": "\"0\"",
-            "hit": false
-          }
-        ],
-        "parent": "certificates.0"
-      }
-    },
-    {
-      "Organization name": {
-        "value": "\"AGRARCO\" LLC",
-        "path": "certificates.1.organisation.name",
-        "field": "name",
-        "lines": [
-          {
-            "key": "name",
-            "value": "\"\\\"AGRARCO\\\" LLC\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation"
-      },
-      "City": {
-        "value": "Zaqatala",
-        "path": "certificates.1.organisation.address.city",
-        "field": "city",
-        "lines": [
-          {
-            "key": "street",
-            "value": "\"Zagathala district, Ashaghi Tala village Hazelnut kernels Production Plant\"",
-            "hit": false
-          },
-          {
-            "key": "zipcode",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "city",
-            "value": "\"Zaqatala\"",
-            "hit": true
-          },
-          {
-            "key": "state",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Azerbaijan\"",
-            "hit": false
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Country": {
-        "value": "Azerbaijan",
-        "path": "certificates.1.organisation.address.country",
-        "field": "country",
-        "lines": [
-          {
-            "key": "city",
-            "value": "\"Zaqatala\"",
-            "hit": false
-          },
-          {
-            "key": "state",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Azerbaijan\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Certificate valid until": {
-        "value": "12-10-2028",
-        "path": "certificates.1.validUntil",
-        "field": "validUntil",
-        "lines": [
-          {
-            "key": "issued",
-            "value": "\"03-10-2025\"",
-            "hit": false
-          },
-          {
-            "key": "status",
-            "value": "\"Valid\"",
-            "hit": false
-          },
-          {
-            "key": "validUntil",
-            "value": "\"12-10-2028\"",
-            "hit": true
-          },
-          {
-            "key": "lastStatusDecision",
-            "value": "\"03-10-2025\"",
-            "hit": false
-          },
-          {
-            "key": "categoryProductType",
-            "value": "null",
-            "hit": false
-          }
-        ],
-        "parent": "certificates.1"
-      }
-    },
-    {
-      "Organization name": {
-        "value": "\"AGRO CITY\" LLC",
-        "path": "certificates.2.organisation.name",
-        "field": "name",
-        "lines": [
-          {
-            "key": "name",
-            "value": "\"\\\"AGRO CITY\\\" LLC\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation"
-      },
-      "City": {
-        "value": "Urtachirchiq district, Saidovul MSG, 151",
-        "path": "certificates.2.organisation.address.city",
-        "field": "city",
-        "lines": [
-          {
-            "key": "street",
-            "value": "\"Saidovul MSG, 151\"",
-            "hit": false
-          },
-          {
-            "key": "zipcode",
-            "value": "\"111500\"",
-            "hit": false
-          },
-          {
-            "key": "city",
-            "value": "\"Urtachirchiq district, Saidovul MSG, 151\"",
-            "hit": true
-          },
-          {
-            "key": "state",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Uzbekistan\"",
-            "hit": false
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Country": {
-        "value": "Uzbekistan",
-        "path": "certificates.2.organisation.address.country",
-        "field": "country",
-        "lines": [
-          {
-            "key": "city",
-            "value": "\"Urtachirchiq district, Saidovul MSG, 151\"",
-            "hit": false
-          },
-          {
-            "key": "state",
-            "value": "\"\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Uzbekistan\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Certificate valid until": {
-        "value": "23-05-2027",
-        "path": "certificates.2.validUntil",
-        "field": "validUntil",
-        "lines": [
-          {
-            "key": "issued",
-            "value": "\"28-07-2026\"",
-            "hit": false
-          },
-          {
-            "key": "status",
-            "value": "\"Valid\"",
-            "hit": false
-          },
-          {
-            "key": "validUntil",
-            "value": "\"23-05-2027\"",
-            "hit": true
-          },
-          {
-            "key": "lastStatusDecision",
-            "value": "\"07-05-2025\"",
-            "hit": false
-          },
-          {
-            "key": "gfsi",
-            "value": "\"0\"",
-            "hit": false
-          }
-        ],
-        "parent": "certificates.2"
-      }
-    },
-    {
-      "Organization name": {
-        "value": "\"ALIMENTOS BENEFITS\", S.A. DE.C.V",
-        "path": "certificates.3.organisation.name",
-        "field": "name",
-        "lines": [
-          {
-            "key": "name",
-            "value": "\"\\\"ALIMENTOS BENEFITS\\\", S.A. DE.C.V\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation"
-      },
-      "City": {
-        "value": "Lagos de Moreno",
-        "path": "certificates.3.organisation.address.city",
-        "field": "city",
-        "lines": [
-          {
-            "key": "street",
-            "value": "\"Calle 24 de Junio No. 111, Col. Pueblo de Moya\"",
-            "hit": false
-          },
-          {
-            "key": "zipcode",
-            "value": "\"47430\"",
-            "hit": false
-          },
-          {
-            "key": "city",
-            "value": "\"Lagos de Moreno\"",
-            "hit": true
-          },
-          {
-            "key": "state",
-            "value": "\"Jalisco\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Mexico\"",
-            "hit": false
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Country": {
-        "value": "Mexico",
-        "path": "certificates.3.organisation.address.country",
-        "field": "country",
-        "lines": [
-          {
-            "key": "city",
-            "value": "\"Lagos de Moreno\"",
-            "hit": false
-          },
-          {
-            "key": "state",
-            "value": "\"Jalisco\"",
-            "hit": false
-          },
-          {
-            "key": "country",
-            "value": "\"Mexico\"",
-            "hit": true
-          }
-        ],
-        "parent": "organisation.address"
-      },
-      "Certificate valid until": {
-        "value": "10-02-2027",
-        "path": "certificates.3.validUntil",
-        "field": "validUntil",
-        "lines": [
-          {
-            "key": "issued",
-            "value": "\"07-01-2026\"",
-            "hit": false
-          },
-          {
-            "key": "status",
-            "value": "\"Valid\"",
-            "hit": false
-          },
-          {
-            "key": "validUntil",
-            "value": "\"10-02-2027\"",
-            "hit": true
-          },
-          {
-            "key": "lastStatusDecision",
-            "value": "\"26-12-2024\"",
-            "hit": false
-          },
-          {
-            "key": "categoryProductType",
-            "value": "null",
-            "hit": false
-          }
-        ],
-        "parent": "certificates.3"
-      }
-    }
+ "job": "0002",
+ "title": "Better Work factory compliance",
+ "host": "portal.betterwork.org",
+ "columns": [
+  [
+   "Factory",
+   "Factory"
+  ],
+  [
+   "Country",
+   "Country"
+  ],
+  [
+   "Assessment Date",
+   "Assessed"
+  ],
+  [
+   "Issues",
+   "Issues"
   ]
+ ],
+ "total": 433,
+ "rows": 433,
+ "credit": null,
+ "rowsShown": [
+  {
+   "Factory": {
+    "value": "28.1 Joint Stock Company",
+    "original": null,
+    "path": "Data.0.Name",
+    "field": "Name",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "1421",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"28.1 Joint Stock Company\"",
+      "hit": true
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1731456000000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "10",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Country": {
+    "value": "Vietnam",
+    "original": null,
+    "path": "Data.0.Country",
+    "field": "Country",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "1421",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": true
+     },
+     {
+      "key": "Name",
+      "value": "\"28.1 Joint Stock Company\"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1731456000000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "10",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Assessment Date": {
+    "value": "13 Nov 2024",
+    "original": null,
+    "path": "Data.0.AssessmentDate",
+    "field": "AssessmentDate",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"28.1 Joint Stock Company\"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1731456000000)/\"",
+      "hit": true
+     },
+     {
+      "key": "CycleNumber",
+      "value": "10",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Issues": {
+    "value": "0",
+    "original": null,
+    "path": "Data.0.NumberOfNonCompliances",
+    "field": "NumberOfNonCompliances",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1731456000000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "10",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": true
+     },
+     {
+      "key": "LastAssessmentId",
+      "value": "60405",
+      "hit": false
+     },
+     {
+      "key": "NumberOfResponse",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   }
+  },
+  {
+   "Factory": {
+    "value": "Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory",
+    "original": null,
+    "path": "Data.4.Name",
+    "field": "Name",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "3116",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory\"",
+      "hit": true
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "6",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Country": {
+    "value": "Vietnam",
+    "original": null,
+    "path": "Data.4.Country",
+    "field": "Country",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "3116",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": true
+     },
+     {
+      "key": "Name",
+      "value": "\"Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory\"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "6",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Assessment Date": {
+    "value": "11 Dec 2024",
+    "original": null,
+    "path": "Data.4.AssessmentDate",
+    "field": "AssessmentDate",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory\"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": true
+     },
+     {
+      "key": "CycleNumber",
+      "value": "6",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Issues": {
+    "value": "0",
+    "original": null,
+    "path": "Data.4.NumberOfNonCompliances",
+    "field": "NumberOfNonCompliances",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "6",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": true
+     },
+     {
+      "key": "LastAssessmentId",
+      "value": "60602",
+      "hit": false
+     },
+     {
+      "key": "NumberOfResponse",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   }
+  },
+  {
+   "Factory": {
+    "value": "Chinh Tuc MTV Co., Ltd.",
+    "original": null,
+    "path": "Data.12.Name",
+    "field": "Name",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "2807",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"Chinh Tuc MTV Co., Ltd.\"",
+      "hit": true
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "7",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Country": {
+    "value": "Vietnam",
+    "original": null,
+    "path": "Data.12.Country",
+    "field": "Country",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "2807",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": true
+     },
+     {
+      "key": "Name",
+      "value": "\"Chinh Tuc MTV Co., Ltd.\"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "7",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Assessment Date": {
+    "value": "11 Dec 2024",
+    "original": null,
+    "path": "Data.12.AssessmentDate",
+    "field": "AssessmentDate",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"Chinh Tuc MTV Co., Ltd.\"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": true
+     },
+     {
+      "key": "CycleNumber",
+      "value": "7",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Issues": {
+    "value": "0",
+    "original": null,
+    "path": "Data.12.NumberOfNonCompliances",
+    "field": "NumberOfNonCompliances",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1733875200000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "7",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": true
+     },
+     {
+      "key": "LastAssessmentId",
+      "value": "60556",
+      "hit": false
+     },
+     {
+      "key": "NumberOfResponse",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   }
+  },
+  {
+   "Factory": {
+    "value": "CSQ S.OK Garment (Vietnam) Co., Ltd. ",
+    "original": null,
+    "path": "Data.16.Name",
+    "field": "Name",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "4225",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"CSQ S.OK Garment (Vietnam) Co., Ltd. \"",
+      "hit": true
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1755561600000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "4",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Country": {
+    "value": "Vietnam",
+    "original": null,
+    "path": "Data.16.Country",
+    "field": "Country",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "OrganizationId",
+      "value": "4225",
+      "hit": false
+     },
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": true
+     },
+     {
+      "key": "Name",
+      "value": "\"CSQ S.OK Garment (Vietnam) Co., Ltd. \"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1755561600000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "4",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Assessment Date": {
+    "value": "19 Aug 2025",
+    "original": null,
+    "path": "Data.16.AssessmentDate",
+    "field": "AssessmentDate",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "Country",
+      "value": "\"Vietnam\"",
+      "hit": false
+     },
+     {
+      "key": "Name",
+      "value": "\"CSQ S.OK Garment (Vietnam) Co., Ltd. \"",
+      "hit": false
+     },
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1755561600000)/\"",
+      "hit": true
+     },
+     {
+      "key": "CycleNumber",
+      "value": "4",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   },
+   "Issues": {
+    "value": "0",
+    "original": null,
+    "path": "Data.16.NumberOfNonCompliances",
+    "field": "NumberOfNonCompliances",
+    "parent": "Data",
+    "lines": [
+     {
+      "key": "AssessmentDate",
+      "value": "\"/Date(1755561600000)/\"",
+      "hit": false
+     },
+     {
+      "key": "CycleNumber",
+      "value": "4",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
+      "hit": true
+     },
+     {
+      "key": "LastAssessmentId",
+      "value": "64272",
+      "hit": false
+     },
+     {
+      "key": "NumberOfResponse",
+      "value": "0",
+      "hit": false
+     }
+    ],
+    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
+    "capturedAt": "2026-11-03T13:06:45.496Z",
+    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+   }
+  }
+ ]
 }

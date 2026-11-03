@@ -47,10 +47,11 @@ Dapi investigates the way a professional does, and shows its work.
 ## Operating Context
 
 - **Input:** specs in the format clients send (a table of columns, sample values and
-  comments). Real cases: Better Work factory compliance (one row per issue, detail behind
-  a "View" button), Great Place to Work India (5,158 certified companies in four embedded
-  tables, a profile page each), CnVerify (refused: a Cloudflare bot check on every path).
-  Demo specs in `specs/` are written by us; clients' documents are never shown.
+  comments). Demo cases, on sources we may use (AGENTS.md, Sources we may use): Better
+  Work factory compliance (one row per issue, detail behind a "View" button) and
+  Arbeidstilsynet's approved occupational health services (a Norwegian register,
+  delivered in English). Demo specs in `specs/` are written by us; clients' documents are
+  never shown.
 - **The agent's steps the user can watch:** reading the spec; loading the page and its
   network traffic; Muse Spark looking at a screenshot and choosing what to click; finding
   the endpoint or embedded data; checking robots.txt and how the site answers Apify's
@@ -59,8 +60,9 @@ Dapi investigates the way a professional does, and shows its work.
 - **Runs:** on Apify, in the owner's account for the hackathon (bring-your-own Apify account
   is the production path). The run and dataset links appear the moment a run starts; rows
   stream in batches; a stopped run continues on Resurrect.
-- **Timing:** investigation 30-150 s; code writing 35-90 s; runs from about 30 s (430 rows)
-  to 10-20 min (5,158 rows with 4,770 detail pages).
+- **Timing:** investigation a few minutes (Muse Wonder's agent); code writing 35-90 s;
+  runs from seconds (291 rows in one request, 433 rows with a detail request per
+  factory) to tens of minutes for tens of thousands of rows.
 - **Hosting:** a public URL where judges and gallery voters explore finished jobs and their
   receipts. Live new jobs are shown in the demo video, because Meta credits ($150) and
   Apify usage are limited.
@@ -75,9 +77,10 @@ Dapi investigates the way a professional does, and shows its work.
   aside. No logins or paywalls. Proxies only when the investigation shows a site needs
   them, recorded in every receipt. robots.txt is obeyed by default; fetching despite it
   needs the user's approval per job and is recorded.
-- Meta models in use: Muse Spark reads spec PDFs, matches columns to fields, looks at page
-  screenshots to choose what to click, writes and repairs the code and selectors. Muse Voice
-  Transcribe is planned for spoken jobs. SAM 3.1 was tested and does not find records on
+- Meta models in use: Muse Voice Transcribe turns a spoken spec into text; Muse Spark reads
+  spec PDFs, looks at page screenshots to choose what to click, writes and repairs the
+  code, and writes everything the client reads in plain words; Muse Wonder runs the
+  investigation as an agent and plans the extraction column by column. SAM 3.1 was tested and does not find records on
   HTML pages, so it is not in the pipeline.
 - Hackathon rules (AGENTS.md): new work only, demo only what was built here, no rights
   violations. The owner's earlier freelance scrapers are separate prior work.
@@ -89,9 +92,10 @@ The name is Dapi. No logo or visual identity exists yet. Voice: plain, honest an
 
 ## Evidence on Hand
 
-- Real runs with real numbers: Better Work 430 rows (379 issues, 51 factories without),
-  135 responses kept as evidence; GPTW 5,158 companies across 4 tables, 4,773 profile pages,
-  two companies the source lists twice; a crash-and-resurrect run; CnVerify's refusal.
+- Real runs with real numbers, on reviewed sources only (re-run on Nov 3 after every
+  earlier job was removed): Better Work 433 of 433 rows from 186 factories (one row per
+  issue), 22 s and $0.025 on Apify; Arbeidstilsynet 291 of 291 approved services in one
+  request, 4 s and $0.001.
 - Real artefacts: our demo specs (`specs/*.pdf`), findings files, generated site parts, the
   receipt view (JSON record with the source line marked, embedded row with the cell marked,
   the captured page with the element outlined).

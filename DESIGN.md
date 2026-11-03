@@ -256,10 +256,14 @@ table's scope chips. Rules do the structuring: row rules, the count's double rul
 - **Focus:** a 2px ink outline, 2px offset.
 
 ### The Live Receipt (home page, signature)
-FSSC's first delivered rows (job 0024) as a table; every cell is a button. The picked
-cell turns lime with an ink ring, and the receipt below shows the request, when it was
-captured and through which proxy, the SHA-256, and the response's own lines with the
-value's line in lime. Data: `web/src/lib/showcase.json`, built from the real capture.
+A finished job's first rows as a table, from a source we may show (AGENTS.md); every
+cell is a button. The picked cell turns lime with an ink ring, and the receipt below
+says, in plain words, where the value came from (the site's own data), when it was
+captured, and that it's sealed (a short fingerprint; the whole SHA-256 and the request
+on hover and on the job), then the response's own lines with the value's line in lime.
+A translated value names the site's original. The source's credit line sits under it.
+Fixed height, so picking a cell never moves the page. Data: `web/src/lib/showcase.json`,
+built by `node src/receipts/showcase.js` from the real capture.
 
 ### Job Cards (signature)
 The jobs list and the home page's proof: each card's art is its own data, the table

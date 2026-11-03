@@ -6,38 +6,44 @@ import showcase from "@/lib/showcase.json";
 import { cn } from "@/lib/utils";
 import { TickMark } from "@/components/tick";
 
-// The home page's live receipt: FSSC's first delivered rows (job 0024) and the response
-// they were read from, as captured on Apify. Click a value to see where it came from.
-type Cell = { value: string; path: string; field: string; parent: string; lines: { key: string; value: string; hit: boolean }[] };
-const rows = showcase.rows as Record<string, Cell>[];
-const COLUMNS: [string, string][] = [
-  ["Organization name", "Organization"],
-  ["City", "City"],
-  ["Country", "Country"],
-  ["Certificate valid until", "Valid until"],
-];
-
-const captured = new Date(showcase.capturedAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC" });
+// The home page's live receipt: a finished job's first rows and, for each value, the
+// response it was read from, as captured on Apify. Click a value to see where it came
+// from. Built by src/receipts/showcase.js from a job on a source we may show.
+type Cell = {
+  value: string;
+  original: string | null;
+  path: string;
+  field: string;
+  parent: string;
+  lines: { key: string; value: string; hit: boolean }[];
+  request: string;
+  capturedAt: string;
+  sha256: string;
+};
+const rows = showcase.rowsShown as Record<string, Cell>[];
+const COLUMNS = showcase.columns as [string, string][];
 const site = showcase.host.replace(/^www\./, "");
+const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC" });
 // The seal, short: enough to recognise it; the whole fingerprint is on hover and in the job.
-const seal = `${showcase.sha256.slice(0, 8)}…${showcase.sha256.slice(-6)}`;
+const short = (sha: string) => `${sha.slice(0, 8)}…${sha.slice(-6)}`;
 
 export function ReceiptDemo() {
-  const [at, setAt] = useState({ row: 1, column: "City" });
+  const [at, setAt] = useState({ row: 1, column: COLUMNS[0][0] });
   const cell = rows[at.row][at.column];
   return (
     <div className="overflow-hidden rounded-xl border bg-sheet shadow-[0_1px_0_rgba(29,44,58,0.04),0_12px_32px_-12px_rgba(29,44,58,0.18)]">
       <div className="flex items-center gap-3 border-b px-4 py-3">
         <span className="text-[14px] font-semibold">{showcase.title}</span>
-        <span className="ml-auto text-[13px] text-ink-2 tabular-nums">43,037 of 43,037 rows</span>
+        <span className="ml-auto text-[13px] text-ink-2 tabular-nums">
+          {showcase.rows.toLocaleString("en-US")} of {showcase.total.toLocaleString("en-US")} rows
+        </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] table-fixed text-[13.5px]">
           <colgroup>
-            <col className="w-[34%]" />
-            <col className="w-[25%]" />
-            <col className="w-[21%]" />
-            <col className="w-[20%]" />
+            {COLUMNS.map(([c], i) => (
+              <col key={c} style={{ width: i === 0 ? "34%" : `${66 / (COLUMNS.length - 1)}%` }} />
+            ))}
           </colgroup>
           <thead>
             <tr className="border-b text-left text-[12px] text-ink-2">
@@ -78,19 +84,21 @@ export function ReceiptDemo() {
       <div className="border-t bg-raised px-4 py-4">
         <div className="flex min-w-0 items-baseline gap-x-2">
           <span className="truncate text-[15px] font-semibold">{cell.value}</span>
-          <span className="shrink-0 text-[13px] text-ink-2">traced to the site&apos;s own data</span>
+          <span className="shrink-0 text-[13px] text-ink-2">
+            {cell.original && cell.original !== cell.value ? <>translated from the site&apos;s &ldquo;{cell.original}&rdquo;</> : "traced to the site's own data"}
+          </span>
         </div>
         {/* What a visitor needs: where it came from, when, and that it can't have changed.
             The request, the proxy and the whole SHA-256 are one click away, on the job. */}
         <dl className="mt-2.5 grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px]">
           <dt className="text-ink-2">From</dt>
-          <dd title={showcase.request}>{site}&apos;s own data feed, the one its public register page loads</dd>
+          <dd title={cell.request}>{site}&apos;s own data, the response its public page loads</dd>
           <dt className="text-ink-2">Captured</dt>
-          <dd>{captured} UTC</dd>
+          <dd>{when(cell.capturedAt)} UTC</dd>
           <dt className="text-ink-2">Sealed</dt>
-          <dd className="flex items-center gap-1.5" title={`SHA-256 ${showcase.sha256}: a fingerprint of the response. Change one character and it no longer matches.`}>
+          <dd className="flex items-center gap-1.5" title={`SHA-256 ${cell.sha256}: a fingerprint of the response. Change one character and it no longer matches.`}>
             <TickMark tick="traced" /> the moment it was captured
-            <span className="font-mono text-[11px] text-ink-3">{seal}</span>
+            <span className="font-mono text-[11px] text-ink-3">{short(cell.sha256)}</span>
           </dd>
         </dl>
         <pre className="mt-3 h-[calc(7lh+22px)] overflow-x-auto rounded-lg border bg-sheet px-3 py-2.5 font-mono text-[12px] leading-[1.7]">
@@ -103,9 +111,13 @@ export function ReceiptDemo() {
           ))}
           <span className="text-ink-2">{"}"}</span>
         </pre>
-        <Link href={`/jobs/${showcase.job}`} className="mt-3 inline-block text-[13px] font-medium underline">
-          Open the whole job and every receipt
-        </Link>
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <Link href={`/jobs/${showcase.job}`} className="text-[13px] font-medium underline">
+            Open the whole job and every receipt
+          </Link>
+          {/* The source's licence asks for this credit wherever its data is shown. */}
+          {showcase.credit && <span className="text-[11.5px] text-ink-3">{showcase.credit}</span>}
+        </div>
       </div>
     </div>
   );
