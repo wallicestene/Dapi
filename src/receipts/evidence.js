@@ -9,11 +9,16 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const cache = new Map();
 let store = null;
 
+// Found by name, never created here: the runner Actor (limited permissions) can only use
+// a store it created itself, so one made from this side would lock every run out (it
+// did, Nov 3).
 async function evidenceStore(fresh = false) {
   if (!store || fresh) {
     const { apify } = await import('../apify/client.js');
-    const { id } = await apify.keyValueStores().getOrCreate('dapi-evidence');
-    store = apify.keyValueStore(id);
+    const { items } = await apify.keyValueStores().list({ limit: 1000 });
+    const found = items.find((s) => s.name === 'dapi-evidence');
+    if (!found) throw new Error('no evidence store yet: the first run creates it');
+    store = apify.keyValueStore(found.id);
   }
   return store;
 }
