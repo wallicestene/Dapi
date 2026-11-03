@@ -14,7 +14,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY web/package.json web/package-lock.json web/
-RUN cd web && npm ci
+# The build needs the web app's dev packages (Tailwind, TypeScript); NODE_ENV=production
+# would otherwise make npm skip them.
+RUN cd web && npm ci --include=dev
 
 COPY . .
 RUN cd web && npx next build
