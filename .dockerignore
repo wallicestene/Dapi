@@ -1,0 +1,12 @@
+# Never in the image: secrets, local build output, scratch data.
+.env
+.env.*
+**/node_modules
+web/.next
+storage
+spike
+.impeccable
+.taste-skill
+.git
+# Only finished jobs are shown; a runner's log and lock files aren't needed.
+jobs/*/runner.log

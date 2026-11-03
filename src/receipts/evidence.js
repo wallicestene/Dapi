@@ -15,6 +15,8 @@ let store = null;
 async function evidenceStore(fresh = false) {
   if (!store || fresh) {
     const { apify } = await import('../apify/client.js');
+    // A deployment given the store's ID needs a token that can read only that store.
+    if (process.env.DAPI_EVIDENCE_STORE) return (store = apify.keyValueStore(process.env.DAPI_EVIDENCE_STORE));
     const { items } = await apify.keyValueStores().list({ limit: 1000 });
     const found = items.find((s) => s.name === 'dapi-evidence');
     if (!found) throw new Error('no evidence store yet: the first run creates it');

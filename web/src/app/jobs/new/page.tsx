@@ -4,6 +4,9 @@ import { READ_ONLY } from "@/lib/server/dapi";
 import { NewJobForm } from "./form";
 
 export const metadata = { title: "New job · Dapi" };
+// Checked on every request: a read-only copy must send visitors away from this page
+// whatever its build saw.
+export const dynamic = "force-dynamic";
 
 // What a spec needs, the way a client would brief a freelancer.
 const GOOD_SPEC = [
