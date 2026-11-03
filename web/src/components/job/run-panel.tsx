@@ -40,7 +40,16 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   // What happened during the run that you'd want to know: the site struggling and the
   // run easing off, a repair, Apify moving the run, translation. Pauses, resumes and
   // stops are the strip's to show.
-  const notes = events.filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify"].includes(e.kind)).slice(-4);
+  // Only the current run's: once a later run starts (or is followed again), earlier
+  // attempts' crashes and repairs are history, not news (FDA, Nov 3: a run that
+  // succeeded still showed the two crashes before it).
+  let current = 0;
+  events.forEach((e, i) => {
+    if (e.step === "run" && (e.kind === "started" || e.kind === "following")) current = i;
+  });
+  const notes = events.slice(current).filter((e) => e.step === "run" && ["watch", "repairing", "restarting", "broken", "translating", "translated", "apify"].includes(e.kind)).slice(-4);
+  // Whether this run started on its own (nothing in the plan needed the client).
+  const autoStarted = [...events].reverse().find((e) => e.kind === "plan" || e.kind === "auto-go")?.kind === "auto-go";
   // Apify's own account of the run, as figures.
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
@@ -48,9 +57,10 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
     // strip's row and pushes the sheet down the page.
     <div className="grid flex-1 content-start items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <ApifyStrip job={job} finished={finished} readOnly={readOnly} />
-      {notes.length > 0 && (
+      {(notes.length > 0 || autoStarted) && (
         <div className="rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">
           <ul className="text-[13px]" aria-label="During the run">
+            {autoStarted && <li className="py-1 text-ink-2">The run started on its own: nothing in the plan needed you.</li>}
             {notes.map((e) => (
               <li key={e.n} className={e.kind === "broken" || e.kind === "repairing" || e.kind === "stopped" ? "py-1 text-pencil-red" : "py-1 text-ink-2"}>
                 {e.text}
@@ -178,6 +188,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
   const translate = plan.translate as { from: string; to: string; columns: string[] } | null;
   const disputes = (plan.disputes as { label?: string; column: string | null; sample: string; site: string }[] | undefined) ?? [];
   const unsettled = (plan.unsettled as string[] | undefined) ?? [];
+  const needsYou = (plan.needsYou as string[] | undefined) ?? [];
   return (
     // The one moment Dapi hands over: a beam runs round the plan until you answer.
     <section className="relative overflow-hidden rounded-2xl border bg-white shadow-[0_12px_32px_-18px_rgb(15_26_36/0.35)]">
@@ -188,6 +199,20 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
           <p className="mt-1 text-[14.5px] leading-relaxed text-ink-2">{plan.text}</p>
         </div>
       </div>
+      {/* Why this plan waited for you; small things Dapi handled itself aren't listed. */}
+      {needsYou.length > 0 && (
+        <div className="mx-6 mb-4 rounded-xl border border-deliver/40 bg-[#e6f7f5] px-4 py-3 text-[14px]">
+          <p className="font-semibold">Dapi needs your Go because</p>
+          <ul className="mt-1 flex flex-col gap-1 text-ink-2">
+            {needsYou.map((r) => (
+              <li key={r} className="flex gap-2">
+                <span aria-hidden className="mt-[0.55em] size-1.5 shrink-0 rounded-full bg-deliver" />
+                {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <dl className="mx-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4">
         {facts.map(([k, v]) => (
           <div key={k} className="bg-sheet px-4 py-3.5">

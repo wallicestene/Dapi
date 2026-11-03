@@ -113,9 +113,17 @@ try {
   // The extraction's own settings: the way in and the pace Muse Spark chose for this site.
   const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
   const plan = makePlan(findings, config, writerNotes, spec, written.report);
+  plan.needsYou = needsYou(plan, findings);
   say('plan', { kind: 'plan', text: plan.text, ...plan });
-  updateJob(dir, { status: 'waiting', records: plan.records });
-  if (autoGo) writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString() });
+  // Nothing that needs the client: the run starts on its own (spacing, a typo in the
+  // spec, a value under another column, dates and translation are Dapi's to handle). A
+  // plan the client brought back after "Not now" always waits: they chose to look.
+  if (autoGo || (!plan.needsYou.length && from !== 'plan')) {
+    if (!autoGo) say('plan', { kind: 'auto-go', text: "Nothing in the plan needs you, so the run starts on its own. Small differences, like spacing or a typo in a sample, Dapi handles itself." });
+    writeJson(dir, 'approve.json', { go: true, robotsOverride: false, at: new Date().toISOString(), auto: !autoGo });
+  } else {
+    updateJob(dir, { status: 'waiting', records: plan.records });
+  }
   let approval;
   while (!(approval = readJson(dir, 'approve.json'))) await sleep(1000);
   if (!approval.go) {
@@ -430,6 +438,25 @@ function testDisputes(report) {
   );
 }
 
+// Why the plan waits for the client's Go, in their words: anything that changes what
+// they'll get, spends a lot of their Apify account, or is their call. Empty: the run
+// starts on its own.
+const BIG_RUN = { minutes: 30, requests: 5000 };
+function needsYou(plan, f) {
+  const reasons = [];
+  const missing = (f.strategy?.columns ?? []).filter((c) => c.route === 'none').map((c) => c.column);
+  if (missing.length) reasons.push(`${missing.join(', ')} won't be delivered: the site has no verified source for ${missing.length === 1 ? 'it' : 'them'}.`);
+  if (plan.unsettled?.length) reasons.push(`Muse Wonder left ${plan.unsettled.length === 1 ? 'a point' : `${plan.unsettled.length} points`} open about the data.`);
+  const notOnSite = plan.disputes.filter((d) => d.column === null).length;
+  const differ = plan.disputes.length - notOnSite;
+  if (notOnSite) reasons.push(`${notOnSite === 1 ? 'A sample record isn\'t' : `${notOnSite} sample records aren't`} on the site.`);
+  if (differ) reasons.push(`The site shows something else for ${differ === 1 ? 'a value' : `${differ} values`} in your samples; Dapi delivers what the site shows.`);
+  if (plan.robotsQuestion) reasons.push('robots.txt disallows part of what the job needs: fetching it anyway is your call.');
+  if (plan.personalData?.length) reasons.push(`${plan.personalData.map((p) => p.column).join(', ')} name or contact people.`);
+  if (plan.minutes > BIG_RUN.minutes || plan.requests > BIG_RUN.requests) reasons.push(`A big run: about ${plan.requests.toLocaleString('en-US')} requests, roughly ${plan.minutes} minutes on your Apify account.`);
+  return reasons;
+}
+
 // What the run will do, from the findings and the extraction's own settings.
 function makePlan(f, config, notes, spec, tested = null) {
   const records = f.list ? Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)) : null;
@@ -443,6 +470,10 @@ function makePlan(f, config, notes, spec, tested = null) {
   // Wonder may have found the value cheaper (FSSC: a suspension date from the feed).
   const routes = new Map((f.strategy?.columns ?? []).map((c) => [c.column, c.route]));
   const usesDetail = Object.keys(f.detail?.fields ?? {}).some((c) => !routes.size || ['page', 'shared-page', 'feed', 'register'].includes(routes.get(c)));
+  // Muse Wonder may have found a better way in than the first look saw (FDA, Nov 3: the
+  // first look read the 11 rows on screen; the strategy reads the table's own feed of
+  // 503). Then the plan is the strategy's: its route, its requests, no first-page count.
+  const beyond = Boolean(f.list?.html && [...routes.values()].includes('feed'));
   const pageColumns = Object.keys(f.detail?.fields ?? {}).filter((c) => f.detail.fields[c].keys?.length && !up?.columns.includes(c));
   const perRecordPages = pageColumns.some((c) => !f.detail.fields[c].sameOnAllPages);
   // A paged list is a request per page (of the biggest size the server honours).
@@ -454,10 +485,10 @@ function makePlan(f, config, notes, spec, tested = null) {
       ? up.apis.reduce((n, a) => n + (a.batch ? Math.ceil((records ?? 0) / a.batch.maxIds) : records ?? 0), 0) + (perRecordPages ? records ?? 0 : pageColumns.length ? 3 : 0)
       : records ?? 0;
   // When the first page isn't the whole list, Muse Wonder's strategy knows the requests.
-  const requests = (more || !f.list) && f.strategy?.requests?.total ? f.strategy.requests.total : listRequests + details;
+  const requests = (more || !f.list || beyond) && f.strategy?.requests?.total ? f.strategy.requests.total : listRequests + details;
   // When the first pass only saw part of the list (or none), the route is the one Muse
   // Wonder found and verified: the plan says it in its words.
-  const agentRoute = (more || !f.list) && f.strategy?.summary;
+  const agentRoute = (more || !f.list || beyond) && f.strategy?.summary;
   const agentSummary = f.strategy?.client?.summary ?? f.strategy?.summary;
   const rpm = Math.min(1200, Math.max(30, Number(config.maxRequestsPerMinute) || 600));
   // The time estimate follows the measured pace at the chosen concurrency, when there is one.
@@ -468,7 +499,7 @@ function makePlan(f, config, notes, spec, tested = null) {
   // robots.txt's Crawl-delay sets the pace when it's slower: one request at a time.
   const delay = f.list?.crawlDelaySecs ?? null;
   const minutes = Math.max(1, Math.ceil(requests / (delay ? Math.min(perMinute, 60 / delay) : perMinute)));
-  const route = !f.list ? 'agent' : f.list.embedded ? 'embedded' : f.list.html ? 'html' : 'feed';
+  const route = !f.list ? 'agent' : beyond ? 'feed' : f.list.embedded ? 'embedded' : f.list.html ? 'html' : 'feed';
   const how = {
     feed: "the site's own data feed (JSON)",
     embedded: 'data embedded in the page',
@@ -484,7 +515,7 @@ function makePlan(f, config, notes, spec, tested = null) {
         ? ', then one page per record'
         : ', then one data request per record';
   return {
-    records,
+    records: beyond ? null : records,
     more: Boolean(more),
     requests,
     minutes,
@@ -500,7 +531,7 @@ function makePlan(f, config, notes, spec, tested = null) {
     // What Muse Wonder couldn't settle: the client sees it before pressing Go.
     unsettled: (f.strategy?.client?.gaps ?? f.strategy?.gaps ?? []).slice(0, 3),
     text: agentRoute
-      ? `${records === null ? '' : `The page shows ${records.toLocaleString('en-US')} records${more ? `, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}` : ''}. `}${agentSummary} ${proxy === 'direct' ? 'Directly from Apify\'s servers.' : `Through Apify\'s ${proxy} proxy.`}`
+      ? `${records === null || beyond ? '' : `The page shows ${records.toLocaleString('en-US')} records${more ? `, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}` : ''}. `}${agentSummary} ${proxy === 'direct' ? 'Directly from Apify\'s servers.' : `Through Apify\'s ${proxy} proxy.`}`
       : `${records === null ? "Muse Wonder's strategy sets the route." : more ? `The page shows ${records.toLocaleString('en-US')} records, with more behind ${f.list.paging.next ? 'its next pages' : `“${f.list.paging.loadMore}”`}.` : `The source lists ${records.toLocaleString('en-US')} records.`} Dapi will read ${how}${pagesHow}${detailHow}: about ${requests.toLocaleString('en-US')} request${requests === 1 ? '' : 's'}, roughly ${minutes} minute${minutes === 1 ? '' : 's'} on Apify, ${proxy === 'direct' ? 'directly from its servers' : `through Apify's ${proxy} proxy`}.`,
   };
 }

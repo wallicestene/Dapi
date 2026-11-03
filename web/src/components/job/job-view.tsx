@@ -8,7 +8,7 @@ import { Footer, Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/lib/alerts";
-import { Bell, BellOff, Pause, Play } from "lucide-react";
+import { ArrowRight, Bell, BellOff, CircleAlert, Hand, Pause, Play } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -104,6 +104,60 @@ function HeldBanner({ job }: { job: Job }) {
       <p className="text-[14px]">
         <span className="font-semibold">Paused before {next}.</span> <span className="text-ink-2">{saved} Press ▶ on the step to resume.</span>
       </p>
+    </section>
+  );
+}
+
+// What the job needs from you, or what went wrong, said under its title at any step, with
+// a button to the step that explains it. Pauses you chose have their own banner.
+function JobNotice({ job, events, steps, onOpen }: { job: Job; events: JobEvent[]; steps: ReturnType<typeof stepStates>; onOpen: (tab: Tab) => void }) {
+  const plan = [...events].reverse().find((e) => e.kind === "plan");
+  const stopped = steps.find((s) => s.state === "stopped");
+  const expected = job.expected ?? null;
+  const notice =
+    job.status === "waiting"
+      ? {
+          tone: "go" as const,
+          title: "Dapi needs your Go",
+          lines: (plan?.needsYou as string[] | undefined) ?? [],
+          action: "Review the plan",
+          tab: "run" as Tab,
+        }
+      : ["failed", "declined"].includes(job.status) || (job.status === "stopped" && !job.paused)
+        ? {
+            tone: "stop" as const,
+            title: job.status === "declined" ? "Dapi can't extract this source" : `Stopped${stopped ? ` at ${stopped.label.toLowerCase()}` : ""}`,
+            lines: [job.declined ?? job.failed ?? ""].filter(Boolean),
+            action: "See why",
+            tab: (stopped?.tab ?? "run") as Tab,
+          }
+        : job.status === "done" && expected !== null && (job.rows ?? 0) < expected
+          ? {
+              tone: "stop" as const,
+              title: `${n(expected - (job.rows ?? 0))} rows missing`,
+              lines: ["Each one is named, with the reason, on the Count step."],
+              action: "See which",
+              tab: "footed" as Tab,
+            }
+          : null;
+  if (!notice) return null;
+  const go = notice.tone === "go";
+  return (
+    <section role="status" className={cn("flex flex-wrap items-start gap-3 rounded-xl border px-5 py-3", go ? "border-deliver/40 bg-[#e6f7f5]" : "border-pencil-red/40 bg-red-wash")}>
+      {go ? <Hand aria-hidden className="mt-0.5 size-4 shrink-0 text-[#0b6f65]" /> : <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-pencil-red" />}
+      <div className="min-w-0 flex-1 text-[14px]">
+        <p className={cn("font-semibold", go ? "text-ink" : "text-red-ink")}>{notice.title}</p>
+        {notice.lines.length > 0 && (
+          <ul className={cn("mt-0.5 flex flex-col gap-0.5", go ? "text-ink-2" : "text-red-ink/85")}>
+            {notice.lines.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <Button variant="outline" onClick={() => onOpen(notice.tab)} className="h-8 shrink-0 gap-1.5 border-control bg-sheet px-3 text-[13px]">
+        {notice.action} <ArrowRight aria-hidden className="size-3.5" />
+      </Button>
     </section>
   );
 }
@@ -240,6 +294,7 @@ export function JobView({
         </div>
 
         {job.status === "held" && <HeldBanner job={job} />}
+        <JobNotice job={job} events={events} steps={steps} onOpen={setPicked} />
         <TabsPrimitive.Root value={tab} onValueChange={(v) => setPicked(v as Tab)} className="flex flex-1 flex-col gap-4">
           {/* Each step carries the mark lit to its stage; the one under way has a quiet beam
               in that stage's colour, and the step's own control (pause, resume) in its corner. */}
