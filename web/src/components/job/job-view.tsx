@@ -52,6 +52,9 @@ function controlFor(job: Job, s: { tab: Tab; state: string }): Control | null {
   if (job.status === "held" && s.tab === (job.heldBefore === "site" ? "site" : "code")) {
     return { icon: "play", label: "Resume from this step", tip: "Resume. This step starts from what was saved; nothing before it is redone.", run: () => post(`/api/jobs/${job.id}/continue`).then(reload) };
   }
+  if (s.tab === "run" && job.status === "cancelled") {
+    return { icon: "play", label: "Back to the plan", tip: "Back to the plan. The extraction is written and tested; the time and cost are worked out fresh, then you press Go.", run: () => post(`/api/jobs/${job.id}/reopen`).then(reload) };
+  }
   if (s.tab === "run" && job.runId && job.status === "running" && job.step === "run") {
     return { icon: "pause", label: "Pause the run on Apify", tip: "Pause the run on Apify. It stops cleanly and keeps the dataset, queue and saved state; Resume carries on from there.", run: () => post(`/api/jobs/${job.id}/pause`).then(reload) };
   }

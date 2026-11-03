@@ -30,7 +30,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
           : job.status === "failed"
             ? "Nothing was run: the step marked in red says what went wrong."
             : job.status === "cancelled"
-              ? "You stopped this job before it ran."
+              ? "Paused at the plan. The extraction is written and tested; ▶ on the Run step brings the plan back."
               : "The run starts once the extraction passes its checks and you say Go."}
       </section>
     );
@@ -251,8 +251,8 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
                 Run, and fetch what robots.txt disallows
               </Button>
             )}
-            <Button variant="ghost" disabled={busy} onClick={() => answer(false)} className="h-11 px-3 text-ink-2">
-              Stop here
+            <Button variant="ghost" disabled={busy} onClick={() => answer(false)} className="h-11 px-3 text-ink-2" title="Pause here. The extraction is kept; ▶ on the Run step brings the plan back.">
+              Not now
             </Button>
             <p className="text-[13px] text-ink-2 sm:ml-auto">Rows stream into your Apify dataset as they&apos;re found.</p>
           </>

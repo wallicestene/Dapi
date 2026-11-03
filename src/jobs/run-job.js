@@ -92,31 +92,16 @@ try {
     await followExisting();
     process.exit(0);
   }
-  // Steps 1 and 2, or, when the extraction is tried again, what they saved.
-  const { spec, findings } = from === 'code' ? restartAtCode() : await specAndSite(from);
-  if (from !== 'code') holdIfAsked('code');
+  // Steps 1 and 2, or, when the job starts again later on, what they saved.
+  const { spec, findings } = from === 'code' ? restartAtCode() : from === 'plan' ? saved() : await specAndSite(from);
+  if (!from || from === 'site') holdIfAsked('code');
   const runSpec = findings.sourceSamples ? { ...spec, samples: findings.sourceSamples } : spec;
   const runSpecPath = path.join(dir, findings.sourceSamples ? 'spec.source.json' : 'spec.json');
 
-  // 3. The extraction: written by Muse Spark, tested against the spec's samples.
-  step('code');
-  say('code', { kind: 'start', text: 'Writing the extraction and testing it against your sample rows.' });
-  let writerNotes = '';
-  const written = await writeAndTest({
-    spec: runSpec,
-    specPath: runSpecPath,
-    findings,
-    outPath: path.join(dir, 'site.js'),
-    onEvent: (e) => {
-      if (e.kind === 'written') writerNotes = e.forClient?.length ? e.forClient : e.notes;
-      say('code', { ...e, text: describeAttempt(e) });
-    },
-  });
-  if (!written.passed) {
-    say('code', { kind: 'failed', text: `The extraction still failed its checks after ${written.attempts} attempts, so Dapi stopped before running it.` });
-    updateJob(dir, { status: 'failed', failed: 'The extraction did not pass its checks.' });
-    process.exit(1);
-  }
+  // 3. The extraction: written by Muse Spark, tested against the spec's samples. Back to
+  // the plan after "Not now": the extraction that passed is kept, with its test.
+  const written = from === 'plan' ? savedExtraction() : await codeStep(runSpec, runSpecPath, findings);
+  const writerNotes = written.writerNotes;
 
   // 4. The plan, and the user's Go.
   step('plan');
@@ -129,11 +114,12 @@ try {
   let approval;
   while (!(approval = readJson(dir, 'approve.json'))) await sleep(1000);
   if (!approval.go) {
-    say('plan', { kind: 'cancelled', text: 'You stopped the job before it ran.' });
+    say('plan', { kind: 'cancelled', text: 'Paused at the plan. The extraction is written and tested; ▶ on the Run step brings the plan back.' });
     updateJob(dir, { status: 'cancelled' });
     process.exit(0);
   }
   if (approval.robotsOverride) say('plan', { kind: 'robots-override', text: 'You approved fetching what robots.txt disallows. Every such request is marked in its receipt.' });
+
 
   // 5. The run.
   step('run');
@@ -317,6 +303,50 @@ function endedEarly(outcome) {
     ? { kind: 'paused', text: `Paused with ${rows} rows delivered. Resume to carry on where it stopped: the dataset, the queue and the saved state are kept.` }
     : { kind: 'stopped', text: `The run ended ${outcome.runStatus.toLowerCase()} with ${rows} rows. Resurrect it to continue where it stopped.` });
   updateJob(dir, { status: 'stopped', runStatus: outcome.runStatus, paused });
+}
+
+
+// Step 3: the extraction, written by Muse Spark and tested against the samples.
+async function codeStep(runSpec, runSpecPath, findings) {
+  step('code');
+  say('code', { kind: 'start', text: 'Writing the extraction and testing it against your sample rows.' });
+  let writerNotes = '';
+  const written = await writeAndTest({
+    spec: runSpec,
+    specPath: runSpecPath,
+    findings,
+    outPath: path.join(dir, 'site.js'),
+    onEvent: (e) => {
+      if (e.kind === 'written') writerNotes = e.forClient?.length ? e.forClient : e.notes;
+      say('code', { ...e, text: describeAttempt(e) });
+    },
+  });
+  if (!written.passed) {
+    say('code', { kind: 'failed', text: `The extraction still failed its checks after ${written.attempts} attempts, so Dapi stopped before running it.` });
+    updateJob(dir, { status: 'failed', failed: 'The extraction did not pass its checks.' });
+    process.exit(1);
+  }
+  return { ...written, writerNotes };
+}
+
+// Back to the plan: the spec and the investigation as saved.
+function saved() {
+  const spec = readJson(dir, 'spec.json');
+  const findings = readJson(dir, 'findings.json');
+  if (!spec || !findings) throw new Error('nothing saved to go back to the plan from');
+  return { spec, findings };
+}
+
+// The extraction that passed its test, as saved: the code in site.js, Muse Spark's lines
+// for the client and the test's report, from the job's own events.
+function savedExtraction() {
+  if (!fs.existsSync(path.join(dir, 'site.js'))) throw new Error('no tested extraction saved');
+  const events = fs.readFileSync(path.join(dir, 'events.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  const written = events.filter((e) => e.kind === 'written').at(-1);
+  const tested = events.filter((e) => e.kind === 'tested' && e.passed).at(-1);
+  if (!tested) throw new Error('no passing test saved');
+  say('plan', { kind: 'resume', text: "Back to the plan: the extraction is written and tested. Press Go when you're ready." });
+  return { passed: true, report: tested.report, writerNotes: written?.forClient?.length ? written.forClient : written?.notes ?? '' };
 }
 
 function refuse(f) {

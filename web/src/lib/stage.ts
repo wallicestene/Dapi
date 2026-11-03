@@ -19,3 +19,9 @@ export function cost(usd?: number | null) {
   if (!usd) return null;
   return usd < 0.01 ? "under $0.01" : `$${usd.toFixed(2)}`;
 }
+
+// Who stopped a job. The client's own pauses (at the plan, between steps, the run on
+// Apify) always carry on from where they stopped; the pipeline stopping itself (refused,
+// failed a check, a broken run) is a different thing, shown in red.
+export const pausedByYou = (job: Pick<Job, "status" | "paused">) => job.status === "cancelled" || job.status === "held" || (job.status === "stopped" && Boolean(job.paused));
+export const stoppedItself = (job: Pick<Job, "status" | "paused">) => job.status === "failed" || job.status === "declined" || (job.status === "stopped" && !job.paused);

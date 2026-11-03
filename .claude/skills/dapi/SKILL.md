@@ -901,6 +901,14 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   (`run-job.js --from site|code`). After the extraction the plan already waits for Go,
   so no hold there. Tested on job 0032: held before the site, resumed, held before the
   extraction with findings and strategy saved, resumed to the plan.
+- **Paused by you vs stopped** (owner, Nov 3): the client's own pauses (at the plan with
+  "Not now", between steps, the run on Apify) always carry on from where they stopped and
+  are never shown as failures; the pipeline stopping itself (refused, e.g. CnVerify's
+  human check; an extraction that failed its checks; a broken run) is "Stopped", in red.
+  Separate filters and sections on the jobs list (`pausedByYou` / `stoppedItself` in
+  `web/src/lib/stage.ts`). A job paused at the plan comes back with ▶ on the Run card
+  (`run-job.js --from plan`): the plan is worked out fresh from the tested extraction,
+  nothing redone. Tested on job 0032.
 - **Alerts** when a job needs you (Ready to run) or finishes (delivered, stopped): a
   soft chime (rising / falling), the tab title flashing until you look, a desktop
   notification when the tab is in the background; a bell in the job's top bar turns

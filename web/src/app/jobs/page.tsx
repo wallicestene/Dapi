@@ -5,7 +5,7 @@ import { Mark, TopBar } from "@/components/shell";
 import { JobArt } from "@/components/job-art";
 import { GLASS } from "@/lib/glass";
 import { READ_ONLY, listJobs } from "@/lib/server/dapi";
-import { STAGE_TEXT, cost, stageOf, took } from "@/lib/stage";
+import { STAGE_TEXT, cost, pausedByYou, stageOf, stoppedItself, took } from "@/lib/stage";
 import { cn } from "@/lib/utils";
 import type { Job } from "@/lib/types";
 
@@ -19,15 +19,19 @@ const STATUS: Record<Job["status"], string> = {
   done: "Delivered",
   failed: "Stopped: failed a check",
   declined: "Refused",
-  cancelled: "Stopped by you",
+  cancelled: "Paused at the plan",
   stopped: "Run stopped",
 };
+const statusOf = (j: Job) => (j.status === "stopped" && j.paused ? "Paused on Apify" : STATUS[j.status]);
 
+// The client's own pauses and the pipeline stopping itself are kept apart: a pause always
+// carries on from where it stopped; a stop is shown in red.
 const FILTERS = [
   { key: "all", label: "All", has: () => true },
   { key: "delivered", label: "Delivered", has: (j: Job) => j.status === "done" },
-  { key: "active", label: "In progress", has: (j: Job) => ["running", "waiting", "held"].includes(j.status) },
-  { key: "stopped", label: "Stopped", has: (j: Job) => ["failed", "declined", "cancelled", "stopped"].includes(j.status) },
+  { key: "active", label: "In progress", has: (j: Job) => j.status === "running" || j.status === "waiting" },
+  { key: "paused", label: "Paused by you", has: (j: Job) => pausedByYou(j) },
+  { key: "stopped", label: "Stopped", has: (j: Job) => stoppedItself(j) },
 ];
 
 export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
@@ -37,8 +41,14 @@ export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
   const shown = jobs.filter(filter.has);
   // On "All", the work in progress and what was delivered come first; stopped attempts
   // sit in their own section below.
-  const stopped = FILTERS[3].has;
-  const groups = filter.key === "all" ? [{ title: null, jobs: shown.filter((j) => !stopped(j)) }, { title: "Stopped", jobs: shown.filter(stopped) }] : [{ title: null, jobs: shown }];
+  const groups =
+    filter.key === "all"
+      ? [
+          { title: null, jobs: shown.filter((j) => !pausedByYou(j) && !stoppedItself(j)) },
+          { title: "Paused by you", jobs: shown.filter(pausedByYou) },
+          { title: "Stopped", jobs: shown.filter(stoppedItself) },
+        ]
+      : [{ title: null, jobs: shown }];
   return (
     <div className="flex min-h-screen flex-col">
       <TopBar />
@@ -109,7 +119,7 @@ function JobCard({ job }: { job: Job }) {
   const host = job.sourceUrl ? new URL(job.sourceUrl).host.replace(/^www\./, "") : null;
   const stage = stageOf(job);
   const live = job.status === "running";
-  const bad = ["failed", "declined", "cancelled", "stopped"].includes(job.status);
+  const bad = stoppedItself(job);
   const short = job.status === "done" && job.expected != null && (job.rows ?? 0) < job.expected;
   const meta = [took(job.apify?.seconds), cost(job.apify?.usd), new Date(job.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })].filter(Boolean);
   return (
@@ -117,7 +127,7 @@ function JobCard({ job }: { job: Job }) {
       <JobArt seed={host ?? job.id} muted={bad} className="absolute inset-0" />
       <span className="absolute top-3.5 left-3.5 inline-flex items-center gap-1.5 rounded-full bg-sheet/95 py-1 pr-2.5 pl-1.5 text-[12px] font-medium text-ink shadow-sm">
         <Mark className="size-4" lit={stage} now={live ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
-        <span className={bad ? "text-pencil-red" : undefined}>{STATUS[job.status]}</span>
+        <span className={bad ? "text-pencil-red" : undefined}>{statusOf(job)}</span>
       </span>
       <div className={cn(GLASS, "absolute inset-x-3 bottom-3 px-4 pt-3.5 pb-4")}>
         <p className="line-clamp-2 text-[15.5px] leading-snug font-semibold">{job.title ?? "Reading the spec…"}</p>
