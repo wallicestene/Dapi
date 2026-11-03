@@ -1,7 +1,7 @@
 // A value's receipt: the evidence it was read from (request, response, capture time,
 // hash) and, for each path the value came from, that place in the evidence.
 
-import { pipeline } from "@/lib/server/dapi";
+import { READ_ONLY, pipeline } from "@/lib/server/dapi";
 import { deliveredKeys, onlyDelivered } from "@/lib/server/delivered";
 import { jobFor } from "@/lib/server/access";
 import { PUBLIC } from "@/lib/server/session";
@@ -36,6 +36,7 @@ export async function GET(request: Request) {
       response: e.response,
       bodySha256: e.bodySha256,
       bodyBytes: Buffer.byteLength(e.body),
+      sealCheck: PUBLIC || READ_ONLY ? "server" : "browser",
       // Only the fields the job delivers leave the server; the rest are counted.
       located: p.getAll("path").map((path) => {
         const l = { path, ...locate(e, path) };

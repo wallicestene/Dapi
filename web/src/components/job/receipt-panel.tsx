@@ -179,7 +179,7 @@ function Evidence({ located, evidenceKey, jobId }: { located: Located; evidenceK
     const src = `/api/evidence/page?key=${evidenceKey}&job=${jobId}&path=${encodeURIComponent(located.path)}`;
     return (
       <figure className="mt-3">
-        <iframe title="The captured page, with the element outlined" src={src} sandbox="" className="h-72 w-full rounded-md border bg-white" />
+        <iframe title="The captured page, with the element outlined" src={src} sandbox="allow-scripts" className="h-72 w-full rounded-md border bg-white" />
         <figcaption className="mt-1.5 text-[12px] text-ink-2">The page as captured, scripts removed; the element the value came from is outlined.</figcaption>
       </figure>
     );
@@ -230,17 +230,13 @@ function Seal({ receipt, readOnly }: { receipt: Receipt; readOnly: boolean }) {
   const recheck = async () => {
     setCheck("checking");
     try {
-      if (readOnly) {
+      // The server says who checks: itself on a public or read-only copy (whole responses
+      // never leave it), your browser where you run Dapi.
+      if (receipt.sealCheck === "server" || readOnly) {
         const { matches } = await (await fetch(`/api/evidence/verify?key=${receipt.key}`)).json();
         return setCheck(matches ? "match" : "mismatch");
       }
-      const res = await fetch(`/api/evidence/body?key=${receipt.key}`);
-      // A copy that doesn't hand out whole responses checks the seal itself.
-      if (res.status === 403) {
-        const { matches } = await (await fetch(`/api/evidence/verify?key=${receipt.key}`)).json();
-        return setCheck(matches ? "match" : "mismatch");
-      }
-      const body = await res.text();
+      const body = await (await fetch(`/api/evidence/body?key=${receipt.key}`)).text();
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
       const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join(""); // taste-skill-ignore: hex bytes
       setCheck(hex === receipt.bodySha256 ? "match" : "mismatch");
@@ -261,7 +257,7 @@ function Seal({ receipt, readOnly }: { receipt: Receipt; readOnly: boolean }) {
           <p className="flex items-start gap-2 rounded-lg bg-verified/25 px-3 py-2 text-green-ink">
             <ShieldCheck aria-hidden className="mt-px size-4 shrink-0" />
             <span>
-              <b className="font-semibold">Seal verified.</b> {readOnly ? "The stored response, hashed again" : "Your browser re-hashed the response"}: byte for byte what was captured.
+              <b className="font-semibold">Seal verified.</b> {receipt.sealCheck === "server" || readOnly ? "The stored response, hashed again" : "Your browser re-hashed the response"}: byte for byte what was captured.
             </span>
           </p>
         ) : check === "mismatch" ? (

@@ -43,7 +43,7 @@ export function locate(evidence, locator) {
 // The captured page as it was, with the elements a selector matched outlined, for
 // display only. The raw body stays untouched for the hash check. Scripts are removed
 // and a <base> makes the page's own styles load.
-export function markedPage(evidence, locator) {
+export function markedPage(evidence, locator, nonce = null) {
   const all = locator.startsWith('css*:');
   const body = locator.slice(all ? 5 : 4);
   const at = body.lastIndexOf('@');
@@ -52,7 +52,12 @@ export function markedPage(evidence, locator) {
   $('script').remove();
   const hits = $(selector);
   (all ? hits : hits.first()).attr('data-dapi-hit', '');
+  hits.first().attr('id', 'dapi-hit');
   $('head').prepend(`<base href="${evidence.request.url}">`);
   $('head').append('<style>[data-dapi-hit]{outline:3px solid #2f7d4f!important;outline-offset:3px;background:rgba(47,125,79,.14)!important}</style>');
+  // The only script the page may run (its own were removed; the frame's policy admits
+  // just this nonce): bring the value into view. A sandboxed frame ignores #anchors.
+  // Again once the page's styles have loaded, which moves things.
+  if (nonce) $('body').append(`<script nonce="${nonce}">const go = () => document.getElementById('dapi-hit')?.scrollIntoView({ block: 'center' }); go(); addEventListener('load', go);</script>`);
   return $.html();
 }

@@ -123,6 +123,9 @@ export interface Receipt {
   response: { status: number; contentType?: string | null };
   bodySha256: string;
   bodyBytes: number;
+  // Who re-checks the seal: the browser (it gets the whole response) or, on a public or
+  // read-only copy, the server (whole responses never leave it).
+  sealCheck: "browser" | "server";
   located: Located[];
 }
 
