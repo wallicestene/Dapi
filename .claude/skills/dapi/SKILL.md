@@ -927,6 +927,21 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Export: five formats, built by Dapi (2026-11-03)
+
+- The job page exports CSV, Excel (.xlsx), JSON, XML and an HTML table from Dapi's own
+  copy of the rows (`rows.jsonl`: the spec's columns, translated where the job
+  translated), so a file always matches the table on screen and nobody goes to Apify
+  for their data. Apify's own dataset export would hand over the site's untranslated
+  words. Any time there are rows: a running or paused job exports the rows so far.
+- `web/src/lib/server/export.ts`. Excel is written by hand as SpreadsheetML and zipped
+  with `fflate` (0.8.3, one small dependency) rather than a spreadsheet library: one
+  sheet named after the job, bold frozen header, columns sized to content, whole
+  numbers and decimals as numbers (leading zeros and 16+ digits stay text, so IDs
+  survive). Checked with openpyxl and macOS Quick Look; FSSC's 43,037 rows come out as
+  an 8 MB .xlsx in about 2 s. XML element names come from the columns
+  ("Assessment Date" -> `assessment_date`).
+
 ### One vocabulary, plain first, nothing moves (2026-11-03)
 
 - **Layout shift, measured.** Two causes, both fixed and re-measured with Playwright:

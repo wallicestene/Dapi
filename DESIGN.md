@@ -298,7 +298,9 @@ every step; addresses show as their path in mono, the full address on hover.
 
 ### The Ticked Data Sheet (signature)
 Delivered rows in a ruled table, every value followed by its tick; each cell opens its
-receipt, and the picked cell turns lime with an ink outline.
+receipt, and the picked cell turns lime with an ink outline. "Export" in its toolbar
+opens a menu of five files (CSV, Excel, JSON, XML, HTML table), each with what it's for
+and its extension; the menu's first line says how many rows ("so far" while a job runs).
 
 ### The Receipt Rail (signature)
 For the picked value: its ticks as sentences; then the request with its method as a

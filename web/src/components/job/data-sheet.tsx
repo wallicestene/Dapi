@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TickLegend, TickMark } from "@/components/tick";
@@ -17,6 +18,15 @@ export interface Selection {
 }
 
 const PAGE = 50;
+// Every way out for the rows, built by Dapi from the rows on screen: nobody has to go to
+// Apify to get their data.
+const EXPORTS: [format: string, name: string, use: string][] = [
+  ["csv", "CSV", "Spreadsheets and most tools"],
+  ["xlsx", "Excel", "Opens straight in Excel"],
+  ["json", "JSON", "For developers and APIs"],
+  ["xml", "XML", "For systems that take XML"],
+  ["html", "HTML table", "To view, print or paste into a doc"],
+];
 const languageName = (code: string) => {
   try {
     return new Intl.DisplayNames(["en"], { type: "language" }).of(code) ?? code;
@@ -117,21 +127,40 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        {job.status === "done" && (
-          <a
-            href={`/api/jobs/${job.id}/download`}
-            className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border border-control bg-white px-2.5 text-[12px] font-medium hover:bg-raised"
-          >
-            <Download aria-hidden className="size-3.5" />
-            Download CSV{page?.translated ? ` (${languageName(page.translated.to)})` : ""}
-          </a>
-        )}
-        {live && (
-          <label className="ml-auto flex items-center gap-2 text-[12px] text-ink-2">
-            <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="accent-ink" />
-            Follow new rows
-          </label>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          {live && (
+            <label className="flex items-center gap-2 text-[12px] text-ink-2">
+              <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} className="accent-ink" />
+              Follow new rows
+            </label>
+          )}
+          {(page?.all ?? 0) > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-md border border-control bg-white px-2.5 text-[12px] font-medium outline-none hover:bg-raised focus-visible:outline-2 focus-visible:outline-ink data-[state=open]:bg-raised">
+                <Download aria-hidden className="size-3.5" />
+                Export
+                <ChevronDown aria-hidden className="size-3.5 text-ink-2" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 bg-sheet p-1.5">
+                <DropdownMenuLabel className="px-2 pt-1 pb-1.5 text-[12px] font-normal text-ink-2">
+                  {n(page!.all)} rows{job.status === "done" ? "" : " so far"}, in your spec&apos;s columns{page?.translated ? `, in ${languageName(page.translated.to)}` : ""}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {EXPORTS.map(([format, name, use]) => (
+                  <DropdownMenuItem key={format} asChild className="cursor-pointer rounded-md px-2 py-1.5 focus:bg-raised">
+                    <a href={`/api/jobs/${job.id}/download?format=${format}`} download>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="text-[13px] font-medium text-ink">{name}</span>
+                        <span className="text-[12px] text-ink-2">{use}</span>
+                      </span>
+                      <span className="ml-auto font-mono text-[11px] text-ink-3">.{format}</span>
+                    </a>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       <div className={cn("max-h-[calc(100vh-330px)] overflow-auto", (!page || page.rows.length >= 6) && "min-h-[260px]")}>
