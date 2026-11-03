@@ -927,6 +927,21 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Run history and alerts (owner's call, Nov 3)
+
+- **Run history, not just the last run:** the Run tab lists every run, one line each,
+  once there's a story (more than one run, or one that failed): why a run failed, what
+  Muse Spark fixed ("fixed the extraction and it passed its tests"), how the last one
+  went ("Run 4 succeeded in 36 s: 503 rows"). One clean run shows nothing. `repairing`
+  and `broken` events carry `reason` (and `after`) so the history never parses text.
+- **Alerts fire when the plan is ready**, after samples are checked and before anything
+  runs on Apify: the Run card turns "Ready to run" with a teal ring, the notice under
+  the title says "Ready to run: your Go starts it on Apify", a chime, the tab title
+  flashes, and a desktop notification ("Samples checked: your Go starts the run on
+  Apify"). Desktop notifications need the browser's permission: the bell shows a teal
+  dot until it's given, one click asks. Alerts need the job's page open (any tab);
+  email or push belongs with user accounts.
+
 ### Go is always the client's; small sample differences are handled (owner's call, Nov 3)
 
 - **The run always waits for Go.** Tried starting clean runs on their own, then reverted:
