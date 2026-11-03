@@ -7,5 +7,7 @@ for job in "$root"/jobs/*/; do
   name=$(basename "$job")
   [ -e "$DAPI_JOBS_DIR/$name" ] || cp -r "$job" "$DAPI_JOBS_DIR/$name"
 done
+# Jobs a deploy or restart interrupted carry on from the step they were on.
+node "$root/src/jobs/resume-all.js" || true
 cd "$root/web"
 exec npx next start -p "${PORT:-3000}"

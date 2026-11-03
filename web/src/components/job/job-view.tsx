@@ -110,12 +110,32 @@ function HeldBanner({ job }: { job: Job }) {
 
 // What the job needs from you, or what went wrong, said under its title at any step, with
 // a button to the step that explains it. Pauses you chose have their own banner.
-function JobNotice({ job, events, steps, onOpen }: { job: Job; events: JobEvent[]; steps: ReturnType<typeof stepStates>; onOpen: (tab: Tab) => void }) {
+// A job whose runner was lost (a deploy or restart stopped it), not one that failed.
+const LOST = "The runner stopped unexpectedly.";
+
+function JobNotice({ job, events, steps, current, readOnly, onOpen }: { job: Job; events: JobEvent[]; steps: ReturnType<typeof stepStates>; current: Tab; readOnly: boolean; onOpen: (tab: Tab) => void }) {
   const plan = [...events].reverse().find((e) => e.kind === "plan");
   const stopped = steps.find((s) => s.state === "stopped");
   const expected = job.expected ?? null;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const startAgain = async () => {
+    setBusy(true);
+    const res = await fetch(`/api/jobs/${job.id}/restart`, { method: "POST" });
+    if (res.ok) return window.location.reload();
+    setError((await res.json().catch(() => ({}))).error ?? "Couldn't start it again. Try once more.");
+    setBusy(false);
+  };
   const notice =
-    job.status === "waiting"
+    job.status === "failed" && job.failed === LOST
+      ? {
+          tone: "stop" as const,
+          title: "This job was interrupted",
+          lines: ["The server restarted while it ran. Start again picks it up at the step it was on; nothing it saved is lost."],
+          action: readOnly ? null : "Start again",
+          tab: null,
+        }
+      : job.status === "waiting"
       ? {
           tone: "go" as const,
           title: "Ready to run: your Go starts it on Apify",
@@ -155,9 +175,13 @@ function JobNotice({ job, events, steps, onOpen }: { job: Job; events: JobEvent[
           </ul>
         )}
       </div>
-      <Button variant="outline" onClick={() => onOpen(notice.tab)} className="h-8 shrink-0 gap-1.5 border-control bg-sheet px-3 text-[13px]">
-        {notice.action} <ArrowRight aria-hidden className="size-3.5" />
-      </Button>
+      {error && <p className="text-[13px] text-pencil-red">{error}</p>}
+      {/* The button does something: start again, or open a step that isn't open yet. */}
+      {notice.action && (notice.tab === null || notice.tab !== current) && (
+        <Button variant="outline" disabled={busy} onClick={() => (notice.tab === null ? startAgain() : onOpen(notice.tab))} className="h-8 shrink-0 gap-1.5 border-control bg-sheet px-3 text-[13px]">
+          {busy ? "Starting…" : notice.action} <ArrowRight aria-hidden className="size-3.5" />
+        </Button>
+      )}
     </section>
   );
 }
@@ -306,7 +330,7 @@ export function JobView({
         </div>
 
         {job.status === "held" && <HeldBanner job={job} />}
-        <JobNotice job={job} events={events} steps={steps} onOpen={setPicked} />
+        <JobNotice job={job} events={events} steps={steps} current={tab} readOnly={readOnly} onOpen={setPicked} />
         <TabsPrimitive.Root value={tab} onValueChange={(v) => setPicked(v as Tab)} className="flex flex-1 flex-col gap-4">
           {/* Each step carries the mark lit to its stage; the one under way has a quiet beam
               in that stage's colour, and the step's own control (pause, resume) in its corner. */}

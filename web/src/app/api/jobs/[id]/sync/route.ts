@@ -30,6 +30,15 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
     const fresh = Date.now() - Date.parse(job.updatedAt ?? "1970-01-01") < 20_000;
     if (["running", "waiting"].includes(job.status) && job.runnerPid && !fresh) {
       const { updateJob, emit } = await pipeline<{ updateJob: (dir: string, changes: object) => void; emit: (dir: string, e: object) => void }>("src/jobs/store.js");
+      // A runner stopped from outside (a deploy, a restart) picks up at its step, twice
+      // at most: something that keeps killing it is a real failure.
+      const resumes = Number((job as { autoResumes?: number }).autoResumes ?? 0);
+      if (!READ_ONLY && resumes < 2) {
+        const { resumeArgs } = await pipeline<{ resumeArgs: (dir: string, job: object) => string[] }>("src/jobs/resume.js");
+        emit(jobPath(id), { step: job.step, kind: "resume", text: "Dapi's runner for this job stopped. Dapi picked it up at this step." });
+        startRunner(id, resumeArgs(jobPath(id), job), { status: job.status, autoResumes: resumes + 1 });
+        return Response.json({ state: "resumed" });
+      }
       emit(jobPath(id), { step: job.step, kind: "error", text: "Dapi's runner for this job stopped unexpectedly. Start the job again." });
       updateJob(jobPath(id), { status: "failed", failed: "The runner stopped unexpectedly." });
       return Response.json({ state: "runner-died" });
