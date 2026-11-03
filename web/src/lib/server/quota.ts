@@ -44,12 +44,12 @@ export function mayStart(user: User | null): { ok: true; left: number } | { ok: 
   const jobs = listJobs().filter((j) => j.owner);
   const mine = jobs.filter((j) => j.owner!.id === user.id);
   const left = turnsLeft(user);
-  if (!left) return { ok: false, reason: `You've used your ${LIMITS.perUser} jobs on the demo. Thanks for trying Dapi.` };
+  if (!left) return { ok: false, reason: `You've used your ${LIMITS.perUser} jobs. Thanks for trying Dapi.` };
   const busy = mine.find(going);
   if (busy) return { ok: false, reason: `Your job “${busy.title ?? busy.id}” is still going: one at a time.` };
   if (jobs.filter((j) => j.status === "running").length >= LIMITS.atOnce) return { ok: false, reason: `${LIMITS.atOnce} jobs are running right now. Try again in a few minutes.` };
   const today = new Date().toISOString().slice(0, 10);
-  if (jobs.filter((j) => j.createdAt.startsWith(today) && counts(j)).length >= LIMITS.perDay) return { ok: false, reason: `The demo has run its ${LIMITS.perDay} jobs for today. Come back tomorrow.` };
-  if (spentThisMonth() >= LIMITS.budgetUsd) return { ok: false, reason: "The demo's budget for this month is used up. The video shows Dapi end to end." };
+  if (jobs.filter((j) => j.createdAt.startsWith(today) && counts(j)).length >= LIMITS.perDay) return { ok: false, reason: `Dapi has run its ${LIMITS.perDay} jobs for today. Come back tomorrow.` };
+  if (spentThisMonth() >= LIMITS.budgetUsd) return { ok: false, reason: "This month's jobs are used up. Come back next month, or watch Dapi run end to end in the video." };
   return { ok: true, left };
 }

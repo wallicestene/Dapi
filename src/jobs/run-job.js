@@ -123,8 +123,8 @@ try {
   plan.needsYou = needsYou(plan, findings);
   // A runaway guard on the public demo: one mistaken spec can't spend everyone's credit.
   if (PUBLIC && PUBLIC_MAX_REQUESTS > 0 && plan.requests > PUBLIC_MAX_REQUESTS) {
-    say('plan', { kind: 'declined', text: `This demo runs jobs of up to ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')} requests; this one needs about ${plan.requests.toLocaleString('en-US')}. Narrow the spec (one year, one country) and try again.` });
-    updateJob(dir, { status: 'declined', declined: `Too big for the public demo: about ${plan.requests.toLocaleString('en-US')} requests (the limit is ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')}).` });
+    say('plan', { kind: 'declined', text: `Jobs here run up to ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')} requests; this one needs about ${plan.requests.toLocaleString('en-US')}. Narrow the spec (one year, one country) and try again.` });
+    updateJob(dir, { status: 'declined', declined: `Too big to run here: about ${plan.requests.toLocaleString('en-US')} requests (the limit is ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')}).` });
     process.exit(0);
   }
   say('plan', { kind: 'plan', text: plan.text, ...plan });
