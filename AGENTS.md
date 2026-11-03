@@ -308,8 +308,10 @@ Note BYO-account as the production path in the README.
 **The public demo (owner's call, Nov 3):** browsing the example jobs needs no sign-in;
 running a job needs GitHub sign-in, with limits so the owner's Meta and Apify accounts
 hold (3 jobs each, one at a time, 2 at once, 30 a day, a $60 monthly Meta budget from
-recorded spend, reviewed sources only, 1,000 requests a job). `DAPI_PUBLIC=1`; see
-DEPLOY.md.
+recorded spend, a 25,000-request runaway guard). Visitors may run **any public site**,
+on Dapi's own rules; the reviewed-sources rule above is for the sites *we* show. Dapi
+never fetches an address on the server's own network (`src/net-guard.js`).
+`DAPI_PUBLIC=1`; see DEPLOY.md.
 
 ### How Dapi uses Crawlee and Apify
 

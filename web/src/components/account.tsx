@@ -5,6 +5,13 @@ import { PUBLIC, currentUser } from "@/lib/server/session";
 export async function Account({ next = "/jobs/new" }: { next?: string }) {
   if (!PUBLIC) return null;
   const user = await currentUser();
+  // Previewing the public demo locally (npm run dev:public): a test sign-in, no GitHub.
+  if (!user && process.env.DAPI_DEV_LOGIN === "1" && process.env.NODE_ENV !== "production")
+    return (
+      <a href="/api/auth/dev?as=you" className="inline-flex h-8 items-center rounded-md border border-control bg-sheet px-3 text-[13px] font-medium hover:bg-raised">
+        Sign in (local test)
+      </a>
+    );
   if (!user)
     return (
       <a href={`/api/auth/github?next=${encodeURIComponent(next)}`} className="inline-flex h-8 items-center rounded-md border border-control bg-sheet px-3 text-[13px] font-medium hover:bg-raised">

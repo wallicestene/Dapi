@@ -6,8 +6,11 @@ anyone can run jobs of their own, on your Meta and Apify accounts, inside limits
 - 3 jobs per person, one at a time; 2 running at once on the server; 30 a day.
 - New jobs stop once Meta's charges this month (recorded per call in
   `jobs/usage.jsonl`) reach $60. Meta's own spend limit is the hard stop behind it.
-- Only reviewed public sources (`src/sources.js`), up to 1,000 requests a job. A spec
-  on any other site is declined right after it's read and doesn't use a turn.
+- Any public site, on Dapi's own rules (no logins, paywalls or CAPTCHAs; robots.txt
+  obeyed). Addresses on the server's own network (localhost, private and cloud-internal
+  ranges) are never fetched (`src/net-guard.js`); a spec pointing at one is declined and
+  doesn't use a turn. A runaway guard stops a job over 25,000 requests
+  (`DAPI_MAX_REQUESTS`, `0` turns it off).
 - Each person sees the example jobs and their own; only they can act on theirs.
   Receipts show only the fields a job delivers.
 
@@ -57,13 +60,15 @@ one Fly.io machine, with the jobs on a volume.
 fly deploy
 ```
 
-Then open `https://dapi-demo.fly.dev`, sign in, and run an example ("FDA warning
-letters" is quick). The machine stays on (a job runs for minutes with no web traffic),
+Then open `https://dapi-demo.fly.dev`, sign in, and run an example ("Books to Scrape"
+is the quickest; FDA asks for 30 s between requests). The machine stays on (a job runs for minutes with no web traffic),
 about $10-15 a month.
 
 ## Changing things
 
-- Limits: `fly secrets set DAPI_JOBS_PER_USER=5 DAPI_BUDGET_USD=50`.
+- Limits: `fly secrets set DAPI_JOBS_PER_USER=5 DAPI_BUDGET_USD=50 DAPI_MAX_REQUESTS=0`.
+- See the public demo on your own machine first: `cd web && npm run dev:public`, then
+  "Sign in (local test)".
 - Which jobs everyone sees: `DAPI_FEATURED` (default `0001,0002,0003`). A new example
   job: add its folder to `jobs/` here and deploy; the volume gets folders it doesn't
   have yet.

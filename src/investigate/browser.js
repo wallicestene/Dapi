@@ -5,12 +5,15 @@
 import { chromium } from 'playwright';
 import { parseJson } from './data.js';
 import { classifyBlock } from '../blocks.js';
+import { privateHost } from '../net-guard.js';
 
 // proxy: Playwright's { server, username, password } for Apify Proxy, or none.
 export async function openPage(url, { proxy } = {}) {
   const browser = await chromium.launch({ headless: true, ...(proxy && { proxy }) });
   // Service workers can answer requests from cache and hide the real network call.
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1280, height: 1000 } });
+  // Nothing the page asks for may reach the server's own network (src/net-guard.js).
+  await context.route('**/*', async (route) => ((await privateHost(route.request().url())) ? route.abort('blockedbyclient') : route.continue()));
   const page = await context.newPage();
 
   const captured = [];

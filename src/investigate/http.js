@@ -4,6 +4,7 @@
 // what works here works in the run.
 
 import { gotScraping } from 'crawlee';
+import { privateHost } from '../net-guard.js';
 
 let proxyUrl;
 export const useProxy = (url) => {
@@ -12,6 +13,7 @@ export const useProxy = (url) => {
 export const currentProxy = () => proxyUrl;
 
 export async function request(url, { method = 'GET', headers = {}, body, timeoutMs = 60_000 } = {}) {
+  if (await privateHost(url)) throw new Error(`${url} isn't a public address`);
   const res = await gotScraping({
     url,
     method,

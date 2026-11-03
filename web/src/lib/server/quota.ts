@@ -16,8 +16,8 @@ export const LIMITS = {
 };
 
 const going = (j: Job) => ["running", "waiting", "held"].includes(j.status);
-// A spec declined for its source costs one short Muse Spark read: it doesn't use a turn.
-const counts = (j: Job) => !(j.status === "declined" && j.declined?.startsWith("The public demo runs only"));
+// A spec declined for its address costs one short Muse Spark read: it doesn't use a turn.
+const counts = (j: Job) => !(j.status === "declined" && j.declined?.startsWith("Dapi only reads public"));
 
 export function spentThisMonth() {
   const month = new Date().toISOString().slice(0, 7);

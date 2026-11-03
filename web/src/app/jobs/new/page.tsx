@@ -15,7 +15,7 @@ const EXAMPLES = [
   { key: "norway", label: "Norway's health services register", file: "norway-health-services.md" },
   { key: "books", label: "Books to Scrape (travel)", file: "books-to-scrape.md" },
 ];
-const REVIEWED_NAMES = "FDA warning letters, Norway's Arbeidstilsynet, Better Work's Transparency Portal, Books and Quotes to Scrape, Wikipedia";
+
 
 export const metadata = { title: "New job · Dapi" };
 // Checked on every request: a read-only copy must send visitors away from this page
@@ -52,7 +52,7 @@ export default async function NewJob({ searchParams }: PageProps<"/jobs/new">) {
               {!user ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="min-w-0 flex-1">
-                    <span className="font-semibold">Sign in to run a job.</span> <span className="text-ink-2">Everyone gets {LIMITS.perUser} jobs on this demo, on reviewed public sources.</span>
+                    <span className="font-semibold">Sign in to run a job.</span> <span className="text-ink-2">Everyone gets {LIMITS.perUser} jobs on this demo, on any public site.</span>
                   </p>
                   <Account next={`/jobs/new${example ? `?example=${example}` : ""}`} />
                 </div>
@@ -61,7 +61,7 @@ export default async function NewJob({ searchParams }: PageProps<"/jobs/new">) {
               ) : (
                 <p>
                   <span className="font-semibold">You have {may.left} job{may.left === 1 ? "" : "s"} left on the demo.</span>{" "}
-                  <span className="text-ink-2">It runs on reviewed public sources: {REVIEWED_NAMES}.</span>
+                  <span className="text-ink-2">Any public site: Dapi reads what any visitor can see, never logins, paywalls or CAPTCHAs.</span>
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-2">

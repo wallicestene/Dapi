@@ -27,7 +27,7 @@ import { compareSamples } from '../compare.js';
 import { planStrategy, forClient } from '../strategy.js';
 import { runAgent, AGENT } from '../agent.js';
 import { runChecks } from '../investigate/checks.js';
-import { REVIEWED, reviewed } from '../sources.js';
+import { privateHost } from '../net-guard.js';
 
 // The run watch (see runOnApify). Declared up here: the job runs at the top level,
 // before declarations further down the file are initialised.
@@ -57,9 +57,10 @@ const from = args.includes('--from-code') ? 'code' : args.includes('--from') ? a
 const dir = jobDir(id);
 // Meta calls record their cost against this job (jobs/usage.jsonl).
 process.env.DAPI_JOB_ID = id;
-// The public demo (DAPI_PUBLIC=1): reviewed sources only, and a size cap per job.
+// The public demo (DAPI_PUBLIC=1): any public site, with a runaway guard per job so one
+// mistaken spec can't spend everyone's Apify credit (DAPI_MAX_REQUESTS=0 turns it off).
 const PUBLIC = process.env.DAPI_PUBLIC === '1';
-const PUBLIC_MAX_REQUESTS = 1000;
+const PUBLIC_MAX_REQUESTS = Number(process.env.DAPI_MAX_REQUESTS ?? 25_000);
 const job = readJson(dir, 'job.json');
 if (!job) {
   console.error(`No job ${id}`);
@@ -120,8 +121,8 @@ try {
   const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
   const plan = makePlan(findings, config, writerNotes, spec, written.report);
   plan.needsYou = needsYou(plan, findings);
-  // The public demo keeps each job small enough for everyone to get a turn.
-  if (PUBLIC && plan.requests > PUBLIC_MAX_REQUESTS) {
+  // A runaway guard on the public demo: one mistaken spec can't spend everyone's credit.
+  if (PUBLIC && PUBLIC_MAX_REQUESTS > 0 && plan.requests > PUBLIC_MAX_REQUESTS) {
     say('plan', { kind: 'declined', text: `This demo runs jobs of up to ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')} requests; this one needs about ${plan.requests.toLocaleString('en-US')}. Narrow the spec (one year, one country) and try again.` });
     updateJob(dir, { status: 'declined', declined: `Too big for the public demo: about ${plan.requests.toLocaleString('en-US')} requests (the limit is ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')}).` });
     process.exit(0);
@@ -188,15 +189,15 @@ async function specAndSite(from) {
     spec = await specStep();
     holdIfAsked('site');
   }
-  // The public demo runs only on sources we've reviewed (src/sources.js): a stranger's
-  // spec never points the owner's Apify account at a site nobody has checked.
-  if (PUBLIC && !reviewed(spec.sourceUrl)) {
+  // Public web data only: a source on the server's own network (localhost, a private or
+  // cloud-internal address) is declined before anything fetches it (src/net-guard.js).
+  if (!spec.sourceUrl || (await privateHost(spec.sourceUrl))) {
     say('site', {
       kind: 'declined',
-      text: "The public demo runs only on sources we've reviewed.",
-      reasons: [`${spec.sourceUrl ? new URL(spec.sourceUrl).host : 'This spec'} isn't one of them yet. Reviewed: ${REVIEWED.map((s) => s.name).join(', ')}.`, 'Run Dapi yourself to use it on any public site you may collect.'],
+      text: 'Dapi only reads public web addresses.',
+      reasons: [`${spec.sourceUrl ?? 'The spec names no source'} isn't a public web address.`, 'Give the address of the public page the data is on.'],
     });
-    updateJob(dir, { status: 'declined', declined: "The public demo runs only on reviewed sources." });
+    updateJob(dir, { status: 'declined', declined: 'Dapi only reads public web addresses.' });
     process.exit(0);
   }
   const findings = await siteStep(spec);
@@ -464,8 +465,10 @@ function testDisputes(report) {
 // What's worth a look before the client presses Go, in their words: anything that
 // changes what they'll get, spends a lot of their Apify account, or is their call.
 // Small sample differences (spacing, a typo) never appear: Dapi handles those.
-const BIG_RUN = { minutes: 30, requests: 5000 };
 function needsYou(plan, f) {
+  // Inside the function: a top-level const below the main flow doesn't exist yet when
+  // the flow reaches the plan (it crashed every job's plan, Nov 3; SKILL.md, the TDZ).
+  const BIG_RUN = { minutes: 30, requests: 5000 };
   const reasons = [];
   const missing = (f.strategy?.columns ?? []).filter((c) => c.route === 'none').map((c) => c.column);
   if (missing.length) reasons.push(`${missing.join(', ')} won't be delivered: the site has no verified source for ${missing.length === 1 ? 'it' : 'them'}.`);

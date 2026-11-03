@@ -935,11 +935,19 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   (a real identity, so turns can't be dodged by clearing cookies), 3 jobs each, one at
   a time, 2 running at once, 30 a day, and no new jobs once recorded Meta charges reach
   $60 (`src/meta.js` appends each call's tokens and cost to `jobs/usage.jsonl`), with
-  Meta's own spend limit as the hard stop. A spec on an unreviewed source is declined
+  Meta's own spend limit as the hard stop. A spec on a non-public address is declined
   after the spec read and doesn't use a turn.
-- **Reviewed sources only** (`src/sources.js`): keeps strangers from pointing the owner's
-  Apify account at any site, and the server's network out of reach. Up to 1,000
-  requests a job. Quick-start examples: FDA, Norway, Books to Scrape.
+- **Any public site** (owner's call, same day: "remember who we are building for"): a
+  demo limited to four sites we picked feels like a toy; the 3-job limit is the budget
+  control. Dapi's own rules hold for every site (public pages only, no logins,
+  paywalls or CAPTCHAs, robots.txt obeyed). What can't be allowed is the server's own
+  network: `src/net-guard.js` refuses loopback, private, link-local (cloud metadata),
+  carrier and IPv6 unique-local ranges and names like localhost or *.internal, after
+  resolving the name, in the investigation's browser (a page's own scripts included),
+  its plain requests and the spec's source. A 25,000-request runaway guard
+  (`DAPI_MAX_REQUESTS`) keeps one mistaken spec from spending everyone's Apify credit.
+  Quick-start examples: FDA, Norway, Books to Scrape. `npm run dev:public` previews it
+  locally with a test sign-in.
 - **Privacy:** each visitor sees the featured jobs (`DAPI_FEATURED`) and their own; only
   the owner acts (`web/src/lib/server/access.ts`, on every job route, receipts tied to
   a visible job). Caught in testing: the tab title came from `generateMetadata`, which
