@@ -207,7 +207,7 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-ink px-3 pt-2.5 pb-2" style={{ borderBottom: "3px double var(--ink)" }}>
         <p className="text-[13px] font-semibold">
-          {job.status === "done" ? "Footed against the source's own count" : "Footed so far against the source's own count"}
+          {job.status === "done" ? "Counted against the source" : "Counted so far against the source"}
           <span className="ml-3 inline-flex items-center gap-1 tabular-nums">
             {n(job.rows ?? 0)} of {expected === null ? "…" : n(expected)}
             {job.status === "done" && <TickMark tick={short ? "missing" : "footed"} />}

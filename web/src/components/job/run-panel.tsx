@@ -30,7 +30,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
           : job.status === "failed"
             ? "Nothing was run: the step marked in red says what went wrong."
             : job.status === "cancelled"
-              ? "Paused at the plan. The extraction is written and tested; ▶ on the Run step brings the plan back."
+              ? "Paused at the plan. The extraction is ready; press ▶ on the Run step to see the plan again."
               : "The run starts once the extraction passes its checks and you say Go."}
       </section>
     );
@@ -169,7 +169,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
     [plan.more ? "Records on the first page" : "Records the source lists", plan.records == null ? "—" : n(plan.records as number)],
     ["Requests", `≈ ${n(plan.requests as number)}`],
     ["Time on Apify", `≈ ${plan.minutes} min`],
-    ["Way in", plan.proxy === "direct" ? "Direct" : `${String(plan.proxy).replace(/^\w/, (c) => c.toUpperCase())} proxy`],
+    ["Connection", plan.proxy === "direct" ? "Direct" : `${String(plan.proxy).replace(/^\w/, (c) => c.toUpperCase())} proxy`],
   ];
   // Muse Spark's lines for the client; older jobs carry its notes as one paragraph.
   const reasoning = Array.isArray(plan.reasoning) ? (plan.reasoning as string[]) : typeof plan.reasoning === "string" && plan.reasoning.trim() ? [plan.reasoning.trim()] : [];
@@ -233,7 +233,7 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
       )}
       {reasoning.length > 0 && (
         <div className="mx-6 mt-5 text-[14px]">
-          <p className="font-semibold">Why this way in and this pace</p>
+          <p className="font-semibold">How Dapi will run it</p>
           <ul className="mt-1.5 flex flex-col gap-1 text-ink-2">
             {reasoning.map((line) => (
               <li key={line} className="flex gap-2">

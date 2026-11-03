@@ -5,6 +5,9 @@ import type { Job, JobEvent, Tick } from "@/lib/types";
 
 export type Tab = "spec" | "site" | "code" | "samples" | "run" | "footed";
 
+// Each step's name in a word, for phones, where the full label doesn't fit.
+export const SHORT: Record<Tab, string> = { spec: "Spec", site: "Site", code: "Extraction", samples: "Samples", run: "Run", footed: "Count" };
+
 export interface StepState {
   tab: Tab;
   label: string;
@@ -83,13 +86,13 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
     {
       tab: "spec",
       label: label("spec", "Spec", "Reading the spec", "Spec read"),
-      line: read ? `${(read.columns as unknown[]).length} columns, ${(read.samples as unknown[]).length} sample${(read.samples as unknown[]).length === 1 ? "" : "s"}` : "your columns and samples",
+      line: read ? `${(read.columns as unknown[]).length} column${(read.columns as unknown[]).length === 1 ? "" : "s"}, ${(read.samples as unknown[]).length} sample${(read.samples as unknown[]).length === 1 ? "" : "s"}` : "your columns and samples",
       tick: read ? "traced" : null,
       state: state("spec"),
     },
     {
       tab: "site",
-      label: declined ? "Site refused" : label("site", "Site", "Investigating the site", "Site investigated"),
+      label: declined ? "Site declined" : label("site", "Site", "Investigating the site", "Site investigated"),
       line: declined ? "can't be extracted" : source ? (source.route === "embedded" ? "data embedded in the page" : "its own data feed") : "how it serves its data",
       tick: declined ? "missing" : source && state("site") === "done" ? "traced" : null,
       state: state("site"),
@@ -103,7 +106,7 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
     },
     {
       tab: "samples",
-      label: label("samples", "Samples", "Checking your samples", "Samples agreed"),
+      label: label("samples", "Samples", "Checking your samples", "Samples checked"),
       line: samples.length ? sampleLine(samples) : notRun ?? "against your rows",
       tick: !samples.length ? null : bad ? "fail" : near ? "near" : "sample",
       state: state("samples"),
@@ -119,15 +122,15 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
           : paused
             ? `${n(job.rows ?? 0)} rows · resume to carry on`
             : job.runId
-            ? `${n(job.rows ?? 0)} rows · ${n(job.failedRequests ?? 0)} failed requests`
-            : notRun ?? "on your Apify account",
+            ? [`${n(job.rows ?? 0)} rows`, job.failedRequests ? `${n(job.failedRequests)} failed requests` : null].filter(Boolean).join(" · ")
+            : notRun ?? "on Apify",
       tick: finished ? "traced" : job.status === "stopped" && !paused ? "missing" : null,
       state: state("run"),
     },
     {
       tab: "footed",
-      label: "Footed",
-      line: finished && expected !== null ? `${n(job.rows ?? 0)} of ${n(expected)}` : notRun ?? "after the last row",
+      label: finished ? "Counted" : "Count",
+      line: finished && expected !== null ? `${n(job.rows ?? 0)} of ${n(expected)}` : notRun ?? "against the source",
       tick: finished ? ((job.rows ?? 0) >= (expected ?? 0) ? "footed" : "missing") : null,
       state: state("footed"),
     },
@@ -139,30 +142,12 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
   return steps;
 }
 
-// The samples' values: how many came out exactly, and what the rest are.
+// The samples' values in one short line: how many match; the why is on the tab.
 function sampleLine(samples: SampleCheck[]) {
   const checks = samples.flatMap((s) => s.checks);
-  const exactValues = checks.filter((c) => c.status === "exact").length;
-  const failing = checks.filter((c) => c.status === "fail").length;
+  const matching = checks.filter((c) => c.status === "exact").length;
   const missingSamples = samples.filter((s) => s.status === "not found").length;
-  return [
-    `${exactValues} of ${checks.length} values exact`,
-    nearLine(samples),
-    failing && `${failing} differ`,
-    missingSamples && `${missingSamples} sample${missingSamples === 1 ? "" : "s"} not found`,
-  ]
-    .filter(Boolean)
-    .join(", ");
-}
-
-// What the near matches are, in the user's terms: "1 spacing", "1 typo in the spec".
-function nearLine(samples: SampleCheck[]) {
-  const whys = samples.filter((s) => s.status === "warn").flatMap((s) => s.checks.filter((c) => c.status === "warn").map((c) => (c.why === "dispute" ? "site" : c.why ?? "spacing")));
-  const words = { spacing: "spacing", typo: "typo", column: "misplaced", site: "site disagrees" };
-  return (Object.keys(words) as (keyof typeof words)[])
-    .filter((w) => whys.includes(w))
-    .map((w) => `${whys.filter((x) => x === w).length} ${words[w]}`)
-    .join(", ");
+  return [`${matching} of ${checks.length} values match`, missingSamples && `${missingSamples} sample${missingSamples === 1 ? "" : "s"} not found`].filter(Boolean).join(", ");
 }
 
 // The tab to show when nobody has picked one: the step under way, or the data once

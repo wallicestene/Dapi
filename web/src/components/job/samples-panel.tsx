@@ -11,7 +11,7 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[14px] text-ink-2">
-        {report ? "Checked against the full run." : "Checked against the test run, before the full run."} Each sample row in your spec is found among the delivered rows and compared column by column.
+        Each sample row from your spec, found in {report ? "the delivered rows" : "the test run"} and compared column by column. Where they differ, Dapi delivers what the site shows.
       </p>
       <div className="grid items-start gap-4 xl:grid-cols-2">
         {samples.map((s) => (
@@ -45,7 +45,7 @@ export function SamplesPanel({ events, report }: { events: JobEvent[]; report: R
                       {String(c.actual) || <span className="text-ink-3">blank</span>}
                       {c.why && (
                         <span className="mt-0.5 block text-[12px] text-pencil-red">
-                          {c.why === "spacing" ? "spacing differs" : c.why === "typo" ? "likely a typo in your spec" : c.why === "site" || c.why === "dispute" ? "the site shows this for the record; delivered as the site has it" : `your value is this record's ${c.belongsTo}`}
+                          {c.why === "spacing" ? "spacing differs" : c.why === "typo" ? "likely a typo in your spec" : c.why === "site" || c.why === "dispute" ? "the site shows this; delivered as the site shows it" : `your value is this record's ${c.belongsTo}`}
                         </span>
                       )}
                     </td>

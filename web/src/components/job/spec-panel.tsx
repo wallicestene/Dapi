@@ -39,8 +39,8 @@ export function SpecPanel({ job, events }: { job: Job; events: JobEvent[] }) {
         <Panel title={`Sample rows (${(read.samples as string[]).length})`}>
           <p className="px-5 py-3 text-[14px]">
             {(read.samples as string[]).length
-              ? `${(read.samples as string[]).join(", ")}. These are the test cases: the extraction must reproduce them before it runs.`
-              : "None. Without sample rows there is nothing to test the extraction against."}
+              ? `${(read.samples as string[]).join(", ")}. Dapi tests the extraction against them before anything runs.`
+              : "None. Add a sample row or two so Dapi can test the extraction before it runs."}
           </p>
         </Panel>
         {aligned && <SamplesAgainstSite event={aligned} />}

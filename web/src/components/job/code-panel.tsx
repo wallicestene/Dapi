@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { ChevronRight, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTE_WORD } from "@/lib/stage";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -49,7 +49,7 @@ function Working({ events, attempts }: { events: JobEvent[]; attempts: JobEvent[
         </div>
         {columns.length > 0 && (
           <div className="flex flex-col gap-2">
-            <p className="text-[13px] font-medium text-ink-2">Code for {columns.length} columns, as the strategy reads them</p>
+            <p className="text-[13px] font-medium text-ink-2">Writing code for {columns.length} columns</p>
             <ul className="flex flex-wrap gap-1.5">
               {columns.map((c) => (
                 <li key={c.column} className="inline-flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-[12.5px]">
@@ -127,16 +127,21 @@ export function CodePanel({ job, events }: { job: Job; events: JobEvent[] }) {
                   </p>
                   {e.kind === "tested" && report && (
                     <p className="mt-1 text-[13px] text-ink-2">
-                      Test run: {report.rows} rows, {report.captures} responses kept as evidence
-                      {report.completeness.map((c) => `, ${c.kind} ${c.got} of ${c.expected ?? "?"}`).join("")}.
+                      Test run: {report.rows} rows from {report.captures} responses.
                     </p>
                   )}
-                  {e.kind === "tested" && !e.passed && (
-                    <ul className="mt-1 list-disc pl-5 text-[13px] text-pencil-red">
-                      {(e.problems as string[]).slice(0, 4).map((p) => (
-                        <li key={p}>{p}</li>
-                      ))}
-                    </ul>
+                  {/* What the test told Muse Spark, word for word, for whoever wants it. */}
+                  {e.kind === "tested" && !e.passed && (e.problems as string[]).length > 0 && (
+                    <details className="group mt-1">
+                      <summary className="flex cursor-pointer list-none items-center gap-1 text-[13px] font-medium text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
+                        <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" /> Details
+                      </summary>
+                      <ul className="mt-1 list-disc pl-5 text-[12.5px] text-ink-2">
+                        {(e.problems as string[]).map((p) => (
+                          <li key={p}>{p}</li>
+                        ))}
+                      </ul>
+                    </details>
                   )}
                 </div>
               </li>
@@ -146,12 +151,36 @@ export function CodePanel({ job, events }: { job: Job; events: JobEvent[] }) {
         </ol>
       </Panel>
       )}
-      {written?.notes ? (
-        <Panel title="Muse Spark's notes">
-          <p className="px-5 py-3 text-[14px] leading-relaxed whitespace-pre-line">{String(written.notes)}</p>
-        </Panel>
-      ) : null}
+      {written && (written.notes || (written.forClient as string[] | undefined)?.length) ? <Notes written={written} /> : null}
     </div>
+  );
+}
+
+// What Muse Spark says about the extraction it wrote: its lines for the client first,
+// its working notes (written for the next attempt, not for you) folded away.
+function Notes({ written }: { written: JobEvent }) {
+  const lines = (written.forClient as string[] | undefined) ?? [];
+  const notes = written.notes ? String(written.notes) : "";
+  return (
+    <Panel title="Muse Spark's notes">
+      {lines.length > 0 && (
+        <ul className="flex flex-col gap-2 px-5 py-3 text-[14px] leading-snug">
+          {lines.map((l) => (
+            <li key={l} className="flex gap-2.5">
+              <TickMark tick="traced" className="mt-1" /> {l}
+            </li>
+          ))}
+        </ul>
+      )}
+      {notes && (
+        <details className={cn("group", lines.length > 0 && "border-t")} open={!lines.length}>
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 px-5 py-2.5 text-[13px] font-medium text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
+            <ChevronRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" /> Technical notes
+          </summary>
+          <p className="px-5 pb-3 text-[13px] leading-relaxed whitespace-pre-line text-ink-2">{notes}</p>
+        </details>
+      )}
+    </Panel>
   );
 }
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import { Button } from "@/components/ui/button";
-import { Mark, TopBar } from "@/components/shell";
+import { Footer, Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/lib/alerts";
@@ -22,7 +22,7 @@ const BEAM: Record<number, [string, string]> = {
   3: ["var(--deliver)", "#9eece3"],
   4: ["var(--verified)", "#dcf7a8"],
 };
-import { defaultTab, n, stepStates, type Report, type Tab } from "@/lib/steps";
+import { SHORT, defaultTab, n, stepStates, type Report, type Tab } from "@/lib/steps";
 import type { Job, JobEvent } from "@/lib/types";
 import { SpecPanel } from "./spec-panel";
 import { SitePanel } from "./site-panel";
@@ -196,10 +196,12 @@ export function JobView({
       />
 
       <main className="flex flex-1 flex-col gap-4 px-6 pt-5 pb-8 md:px-7">
-        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-          <div className="flex min-w-0 items-start gap-3.5">
+        {/* The title takes the room it needs (wrapping, never pushing the count off its line);
+            the count sits right, and only once there is a run to count. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+          <div className="min-w-0 flex-1">
             <div className="min-w-0">
-              <h1 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">{job.title ?? "Reading your spec…"}</h1>
+              <h1 className="max-w-[900px] text-[28px] leading-tight font-bold tracking-[-0.03em] text-balance">{job.title ?? "Reading your spec…"}</h1>
               <p className="mt-1 text-[14px] text-ink-2">
                 {host ? (
                   <>
@@ -214,22 +216,26 @@ export function JobView({
               </p>
             </div>
           </div>
-          <div className="text-right" aria-live="polite">
-            <p className="text-[38px] leading-none font-bold tracking-[-0.03em]">
-              {job.runId ? <NumberTicker value={job.rows ?? 0} /> : "–"}
-              <span className="text-ink-3"> / </span>
-              {expected !== null ? n(expected) : job.records ? <span className="text-ink-3">…</span> : "–"}
-            </p>
-            <p className="mt-1.5 text-[13px] text-ink-2">
-              {job.status === "done"
-                ? `rows delivered · footed against the source's count`
-                : job.runId
-                  ? `rows delivered · ${live ? "streaming" : job.paused && job.status === "stopped" ? "paused" : job.status}`
-                  : job.status === "declined"
-                    ? "nothing run: the source refused"
-                    : "rows delivered once the run starts"}
-            </p>
-          </div>
+          {job.runId && (
+            <div className="shrink-0 sm:text-right" aria-live="polite">
+              <p className="text-[38px] leading-none font-bold tracking-[-0.03em] whitespace-nowrap">
+                {/* The final figure, invisible, holds the width while the ticker counts up. */}
+                <span className="inline-grid">
+                  <span aria-hidden className="invisible col-start-1 row-start-1">{n(job.rows ?? 0)}</span>
+                  <NumberTicker value={job.rows ?? 0} className="col-start-1 row-start-1 text-right" />
+                </span>
+                {expected !== null && (
+                  <>
+                    <span className="text-ink-3"> / </span>
+                    {n(expected)}
+                  </>
+                )}
+              </p>
+              <p className="mt-1.5 text-[13px] text-ink-2">
+                {job.status === "done" ? "rows delivered, counted against the source" : live ? "rows so far" : job.paused && job.status === "stopped" ? "rows so far · paused" : "rows so far · stopped"}
+              </p>
+            </div>
+          )}
         </div>
 
         {job.status === "held" && <HeldBanner job={job} />}
@@ -259,7 +265,10 @@ export function JobView({
                       )}
                       <span className="flex items-center gap-2">
                         <Mark className="size-5 shrink-0" lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
-                        <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>
+                        <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>
+                          <span className="sm:hidden">{SHORT[s.tab]}</span>
+                          <span className="hidden sm:inline">{s.label}</span>
+                        </span>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         {s.tab === "run" && <img src="/brand/apify-logomark.svg" alt="on Apify" className={cn("ml-auto size-3.5", s.state === "todo" && "opacity-40 grayscale")} />}
                         {s.tick && <TickMark tick={s.tick} className={s.tab === "run" ? undefined : "ml-auto"} />}
@@ -293,6 +302,7 @@ export function JobView({
           </TabsPrimitive.Content>
         </TabsPrimitive.Root>
       </main>
+      <Footer readOnly={readOnly} fluid />
     </div>
   );
 }
