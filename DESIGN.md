@@ -117,8 +117,8 @@ Dapi turns a spec into a dataset and proves every value. The identity says that 
 mark: a D in four parts, one per stage of a job. The stem is the **source** (violet),
 the top arc the **extraction** (red), the bottom arc the **delivery** (teal), and the
 tick, **verified** (lime), sits exactly where extraction ends and delivery begins. The
-mark draws itself in that order, and on a job's page it is the progress: lit up to the
-stage the job has reached, the stage under way breathing.
+mark draws itself in that order, and on a job's step cards it is the progress: lit up to
+the stage each step belongs to, the step under way breathing.
 
 Around the mark the system is calm and exact: navy ink on sage paper, white sheets,
 tabular figures, the real product on screen. Colour belongs to the mark and to state;
@@ -142,20 +142,26 @@ stem `M14 50V14`; extract `M23 14H32A18 18 0 0 1 46.36 21.15`; deliver
 (8.5 small) over a halo of 13 in the background colour, which splits the arcs. Master
 files: `web/public/brand/dapi-mark.svg` (the halo is a mask, so it sits on any
 background) and `dapi-mark-animated.svg` (draws, holds, fades, loops). In the app:
-`Mark` in `web/src/components/shell.tsx` (`draw`, `lit`, `now`, `bg`, `dim`).
+`Mark` in `web/src/components/mark.tsx` (`draw`, `lit`, `now`, `dim`, `label`).
 
 - **Draw order:** stem rises, top arc sweeps, bottom arc sweeps round, tick lands
   (about 1.5 s). Still for people who prefer reduced motion.
 - **Progress:** stages not yet reached take `dim` (the active tone on paper, #2b3a48 on
   night); the stage under way breathes.
 - The wordmark is "Dapi" in Archivo 700 at -0.04em, in ink, beside the mark.
+- **Where it appears, once each:** the nav lockup; the D of "data" in the home
+  headline (0.92em, sitting on the baseline, so the headline reads as words); the
+  first-visit intro, where it draws alone in the centre of the screen, then the page
+  fades in (once per browser session, skipped for reduced motion); and on the step
+  cards, lit to each step's stage. Never as a decoration above a headline or beside a
+  job's title, where it would repeat what the step cards already say.
 
 ## Colors
 
 ### The mark's four
 - **Source** (#6a4cff), **Extract** (#f12727), **Deliver** (#12b5a5), **Verified**
   (#9ad82b). They name the stages of a job wherever stages appear (the home page's
-  steps, the progress mark). Verified lime is also the highlight on a traced value and
+  steps, the step cards). Verified lime is also the highlight on a traced value and
   on the line of a response it came from.
 
 ### State
@@ -209,7 +215,7 @@ Headlines are 2 to 6 words; a subhead is one sentence.
 ## Layout
 
 App screens: fluid canvas, 28px side padding (24 on tablets, 16 on phones). A job reads
-top to bottom: title row (progress mark, h1 and source left, footing figure right), the
+top to bottom: title row (h1 and source left, footing figure right), the
 six-step strip, then the step's content; on Run, the data sheet with a 360px receipt rail
 to its right (below 1024px, under it). The jobs list sits in a centred 1120px column.
 

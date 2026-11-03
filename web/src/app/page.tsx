@@ -36,11 +36,27 @@ const WHY = [
   { title: "Your samples guide, the site decides", body: "When a sample disagrees with the site, you see both, and Dapi delivers what the site shows." },
 ];
 
+// The first visit opens on the mark drawing itself in the middle of the screen, then
+// the page. Once per visit (sessionStorage), never for reduced motion, and pure CSS, so
+// it clears itself even before the page's scripts run. The inline script, ahead of the
+// overlay, marks a repeat visit before anything paints.
+function Intro() {
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: "try{if(sessionStorage.getItem('dapi-intro'))document.documentElement.dataset.seen='1';sessionStorage.setItem('dapi-intro','1')}catch(e){}" }} />
+      <div aria-hidden className="dapi-intro">
+        <Mark draw className="size-28" />
+      </div>
+    </>
+  );
+}
+
 export default function Home() {
   const proof = PROOF.map((p) => ({ ...p, job: getJob(p.id) })).filter((p) => p.job?.status === "done");
   const start = READ_ONLY ? { href: "/jobs", label: "Explore finished jobs" } : { href: "/jobs/new", label: "Start a job" };
   return (
     <div className="flex min-h-screen flex-col">
+      <Intro />
       <header className="flex h-16 shrink-0 items-center gap-6 px-5 sm:px-8">
         <Wordmark />
         <nav aria-label="Main" className="hidden items-center gap-6 text-[14px] font-medium text-ink-2 sm:flex">
@@ -62,8 +78,13 @@ export default function Home() {
       <main className="flex flex-col">
         <section className="mx-auto grid w-full max-w-[1240px] items-center gap-10 px-5 pt-10 pb-20 sm:px-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,7fr)] lg:gap-12 lg:pt-16">
           <div className="flex flex-col gap-6">
-            <Mark draw className="size-16" label="Dapi" />
-            <h1 className="text-[clamp(44px,5.4vw,78px)] leading-[0.95] font-bold tracking-[-0.045em]">Web data you can prove.</h1>
+            {/* The headline carries the mark: our D is the d of "data". */}
+            <h1 aria-label="Web data you can prove." className="text-[clamp(44px,5.4vw,78px)] leading-[0.95] font-bold tracking-[-0.045em]">
+              <span aria-hidden>
+                Web <Mark className="inline-block h-[0.92em] w-[0.92em] -ml-[0.03em] -mr-[0.03em] align-[-0.075em]" />
+                ata you can prove.
+              </span>
+            </h1>
             <p className="max-w-[460px] text-[19px] leading-[1.45] text-ink-2">Send a spec. Get the dataset, with every value traced to the response it came from.</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild className="h-11 px-5 text-[15px]">
@@ -139,7 +160,6 @@ export default function Home() {
 
         <section className="mx-auto w-full max-w-[1240px] px-5 pb-24 sm:px-8">
           <div className="flex flex-col items-start gap-5 rounded-2xl bg-sheet px-7 py-10 sm:flex-row sm:items-center sm:px-10">
-            <Mark className="size-14" />
             <div className="flex flex-col gap-1">
               <h2 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">Have a spec? See it run.</h2>
               <p className="text-[15px] text-ink-2">Dapi shows you the plan, the cost and the time before anything runs.</p>

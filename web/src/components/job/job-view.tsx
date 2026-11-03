@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
-import { STAGE_TEXT, stageOf } from "@/lib/stage";
 import { useAlerts } from "@/lib/alerts";
 import { Bell, BellOff, Pause, Play } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -168,8 +167,6 @@ export function JobView({
   const steps = useMemo(() => stepStates(job, events, report), [job, events, report]);
   const tab = picked ?? defaultTab(job, events);
   const live = !["done", "failed", "declined", "cancelled", "stopped", "held"].includes(job.status);
-  // The mark as the job's progress: source, extract, deliver, verified.
-  const stage = stageOf(job);
   const host = job.sourceUrl ? new URL(job.sourceUrl).host : null;
   const expected = job.expected ?? null;
 
@@ -201,7 +198,6 @@ export function JobView({
       <main className="flex flex-1 flex-col gap-4 px-6 pt-5 pb-8 md:px-7">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
           <div className="flex min-w-0 items-start gap-3.5">
-            <Mark className="mt-0.5 size-10 shrink-0" lit={stage} now={live && job.status !== "waiting" ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
             <div className="min-w-0">
               <h1 className="text-[28px] leading-tight font-bold tracking-[-0.03em]">{job.title ?? "Reading your spec…"}</h1>
               <p className="mt-1 text-[14px] text-ink-2">
