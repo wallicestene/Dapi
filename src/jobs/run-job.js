@@ -14,6 +14,7 @@
 //                                                   now (resurrected, or left unwatched)
 //                                                   and see it to the end
 
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -67,6 +68,10 @@ const say = (step, event) => {
 const step = (name) => updateJob(dir, { step: name, status: 'running' });
 // So the web app can tell whether a runner is watching this job.
 updateJob(dir, { runnerPid: process.pid });
+// A Mac that idle-sleeps freezes the runner: Muse calls time out and the run looks
+// stalled (job 0002, Nov 3: a 22 s run judged stuck after the Mac slept). caffeinate
+// holds idle sleep off for exactly as long as this process lives.
+if (process.platform === 'darwin') spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
 
 // Anything that escapes every handler (a stray rejected promise from a closed browser
 // page) still ends the job honestly: marked failed with the reason, and any run on
@@ -602,6 +607,7 @@ async function watchRun({ apify, run, fresh }) {
   const seen = { migrations: run.stats?.migrationCount ?? 0, restarts: run.stats?.restartCount ?? 0, resurrects: run.stats?.resurrectCount ?? 0 };
   try {
     while (!['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(current.status)) {
+      const lookedAt = Date.now();
       await sleep(3000);
       current = await apify.run(run.id).get();
       await copy();
@@ -628,7 +634,15 @@ async function watchRun({ apify, run, fresh }) {
         say('run', { kind: 'watch', text: `The site started answering with errors, so the run eased off: ${eased.at(-1).match(/easing off to \d+ at a time/)[0]}.` });
       }
 
-      const broken = assess({ state, current, log, copied, lastProgress });
+      // Time Dapi couldn't watch (the machine asleep, Apify slow to answer) isn't time
+      // the run stood still: the stall clock only counts what was seen.
+      if (Date.now() - lookedAt > 60_000) lastProgress = Date.now();
+      let broken = assess({ state, current, log, copied, lastProgress });
+      // Before calling a run stalled, ask Apify again: one that has finished is finished.
+      if (broken?.stall) {
+        current = await apify.run(run.id).get();
+        if (['SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'].includes(current.status)) broken = null;
+      }
       const mark = `${copied}|${current.statusMessage}|${log.length}`;
       if (mark !== lastMark) {
         lastMark = mark;
@@ -706,7 +720,7 @@ function assess({ state, current, log, copied, lastProgress }) {
   const codeErrors = log.filter((l) => CODE_ERROR.test(l));
   if (codeErrors.length >= 5) return { reason: `The extraction code is throwing errors (${codeErrors.length} so far).` };
   if (failed.length >= 10 && failed.length > Math.max(1, crawled) * 0.2) return { reason: `${failed.length} requests failed every retry out of ${crawled} done.` };
-  if (Date.now() - lastProgress > STALL_MS) return { reason: `Nothing has moved for ${Math.round(STALL_MS / 60_000)} minutes (${copied} rows).` };
+  if (Date.now() - lastProgress > STALL_MS) return { reason: `Nothing has moved for ${Math.round(STALL_MS / 60_000)} minutes (${copied} rows).`, stall: true };
   return null;
 }
 
