@@ -927,6 +927,27 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Clean slate on reviewed sources; a sleeping Mac (2026-11-03)
+
+- Every earlier job and its local evidence was removed (31 jobs, `storage/`); the old
+  runs on Apify (57 runs of dapi-runner and the `dapi-evidence` store) still await
+  the owner's go-ahead to delete. Re-run on reviewed sources: Better Work 0002 (433/433)
+  and Arbeidstilsynet 0001 (291/291).
+- **The Mac idle-slept mid-job** (power log: 13:17, 13:23, ...). The runner froze: Muse
+  calls "timed out" across the sleep (all three code attempts), and the watcher counted
+  the sleep as a stall on a run that had finished in 22 s, then tried a repair. Fixed:
+  the runner holds idle sleep off with `caffeinate -i -w <pid>` on macOS; time the
+  watcher couldn't see never counts as a stall; Apify is asked again before a run is
+  called stalled.
+- **Norway's new run is weak as a demo:** the feed holds `status: 1`, not the "Godkjent"
+  the site shows, and no address (the agent couldn't verify another source). Dapi
+  should deliver a coded value as the label the page shows: open gap. Translation kept
+  all 291 names as written (right), but said "Translated 289 values": now it says what
+  changed.
+- The home page's demo is built by `node src/receipts/showcase.js <job> ...` (each value
+  with its own receipt), and its examples pick the newest delivered job per reviewed
+  source, so a fresh run takes the place of an old one without a code change.
+
 ### Rules and rights check before submitting (2026-11-03)
 
 - **Repo:** commits run 27 Oct to 3 Nov, one author. No key value (MODEL_API_KEY,
