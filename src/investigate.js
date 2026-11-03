@@ -121,7 +121,7 @@ export async function investigate(spec, { onEvent = () => {}, checkReach = true 
       const missing = wanted.filter((c) => !list.fields[c.name]?.keys.length);
       onEvent({
         kind: 'source',
-        text: `The records are in the page's own HTML: ${list.recordCount} items like your sample's${list.paging.next ? ', with a next page' : list.paging.loadMore ? `, and a “${list.paging.loadMore}” control that loads more` : ''}. Dapi reads them with selectors checked against your sample.`,
+        text: `The records are in the page's own HTML: ${list.recordCount} items like your sample's${list.paging.next ? ', with a next page' : list.paging.loadMore ? `, and a “${list.paging.loadMore}” control that loads more` : ''}. Dapi reads them from the page, checked against your sample.`,
         route: 'html',
         request: list.request,
         recordCount: list.recordCount,
@@ -161,8 +161,8 @@ export async function investigate(spec, { onEvent = () => {}, checkReach = true 
     onEvent({
       kind: 'source',
       text: list.embedded
-        ? `The records are embedded in the page itself (${list.records.count + (list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)} rows${list.siblings?.length ? ` in ${list.siblings.length + 1} tables` : ''}): no need to parse the visible page.`
-        : `Found the site's own data feed: ${list.capture.method} ${list.capture.url.split('?')[0]} returns ${list.records.count} records as JSON. Calling it directly instead of parsing the page.`,
+        ? `The records are in data the page carries with it: ${list.records.count + (list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)} rows${list.siblings?.length ? ` in ${list.siblings.length + 1} tables` : ''}. Dapi reads that data, not the visible page.`
+        : `Found the site's own data feed: ${list.records.count} records per request. Dapi reads it instead of the page.`,
       route: list.embedded ? 'embedded' : 'feed',
       request: { method: list.capture.method, url: list.capture.url, payload: list.capture.payload ?? null },
       recordCount: list.records.count,
@@ -208,7 +208,7 @@ export async function investigate(spec, { onEvent = () => {}, checkReach = true 
     if (detail?.kind === 'json') detail.replay = await safely('Fetching the detail without a browser', notes, () => replay(detail.capture, detail.records.path));
     onEvent({
       kind: 'replay',
-      text: `Fetched the data again without a browser: ${list.replay?.works ? `works (${list.replay.works})` : 'did not work'}${detail?.replay ? `; detail ${detail.replay.works ? 'works too' : 'did not'}` : ''}.`,
+      text: list.replay?.works ? `The feed works without a browser${detail?.replay ? (detail.replay.works ? ', and so do the details' : ', but the details need one') : ''}.` : 'The feed needs a browser to answer.',
       works: Boolean(list.replay?.works),
       timing: list.replay?.timing ?? null,
     });
@@ -217,7 +217,7 @@ export async function investigate(spec, { onEvent = () => {}, checkReach = true 
       const p = reachability.pace;
       onEvent({
         kind: 'pace',
-        text: `Measured the site's pace from Apify: ${p.levels.map((l) => `${l.concurrency} at a time ${l.errors ? `${l.errors} error${l.errors === 1 ? '' : 's'} (${l.errorKinds.join(', ')})` : `${l.medianMs} ms`}`).join(', ')}. Sweet spot: ${p.recommended.concurrency} at a time, about ${p.recommended.perMinute} requests a minute.`,
+        text: `Measured how fast the site answers: ${p.recommended.concurrency} at a time, about ${p.recommended.perMinute} requests a minute, is safe.`,
         ...p,
       });
     }
@@ -226,7 +226,7 @@ export async function investigate(spec, { onEvent = () => {}, checkReach = true 
       onEvent({
         kind: 'reach',
         text: how
-          ? `Checked from Apify's servers, where the run happens: the site answers ${how === 'direct' ? 'directly, no proxy needed' : `through Apify's ${how} proxy`}.`
+          ? `Checked from Apify, where the run happens: the site answers ${how === 'direct' ? 'directly, no proxy needed' : `through Apify's ${how} proxy`}.`
           : "Checked from Apify's servers: the site refused every way Dapi is allowed to ask.",
         recommendation: how ?? null,
         results: reachability.results ?? [],
@@ -262,7 +262,7 @@ function pageCandidates(session, image, onEvent) {
   const embedded = embeddedCandidates(session);
   onEvent({
     kind: 'page',
-    text: `Opened ${session.finalUrl} (HTTP ${session.status ?? '?'}) and watched its traffic: ${plural(session.captured.length, 'JSON response')}, ${json.length} holding lists of records; ${plural(embedded.length, 'data block')} embedded in the HTML.`,
+    text: `Opened the page and watched what it loads: ${plural(session.captured.length, 'data response')}, ${json.length} with lists of records${embedded.length ? `; ${plural(embedded.length, 'data block')} inside the page` : ''}.`,
     url: session.finalUrl,
     status: session.status ?? null,
     jsonResponses: session.captured.length,
@@ -511,9 +511,9 @@ async function paging(list, onEvent) {
     kind: 'paging',
     text: out.bigPage
       ? out.bigPage.onePage
-        ? `The list comes ${list.records.count} per page (${pageParam ?? 'page'}, ${sizeParam}), but asking for ${out.bigPage.size} per page returns all ${total} records in one request.`
-        : `The list comes ${list.records.count} per page, but the server honours ${out.bigPage.size} per page: ${Math.ceil(total / out.bigPage.size)} requests for all ${total} records instead of ${Math.ceil(total / list.records.count)}.`
-      : `The list comes in pages (${[pageParam, sizeParam].filter(Boolean).join(', ')})${total ? ` of ${total} records` : ''}: the extraction reads every page.`,
+        ? `The list shows ${list.records.count} at a time, but one request can return all ${total.toLocaleString('en-US')} records.`
+        : `The list shows ${list.records.count} at a time, but the site gives ${out.bigPage.size} per request: ${Math.ceil(total / out.bigPage.size).toLocaleString('en-US')} requests instead of ${Math.ceil(total / list.records.count).toLocaleString('en-US')}.`
+      : `The list comes in pages${total ? `, ${total.toLocaleString('en-US')} records in all` : ''}: the extraction reads every page.`,
     ...out,
   });
   return out;
@@ -854,7 +854,7 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
         text:
           pick.control === null
             ? `Looked at the page around "${recordText.slice(0, 50)}": no control there reveals ${missing.map((c) => c.name).join(', ')}.`
-            : `Looked at the page around "${recordText.slice(0, 50)}" and chose "${controls[pick.control].text}" to reveal ${missing.map((c) => c.name).join(', ')}: ${pick.reason}`,
+            : `Looked at the page and chose “${controls[pick.control].text}” to reveal ${missing.map((c) => c.name).join(', ')}.`,
         record: recordText.slice(0, 120),
         controls: controls.map((c) => c.text),
         chosen: pick.control,
@@ -875,7 +875,7 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
           onEvent({
             kind: 'detail',
             route: 'page',
-            text: `"${control.text}" opens a page per record. Fetched the sample's page and found ${Object.keys(html.fields).join(', ')} on it.`,
+            text: `Each record has its own page, with ${Object.keys(html.fields).join(', ')} on it.`,
             url: html.sampleUrl,
             columns: Object.keys(html.fields),
           });
@@ -895,7 +895,7 @@ async function revealDetail({ spec, session, list, missing, count, notes, onEven
       onEvent({
         kind: 'detail',
         route: 'feed',
-        text: `Clicking "${control.text}" makes the page call ${found.capture.method} ${found.capture.url.split('?')[0]}${join ? `, keyed by ${join.param}` : ''}. Dapi calls it once per record instead of clicking.`,
+        text: `Clicking “${control.text}” loads the record's details from the site's data feed. Dapi loads them directly, once per record, instead of clicking.`,
         request: { method: found.capture.method, url: found.capture.url, payload: found.capture.payload ?? null },
         columns: Object.keys(found.fields).filter((c) => found.fields[c].keys.length),
         join,

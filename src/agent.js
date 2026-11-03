@@ -91,7 +91,7 @@ function describe(name, args, result) {
     case 'search_page_source':
       return `searched ${args.url}'s source for “${args.text}”: ${result.matches} match${result.matches === 1 ? '' : 'es'}`;
     case 'test_endpoint':
-      return `tested ${args.url}: ${result.works ? `works${result.records !== null ? `, ${result.records} records` : ''}${args.expect?.length ? `, ${result.expectedFound.length} of ${args.expect.length} expected values found` : ''}` : `HTTP ${result.status}`}`;
+      return `tested ${args.url}: ${result.works ? `works${result.records !== null ? `, ${result.records} records` : ''}${args.expect?.length ? `, ${result.expectedFound.length} of ${args.expect.length} sample values found` : ''}` : `HTTP ${result.status}`}`;
     case 'look_at_page':
       return `looked at ${args.url}`;
     case 'click_and_watch':

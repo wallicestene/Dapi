@@ -128,7 +128,7 @@ export async function forClient(strategy) {
       reasoningEffort: 'low',
       timeoutMs: 60_000,
       messages: [
-        { role: 'system', content: `Rewrite each item for the client, following this voice. Keep the meaning and every number; add nothing; one item in, one item out, in the same order. The summary says what Dapi will read and how, in one or two sentences.\n\n${VOICE}` },
+        { role: 'system', content: `Rewrite each item for the client, following this voice. Keep the meaning. Keep a number only when it tells the client something about their dataset (how many records, how many are missing); drop the working (page sizes, how a fact was checked, the values used as proof). Add nothing; one item in, one item out, in the same order. The summary says what Dapi will read and how, in one or two short sentences; each gap or risk is one sentence.\n\n${VOICE}` },
         { role: 'user', content: JSON.stringify(original) },
       ],
       schema: { name: 'for_client', schema: REWRITE_SCHEMA },

@@ -225,7 +225,7 @@ async function siteStep(spec) {
   // still open with its tools (web search, a look at a page, counts, record pages, the
   // register, endpoint tests) and submits the plan. If the agent fails, the
   // code-driven loop below plans instead.
-  say('site', { kind: 'strategizing', text: `Muse Wonder (${AGENT}) is taking over the investigation as an agent: settling what's open with its tools, then planning the extraction column by column.` });
+  say('site', { kind: 'strategizing', text: `Muse Wonder (${AGENT}) takes over: it settles what's still open, then plans each column.` });
   let agentPlan = null;
   try {
     agentPlan = await runAgent({ spec, sourceSpec: runSpec, findings, onEvent: (e) => say('site', e) });
@@ -256,6 +256,8 @@ async function siteStep(spec) {
       pace: strategy.pace,
       risks: strategy.client.risks,
       gaps: strategy.client.gaps,
+      // Muse Wonder's own words, under Technical details on the screen.
+      raw: { summary: strategy.summary, gaps: strategy.gaps ?? [], risks: strategy.risks ?? [] },
       model: strategy.model,
     });
   } catch (err) {
@@ -380,14 +382,35 @@ function describeAttempt(e) {
   const samples = e.report.samples;
   const pass = samples.filter((s) => s.status === 'pass').length;
   const whys = samples.flatMap((s) => s.checks.filter((c) => c.status === 'warn').map((c) => c.why ?? 'spacing'));
-  const words = { spacing: 'spacing differs', typo: 'a likely typo in the spec', column: 'a value typed under another column', dispute: "a sample value the site's data doesn't hold" };
-  const notes = Object.keys(words).filter((w) => whys.includes(w)).map((w) => `${whys.filter((x) => x === w).length}× ${words[w]}`);
+  const words = { spacing: 'spacing', typo: 'a likely typo in your spec', column: 'a value under another column', dispute: 'values the site shows differently' };
+  const notes = Object.keys(words).filter((w) => whys.includes(w)).map((w) => words[w]);
   const unreached = samples.filter((s) => s.status === 'not found').length;
   const missing = samples.filter((s) => s.why === 'not on the site').length;
-  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(', ')}` : ''}${missing ? `; ${missing} ${missing === 1 ? "isn't" : "aren't"} on the site: Dapi asked the site for ${missing === 1 ? 'it' : 'them'} directly and got nothing back` : ''}${unreached ? `; ${unreached} couldn't be reached in a test (the site has no way to ask for one record), so the run's first rows are the check` : ''}`;
+  const sampleText = `${pass} of ${samples.length} sample${samples.length === 1 ? '' : 's'} match exactly${notes.length ? `; the rest differ only by ${notes.join(' and ')}` : ''}${missing ? `; ${missing} ${missing === 1 ? "isn't" : "aren't"} on the site: Dapi asked the site for ${missing === 1 ? 'it' : 'them'} directly and got nothing back` : ''}${unreached ? `; ${unreached} couldn't be reached in a test, so the run's first rows are the check` : ''}`;
   return e.passed
-    ? `Attempt ${e.attempt} passed: ${e.report.rows} rows in the test run, ${sampleText}.`
-    : `Attempt ${e.attempt} failed: ${e.problems[0]}${e.problems.length > 1 ? ` (and ${e.problems.length - 1} more)` : ''}. Fixing it.`;
+    ? `Attempt ${e.attempt} passed: ${sampleText}.`
+    : `Attempt ${e.attempt} didn't pass: ${problemsInBrief(e.problems)}. Muse Spark is fixing it.`;
+}
+
+// The test's problems are written for Muse Spark; the client reads what kind they were
+// and how many. The exact list stays on the event, behind Details on the screen.
+function problemsInBrief(problems) {
+  const count = (re) => problems.filter((p) => re.test(p)).length;
+  const values = count(/^sample "[^"]*", column/);
+  const unfound = count(/^sample "[^"]*" not found/);
+  const counts = count(/^"[^"]*": (got|no expected count)/);
+  const requests = count(/^request failed/);
+  const brief = [
+    values && `${values} value${values === 1 ? "" : "s"} didn't match your samples`,
+    unfound && `${unfound} sample${unfound === 1 ? " wasn't" : "s weren't"} found in the test run`,
+    counts && "the row count didn't add up",
+    requests && `${requests} request${requests === 1 ? "" : "s"} failed`,
+    count(/no rows emitted/) && 'the test run delivered no rows',
+    count(/crashed/) && 'the test run crashed',
+  ].filter(Boolean);
+  const other = problems.length - values - unfound - counts - requests - count(/no rows emitted|crashed/);
+  if (other > 0) brief.push(`${other} other problem${other === 1 ? "" : "s"}`);
+  return brief.join(', ') || 'a check failed';
 }
 
 // Where the test found the client's samples at odds with the site's own data: values
