@@ -44,7 +44,9 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   // Apify's own account of the run, as figures.
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
-    <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+    // content-start: the rows stack from the top; a short sheet never stretches the
+    // strip's row and pushes the sheet down the page.
+    <div className="grid flex-1 content-start items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <ApifyStrip job={job} finished={finished} readOnly={readOnly} />
       {notes.length > 0 && (
         <div className="rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">

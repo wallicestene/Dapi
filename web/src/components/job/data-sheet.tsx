@@ -135,7 +135,9 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
             </label>
           )}
           {(page?.all ?? 0) > 0 && (
-            <DropdownMenu>
+            // Not modal: a modal menu locks the page's scroll, takes the scrollbar away
+            // and shifts the page sideways while it's open.
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-md border border-control bg-white px-2.5 text-[12px] font-medium outline-none hover:bg-raised focus-visible:outline-2 focus-visible:outline-ink data-[state=open]:bg-raised">
                 <Download aria-hidden className="size-3.5" />
                 Export
@@ -163,7 +165,9 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
         </div>
       </div>
 
-      <div className={cn("max-h-[calc(100vh-330px)] overflow-auto", (!page || page.rows.length >= 6) && "min-h-[260px]")}>
+      {/* One height for the job, whatever the filter: Exceptions or Missing never shrink
+          the sheet and move what's around it. */}
+      <div className={cn("overflow-auto", !page || page.all >= 6 ? "h-[max(260px,calc(100vh-330px))]" : "max-h-[calc(100vh-330px)]")}>
         <table className="w-max min-w-full border-collapse text-[13px]">
           <thead className="sticky top-0 z-10 bg-sheet">
             <tr className="border-b">
@@ -235,7 +239,8 @@ export function DataSheet({ job, selected, onSelect }: { job: Job; selected: Sel
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-ink px-3 pt-2.5 pb-2" style={{ borderBottom: "3px double var(--ink)" }}>
-        <p className="text-[13px] font-semibold">
+        {/* As tall as the pager beside it, so the bar keeps its height when there's no pager. */}
+        <p className="flex min-h-7 flex-wrap items-center text-[13px] font-semibold">
           {job.status === "done" ? "Counted against the source" : "Counted so far against the source"}
           <span className="ml-3 inline-flex items-center gap-1 tabular-nums">
             {n(job.rows ?? 0)} of {expected === null ? "…" : n(expected)}
