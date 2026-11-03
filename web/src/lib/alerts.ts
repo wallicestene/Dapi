@@ -29,6 +29,8 @@ export function useAlerts(job: Job) {
         ? ["Ready to run", "The plan is ready. Dapi needs your Go.", false]
         : job.status === "done"
           ? ["Delivered", `${(job.rows ?? 0).toLocaleString("en-US")} rows, footed against the source.`, false]
+          : job.status === "held"
+            ? ["Paused", "Paused before the next step. Resume when you're ready.", false]
           : job.status === "failed" || job.status === "declined"
             ? ["Stopped", job.failed ?? job.declined ?? "A step needs you.", true]
             : null;

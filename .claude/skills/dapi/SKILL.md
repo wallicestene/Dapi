@@ -894,6 +894,13 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   run gracefully (a `pause.json` marker tells the runner it was the client's stop);
   Resume resurrects it on Apify: same dataset, request queue and saved state. Tested on
   job 0022: 900 rows, paused (990 after the flush), resumed to 1,485, paused at 1,515.
+- **Pause between steps** (owner's idea, Nov 3): while the spec or the site step runs,
+  "Pause after this step" lets that step finish and save, then the job holds before the
+  next one with no process behind it (`hold.json`; status `held`, `heldBefore`), so it
+  survives a restart; Resume starts the next step from the saved spec and findings
+  (`run-job.js --from site|code`). After the extraction the plan already waits for Go,
+  so no hold there. Tested on job 0032: held before the site, resumed, held before the
+  extraction with findings and strategy saved, resumed to the plan.
 - **Alerts** when a job needs you (Ready to run) or finishes (delivered, stopped): a
   soft chime (rising / falling), the tab title flashing until you look, a desktop
   notification when the tab is in the background; a bell in the job's top bar turns

@@ -9,7 +9,7 @@ import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { STAGE_TEXT, stageOf } from "@/lib/stage";
 import { useAlerts } from "@/lib/alerts";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, Pause, Play } from "lucide-react";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
@@ -30,6 +30,62 @@ import { CodePanel } from "./code-panel";
 import { SamplesPanel } from "./samples-panel";
 import { RunPanel } from "./run-panel";
 import { FootedPanel } from "./footed-panel";
+
+// Pause after this step: while the spec or the site step runs, ask the job to stop at
+// the next step boundary. The step finishes; the next one waits for Resume.
+function HoldControl({ job }: { job: Job }) {
+  const [busy, setBusy] = useState(false);
+  if (job.status !== "running" || !["spec", "site"].includes(job.step)) return null;
+  const ask = async (on: boolean) => {
+    setBusy(true);
+    await fetch(`/api/jobs/${job.id}/hold`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ on }) }).catch(() => {});
+    setBusy(false);
+  };
+  return job.holdRequested ? (
+    <Button variant="outline" disabled={busy} onClick={() => ask(false)} className="hidden h-8 gap-1.5 px-3 sm:inline-flex" title="This step finishes, then the job waits. Click to keep going instead.">
+      <span aria-hidden className="size-2 animate-pulse rounded-full bg-source" /> Pausing after this step · Cancel
+    </Button>
+  ) : (
+    <Button variant="outline" disabled={busy} onClick={() => ask(true)} className="hidden h-8 gap-1.5 px-3 sm:inline-flex" title="Let this step finish, then wait before the next one">
+      <Pause aria-hidden className="size-3.5" /> Pause after this step
+    </Button>
+  );
+}
+
+// A job paused between steps: what's saved, and Resume.
+function HeldBanner({ job, readOnly }: { job: Job; readOnly: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const next = job.heldBefore === "site" ? "investigating the site" : "writing the extraction";
+  const saved = job.heldBefore === "site" ? "Your spec is saved." : "Your spec, the investigation and Muse Wonder's strategy are saved.";
+  return (
+    <section className="flex flex-wrap items-center gap-4 rounded-xl border border-source/30 bg-[#f4f2ff] px-5 py-3.5">
+      <Pause aria-hidden className="size-4 text-source" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold">Paused before {next}</p>
+        <p className="text-[13.5px] text-ink-2">{saved} Resume carries on from there.</p>
+      </div>
+      {error && <p className="text-[13px] text-pencil-red">{error}</p>}
+      {!readOnly && (
+        <Button
+          disabled={busy}
+          className="h-9 gap-1.5 px-4"
+          onClick={async () => {
+            setBusy(true);
+            const res = await fetch(`/api/jobs/${job.id}/continue`, { method: "POST" });
+            if (res.ok) window.location.reload();
+            else {
+              setError((await res.json().catch(() => ({}))).error ?? "Couldn't resume. Try again.");
+              setBusy(false);
+            }
+          }}
+        >
+          <Play aria-hidden className="size-3.5 fill-current" /> {busy ? "Resuming…" : "Resume"}
+        </Button>
+      )}
+    </section>
+  );
+}
 
 export function JobView({
   initialJob,
@@ -89,7 +145,7 @@ export function JobView({
 
   const steps = useMemo(() => stepStates(job, events, report), [job, events, report]);
   const tab = picked ?? defaultTab(job, events);
-  const live = !["done", "failed", "declined", "cancelled", "stopped"].includes(job.status);
+  const live = !["done", "failed", "declined", "cancelled", "stopped", "held"].includes(job.status);
   // The mark as the job's progress: source, extract, deliver, verified.
   const stage = stageOf(job);
   const host = job.sourceUrl ? new URL(job.sourceUrl).host : null;
@@ -101,6 +157,7 @@ export function JobView({
         crumb={job.title ?? `Job ${job.id}`}
         actions={
           <>
+            {!readOnly && <HoldControl job={job} />}
             <Button variant="ghost" size="icon" onClick={alerts.toggle} aria-pressed={alerts.on} title={alerts.on ? "Alerts on: a chime, the tab title and a notification when this job needs you or finishes" : "Alerts off"} aria-label={alerts.on ? "Turn alerts off" : "Turn alerts on"} className="text-ink-2">
               {alerts.on ? <Bell /> : <BellOff />}
             </Button>
@@ -158,6 +215,7 @@ export function JobView({
           </div>
         </div>
 
+        {job.status === "held" && <HeldBanner job={job} readOnly={readOnly} />}
         <TabsPrimitive.Root value={tab} onValueChange={(v) => setPicked(v as Tab)} className="flex flex-1 flex-col gap-4">
           {/* Each step carries the mark lit to its stage; the one under way has a beam running round it. */}
           <TabsPrimitive.List aria-label="Steps" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">

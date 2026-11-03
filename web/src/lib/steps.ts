@@ -47,7 +47,9 @@ export function latestSamples(events: JobEvent[], report: Report | null): Sample
 export function stepStates(job: Job, events: JobEvent[], report: Report | null): StepState[] {
   const order: Tab[] = ["spec", "site", "code", "samples", "run", "footed"];
   const at = (t: Tab) => order.indexOf(t);
-  const jobTab: Tab = job.step === "plan" ? "run" : job.step === "code" && last(events, "tested") ? "samples" : (job.step as Tab);
+  // Paused between steps: everything before the step it resumes at is done.
+  const held = job.status === "held" && job.heldBefore ? (job.heldBefore as Tab) : null;
+  const jobTab: Tab = held ?? (job.step === "plan" ? "run" : job.step === "code" && last(events, "tested") ? "samples" : (job.step as Tab));
   // A pause is the client's own stop: the run waits to resume, nothing failed.
   const paused = job.status === "stopped" && Boolean(job.paused);
   const stoppedHere = ["failed", "declined", "cancelled", "stopped"].includes(job.status) && !paused;
@@ -125,6 +127,10 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
       state: state("footed"),
     },
   ];
+  if (held) {
+    const at = steps.find((s) => s.tab === held);
+    if (at) Object.assign(at, { label: held === "site" ? "Site" : "Extraction", line: "paused before this step", tick: null });
+  }
   return steps;
 }
 

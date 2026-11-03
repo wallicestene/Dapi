@@ -15,6 +15,7 @@ export const metadata = { title: "Jobs · Dapi" };
 const STATUS: Record<Job["status"], string> = {
   running: "Running",
   waiting: "Waiting for your Go",
+  held: "Paused between steps",
   done: "Delivered",
   failed: "Stopped: failed a check",
   declined: "Refused",
@@ -25,7 +26,7 @@ const STATUS: Record<Job["status"], string> = {
 const FILTERS = [
   { key: "all", label: "All", has: () => true },
   { key: "delivered", label: "Delivered", has: (j: Job) => j.status === "done" },
-  { key: "active", label: "In progress", has: (j: Job) => j.status === "running" || j.status === "waiting" },
+  { key: "active", label: "In progress", has: (j: Job) => ["running", "waiting", "held"].includes(j.status) },
   { key: "stopped", label: "Stopped", has: (j: Job) => ["failed", "declined", "cancelled", "stopped"].includes(j.status) },
 ];
 

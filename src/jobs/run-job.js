@@ -49,7 +49,9 @@ if (id === '--new') {
 }
 const autoGo = args.includes('--go');
 const follow = args.includes('--follow');
-const fromCode = args.includes('--from-code');
+// Where a job starts again: '--from site' or '--from code' (after a pause between
+// steps), and '--from-code' (trying the extraction again).
+const from = args.includes('--from-code') ? 'code' : args.includes('--from') ? args[args.indexOf('--from') + 1] : null;
 const dir = jobDir(id);
 const job = readJson(dir, 'job.json');
 if (!job) {
@@ -91,7 +93,8 @@ try {
     process.exit(0);
   }
   // Steps 1 and 2, or, when the extraction is tried again, what they saved.
-  const { spec, findings } = fromCode ? restartAtCode() : await specAndSite();
+  const { spec, findings } = from === 'code' ? restartAtCode() : await specAndSite(from);
+  if (from !== 'code') holdIfAsked('code');
   const runSpec = findings.sourceSamples ? { ...spec, samples: findings.sourceSamples } : spec;
   const runSpecPath = path.join(dir, findings.sourceSamples ? 'spec.source.json' : 'spec.json');
 
@@ -168,8 +171,22 @@ function describeCheck(c) {
 // Steps 1 and 2: the spec, then the site (the first pass, Muse Wonder's investigation
 // and its strategy). Their results are saved in the job folder, so the extraction can be
 // tried again from them without redoing either.
-async function specAndSite() {
-  // 1. The spec.
+async function specAndSite(from) {
+  let spec;
+  if (from === 'site') {
+    spec = readJson(dir, 'spec.json');
+    if (!spec) throw new Error('nothing saved to resume from');
+    say('site', { kind: 'resume', text: 'Resuming: your spec is kept. Next, the site.' });
+  } else {
+    spec = await specStep();
+    holdIfAsked('site');
+  }
+  const findings = await siteStep(spec);
+  return { spec, findings };
+}
+
+// Step 1: the spec, read and saved.
+async function specStep() {
   step('spec');
   say('spec', { kind: 'start', text: 'Reading your spec.' });
   const { spec, problems } = await readSpec(path.join(dir, job.input));
@@ -186,8 +203,11 @@ async function specAndSite() {
     corrections: spec.corrections ?? [],
     problems,
   });
+  return spec;
+}
 
-  // 2. The site.
+// Step 2: the site (the first pass, Muse Wonder's investigation and its strategy).
+async function siteStep(spec) {
   step('site');
   say('site', { kind: 'start', text: `Investigating ${spec.sourceUrl}: watching what the page loads before reading any of it.` });
   // The first pass never ends a job: if it breaks on something new, the agent takes over
@@ -255,18 +275,36 @@ async function specAndSite() {
   } catch (err) {
     say('site', { kind: 'strategy-skipped', text: `Planning the strategy failed (${err.message.split('\n')[0]}); the code writer works from the findings directly.` });
   }
-  return { spec, findings };
+  return findings;
 }
 
-// Trying the extraction again: the spec, the findings and Muse Wonder's strategy, as
-// saved; Muse Spark writes the extraction afresh from them.
+// Trying the extraction again, or resuming before it after a pause: the spec, the
+// findings and Muse Wonder's strategy, as saved; Muse Spark writes the extraction.
 function restartAtCode() {
   const spec = readJson(dir, 'spec.json');
   const findings = readJson(dir, 'findings.json');
   if (!spec || !findings) throw new Error('nothing saved to start again from');
+  // How it was started says which: '--from code' resumes, '--from-code' tries again.
+  const resumed = !args.includes('--from-code');
   updateJob(dir, { failed: null });
-  say('code', { kind: 'restart', text: "Starting again from the extraction. The spec, the investigation and Muse Wonder's strategy are kept." });
+  say('code', {
+    kind: 'restart',
+    text: resumed ? "Resuming: your spec, the investigation and Muse Wonder's strategy are kept. Next, the extraction." : "Starting again from the extraction. The spec, the investigation and Muse Wonder's strategy are kept.",
+  });
   return { spec, findings };
+}
+
+// A pause between steps, asked for while a step ran: that step has finished and saved
+// everything the next one needs, so the job waits here with no process behind it (it
+// survives a restart or a sleeping laptop), and Resume starts the next step from what
+// was saved.
+function holdIfAsked(next) {
+  if (!readJson(dir, 'hold.json')) return;
+  // Inside the function: the job runs at the top level, before later consts exist.
+  const NEXT_STEP = { site: 'investigating the site', code: 'writing the extraction' };
+  updateJob(dir, { status: 'held', heldBefore: next, holdRequested: false, runnerPid: null });
+  say(next === 'site' ? 'spec' : 'site', { kind: 'held', text: `Paused before ${NEXT_STEP[next]}. Everything so far is saved; Resume carries on from there.` });
+  process.exit(0);
 }
 
 // A run that ended without finishing: paused by the client (it continues with Resume),

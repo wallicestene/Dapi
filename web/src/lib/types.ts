@@ -1,6 +1,6 @@
 // Shapes the runner writes to a job's folder (src/jobs/store.js) and the web app reads.
 
-export type JobStatus = "running" | "waiting" | "done" | "failed" | "declined" | "cancelled" | "stopped";
+export type JobStatus = "running" | "waiting" | "held" | "done" | "failed" | "declined" | "cancelled" | "stopped";
 export type StepName = "spec" | "site" | "code" | "plan" | "run" | "footed";
 
 export interface Job {
@@ -29,6 +29,9 @@ export interface Job {
   runAttempt?: number;
   // Paused by the client on Apify; Resume carries on where it stopped.
   paused?: boolean;
+  // Paused between steps: the step it resumes at, and a pause asked for while a step runs.
+  heldBefore?: StepName;
+  holdRequested?: boolean;
   // What Apify itself reports about the run.
   apify?: {
     status: string;
