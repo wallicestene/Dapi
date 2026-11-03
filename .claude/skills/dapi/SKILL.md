@@ -953,6 +953,14 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   deliver). Chosen over marble and sunset (gradients) and pixel (too loud) after
   rendering all six. 21st.dev's registry now needs an account key, so Magic UI's
   NumberTicker and DotPattern came from Magic UI's own registry, restyled.
+- **The mark appears once in each place, never as decoration** (Nov 3): the nav lockup; the
+  D of "data" in the home headline (rendered three ways, chosen at 0.92em on the
+  baseline so the line still reads as words); a first-visit intro, the mark drawing alone
+  in the centre before the page fades in (once per browser session through
+  sessionStorage, skipped for reduced motion, about 2.4 s); and on the step cards. The
+  hero's standalone mark, the closing one and the progress mark beside a job's title went:
+  each repeated something already on screen. The intro sets `data-seen` on `<html>`
+  before paint, so `<html>` carries `suppressHydrationWarning`.
 
 ### Receipt view (2026-10-30)
 
