@@ -2,11 +2,17 @@
 // Spark writes it up as a spec the user checks before starting the job.
 
 import { READ_ONLY, pipeline } from "@/lib/server/dapi";
+import { PUBLIC, currentUser } from "@/lib/server/session";
+import { mayStart } from "@/lib/server/quota";
 
 const MAX_BYTES = 32 * 1024 * 1024;
 
 export async function POST(request: Request) {
   if (READ_ONLY) return Response.json({ error: "This copy of Dapi is for exploring finished jobs; new jobs run locally." }, { status: 403 });
+  if (PUBLIC) {
+    const may = mayStart(await currentUser());
+    if (!may.ok) return Response.json({ error: may.reason }, { status: 401 });
+  }
   const form = await request.formData();
   const audio = form.get("audio");
   if (!(audio instanceof File) || !audio.size) return Response.json({ error: "No recording arrived." }, { status: 400 });

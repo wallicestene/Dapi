@@ -3,11 +3,15 @@
 
 import fs from "node:fs";
 import { getEvents, getJob, jobPath, validId } from "@/lib/server/dapi";
+import { jobFor } from "@/lib/server/access";
 
 const FINISHED = new Set(["done", "failed", "declined", "cancelled", "stopped"]);
 
 export async function GET(request: Request, ctx: RouteContext<"/api/jobs/[id]/stream">) {
   const { id } = await ctx.params;
+  // On the public demo: a job someone may not see doesn't exist for them; only its owner acts on it.
+  const access = await jobFor(id, "see");
+  if (access instanceof Response) return access;
   if (!validId(id) || !getJob(id)) return new Response("no such job", { status: 404 });
   const since = Number(new URL(request.url).searchParams.get("since") ?? 0);
 

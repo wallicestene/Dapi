@@ -3,6 +3,8 @@
 
 import { pipeline } from "@/lib/server/dapi";
 import { deliveredKeys, onlyDelivered } from "@/lib/server/delivered";
+import { jobFor } from "@/lib/server/access";
+import { PUBLIC } from "@/lib/server/session";
 import type { Located, Receipt } from "@/lib/types";
 
 interface Evidence {
@@ -17,6 +19,11 @@ interface Evidence {
 export async function GET(request: Request) {
   const p = new URL(request.url).searchParams;
   const key = p.get("key") ?? "";
+  // On the public demo a receipt is read through a job the visitor may see.
+  if (PUBLIC) {
+    const access = await jobFor(p.get("job") ?? "", "see");
+    if (access instanceof Response) return access;
+  }
   try {
     const { loadEvidence } = await pipeline<{ loadEvidence: (k: string) => Promise<Evidence> }>("src/receipts/evidence.js");
     const { locate } = await pipeline<{ locate: (e: Evidence, path: string) => Omit<Located, "path"> }>("src/receipts/locate.js");

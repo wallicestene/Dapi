@@ -6,6 +6,8 @@ export type StepName = "spec" | "site" | "code" | "plan" | "run" | "footed";
 export interface Job {
   id: string;
   input: string;
+  // Who started it, on the public demo (a GitHub account): only they see and act on it.
+  owner?: { id: number; login: string };
   status: JobStatus;
   step: StepName;
   createdAt: string;

@@ -3,6 +3,7 @@
 
 import fs from "node:fs";
 import { jobPath, validId } from "@/lib/server/dapi";
+import { jobFor } from "@/lib/server/access";
 
 const TYPES: [RegExp, string][] = [
   [/^img-\d+\.png$/, "image/png"],
@@ -14,6 +15,9 @@ const TYPES: [RegExp, string][] = [
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/jobs/[id]/files/[name]">) {
   const { id, name } = await ctx.params;
+  // On the public demo: a job someone may not see doesn't exist for them; only its owner acts on it.
+  const access = await jobFor(id, "see");
+  if (access instanceof Response) return access;
   const type = TYPES.find(([re]) => re.test(name))?.[1];
   const file = validId(id) && type ? jobPath(id, name) : null;
   if (!file || !fs.existsSync(file)) return new Response("not found", { status: 404 });

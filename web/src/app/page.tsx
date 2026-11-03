@@ -11,6 +11,8 @@ import { GLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { READ_ONLY, listJobs } from "@/lib/server/dapi";
+import { canSee } from "@/lib/server/access";
+import { Account } from "@/components/account";
 import { dataShape } from "@/lib/server/shape";
 import { cost, took } from "@/lib/stage";
 
@@ -44,7 +46,7 @@ const WHY = [
 export default async function Home() {
   // The intro plays on a first visit and again after 12 hours away (its cookie's life).
   const seen = (await cookies()).has("dapi-intro");
-  const delivered = listJobs().filter((j) => j.status === "done" && j.sourceUrl);
+  const delivered = listJobs().filter((j) => j.status === "done" && j.sourceUrl && canSee(j, null));
   const proof = PROOF.map((p) => ({ ...p, job: delivered.find((j) => new URL(j.sourceUrl!).host === p.host) })).filter((p) => p.job);
   const start = READ_ONLY ? { href: "/jobs", label: "Explore finished jobs" } : { href: "/jobs/new", label: "Start a job" };
   return (
@@ -63,9 +65,12 @@ export default async function Home() {
             Jobs
           </Link>
         </nav>
-        <Button asChild className="ml-auto h-9 px-4">
-          <Link href={start.href}>{start.label}</Link>
-        </Button>
+        <div className="ml-auto flex items-center gap-3">
+          <Account next="/jobs/new" />
+          <Button asChild className="h-9 px-4">
+            <Link href={start.href}>{start.label}</Link>
+          </Button>
+        </div>
       </header>
 
       <main className="flex flex-col">

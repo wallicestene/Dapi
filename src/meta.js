@@ -1,5 +1,7 @@
 // The one place Dapi talks to the Meta Model API: auth, retries, errors.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const API = 'https://api.meta.ai/v1';
@@ -65,7 +67,11 @@ async function post(path, body, timeoutMs, attempts = 3) {
       await backoff(attempt);
       continue;
     }
-    if (res.ok) return res.json();
+    if (res.ok) {
+      const json = await res.json();
+      record(body.model, json.usage);
+      return json;
+    }
 
     const retryable = res.status === 429 || res.status >= 500;
     if (!retryable || attempt === attempts) {
@@ -74,6 +80,30 @@ async function post(path, body, timeoutMs, attempts = 3) {
     const retryAfter = Number(res.headers.get('retry-after'));
     if (retryAfter > 0) await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
     else await backoff(attempt);
+  }
+}
+
+// What each call cost, appended to jobs/usage.jsonl: a public deployment adds it up and
+// stops taking jobs before the month's Meta budget runs out. Prices per million tokens:
+// input, output, cached input (AGENTS.md).
+const PRICE = {
+  'muse-wonder-1.0': [4, 20, 0.2],
+  'muse-spark-1.3': [1.25, 4.25, 0.15],
+  'muse-spark-1.3-contributor': [0.1, 0.2, 0.1],
+};
+function record(model, usage) {
+  if (!usage) return;
+  try {
+    const input = usage.prompt_tokens ?? usage.input_tokens ?? 0;
+    const cached = usage.prompt_tokens_details?.cached_tokens ?? usage.input_tokens_details?.cached_tokens ?? 0;
+    const output = usage.completion_tokens ?? usage.output_tokens ?? 0;
+    const [pin, pout, pcached] = PRICE[model] ?? PRICE[SPARK];
+    const usd = ((input - cached) * pin + cached * pcached + output * pout) / 1e6;
+    const dir = path.resolve(process.env.DAPI_JOBS_DIR ?? fileURLToPath(new URL('../jobs', import.meta.url)));
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, 'usage.jsonl'), `${JSON.stringify({ at: new Date().toISOString(), job: process.env.DAPI_JOB_ID ?? null, model, input, cached, output, usd: Number(usd.toFixed(6)) })}\n`);
+  } catch {
+    // the ledger never stops a call
   }
 }
 

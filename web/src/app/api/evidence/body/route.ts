@@ -4,9 +4,10 @@
 // the public read-only copy re-checks seals on the server instead (../verify).
 
 import { READ_ONLY, pipeline } from "@/lib/server/dapi";
+import { PUBLIC } from "@/lib/server/session";
 
 export async function GET(request: Request) {
-  if (READ_ONLY) return new Response("This copy checks seals on the server.", { status: 403 });
+  if (READ_ONLY || PUBLIC) return new Response("This copy checks seals on the server.", { status: 403 });
   const key = new URL(request.url).searchParams.get("key") ?? "";
   try {
     const { loadEvidence } = await pipeline<{ loadEvidence: (k: string) => Promise<{ body: string }> }>("src/receipts/evidence.js");

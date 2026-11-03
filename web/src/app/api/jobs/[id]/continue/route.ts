@@ -4,9 +4,13 @@
 import fs from "node:fs";
 import { READ_ONLY, getJob, jobPath, validId } from "@/lib/server/dapi";
 import { startRunner } from "@/lib/server/runner";
+import { jobFor } from "@/lib/server/access";
 
 export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/continue">) {
   const { id } = await ctx.params;
+  // On the public demo: a job someone may not see doesn't exist for them; only its owner acts on it.
+  const access = await jobFor(id, "act");
+  if (access instanceof Response) return access;
   const job = validId(id) ? getJob(id) : null;
   if (READ_ONLY) return Response.json({ error: "Read-only copy." }, { status: 403 });
   if (!job || job.status !== "held" || !job.heldBefore) return Response.json({ error: "This job isn't paused between steps." }, { status: 409 });

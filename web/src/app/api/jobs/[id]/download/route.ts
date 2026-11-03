@@ -5,9 +5,13 @@
 import fs from "node:fs";
 import { getJob, jobPath, readJson, validId } from "@/lib/server/dapi";
 import { FORMATS, type Format } from "@/lib/server/export";
+import { jobFor } from "@/lib/server/access";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/jobs/[id]/download">) {
   const { id } = await ctx.params;
+  // On the public demo: a job someone may not see doesn't exist for them; only its owner acts on it.
+  const access = await jobFor(id, "see");
+  if (access instanceof Response) return access;
   const job = validId(id) ? getJob(id) : null;
   const file = job ? jobPath(id, "rows.jsonl") : null;
   if (!job || !file || !fs.existsSync(file)) return new Response("no rows", { status: 404 });

@@ -4,6 +4,7 @@
 
 import { READ_ONLY, getJob, jobPath, pipeline, validId } from "@/lib/server/dapi";
 import { runnerAlive, startRunner } from "@/lib/server/runner";
+import { jobFor } from "@/lib/server/access";
 
 interface ApifyRun {
   status: string;
@@ -15,6 +16,9 @@ interface ApifyRun {
 
 export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/sync">) {
   const { id } = await ctx.params;
+  // On the public demo: a job someone may not see doesn't exist for them; only its owner acts on it.
+  const access = await jobFor(id, "see");
+  if (access instanceof Response) return access;
   const job = validId(id) ? getJob(id) : null;
   if (!job) return Response.json({ error: "no such job" }, { status: 404 });
   if (runnerAlive(job.runnerPid)) return Response.json({ state: "watching" });

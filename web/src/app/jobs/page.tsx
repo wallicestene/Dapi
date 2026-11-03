@@ -5,6 +5,9 @@ import { Footer, Mark, TopBar } from "@/components/shell";
 import { JobArt } from "@/components/job-art";
 import { GLASS } from "@/lib/glass";
 import { READ_ONLY, listJobs } from "@/lib/server/dapi";
+import { canSee } from "@/lib/server/access";
+import { PUBLIC, currentUser } from "@/lib/server/session";
+import { Account } from "@/components/account";
 import { dataShape } from "@/lib/server/shape";
 import { STAGE_TEXT, cost, pausedByYou, stageOf, stoppedItself, took } from "@/lib/stage";
 import { cn } from "@/lib/utils";
@@ -38,7 +41,9 @@ const FILTERS = [
 
 export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
   const { show } = await searchParams;
-  const jobs = listJobs();
+  // On the public demo: the featured jobs and the visitor's own, nobody else's.
+  const user = PUBLIC ? await currentUser() : null;
+  const jobs = listJobs().filter((j) => canSee(j, user));
   const filter = FILTERS.find((f) => f.key === show) ?? FILTERS[0];
   const shown = jobs.filter(filter.has);
   // On "All", the work in progress and what was delivered come first; stopped attempts
@@ -53,12 +58,12 @@ export default async function Jobs({ searchParams }: PageProps<"/jobs">) {
       : [{ title: null, jobs: shown, compact: filter.key === "stopped" }];
   return (
     <div className="flex min-h-screen flex-col">
-      <TopBar />
+      <TopBar actions={<Account next="/jobs" />} />
       <main className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-5 pt-8 pb-14 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-[32px] leading-tight font-bold tracking-[-0.03em]">Jobs</h1>
-            <p className="mt-1 text-[15px] text-ink-2">Every job turns a spec into a dataset you can prove.</p>
+            <p className="mt-1 text-[15px] text-ink-2">{PUBLIC ? "Example jobs anyone can open, and the jobs you've run." : "Every job turns a spec into a dataset you can prove."}</p>
           </div>
           {!READ_ONLY && (
             <Button asChild className="h-10 gap-2 px-4">

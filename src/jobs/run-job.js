@@ -27,6 +27,7 @@ import { compareSamples } from '../compare.js';
 import { planStrategy, forClient } from '../strategy.js';
 import { runAgent, AGENT } from '../agent.js';
 import { runChecks } from '../investigate/checks.js';
+import { REVIEWED, reviewed } from '../sources.js';
 
 // The run watch (see runOnApify). Declared up here: the job runs at the top level,
 // before declarations further down the file are initialised.
@@ -54,6 +55,11 @@ const follow = args.includes('--follow');
 // steps), and '--from-code' (trying the extraction again).
 const from = args.includes('--from-code') ? 'code' : args.includes('--from') ? args[args.indexOf('--from') + 1] : null;
 const dir = jobDir(id);
+// Meta calls record their cost against this job (jobs/usage.jsonl).
+process.env.DAPI_JOB_ID = id;
+// The public demo (DAPI_PUBLIC=1): reviewed sources only, and a size cap per job.
+const PUBLIC = process.env.DAPI_PUBLIC === '1';
+const PUBLIC_MAX_REQUESTS = 1000;
 const job = readJson(dir, 'job.json');
 if (!job) {
   console.error(`No job ${id}`);
@@ -114,6 +120,12 @@ try {
   const { config = {} } = await import(`${pathToFileURL(path.join(dir, 'site.js')).href}?t=${Date.now()}`);
   const plan = makePlan(findings, config, writerNotes, spec, written.report);
   plan.needsYou = needsYou(plan, findings);
+  // The public demo keeps each job small enough for everyone to get a turn.
+  if (PUBLIC && plan.requests > PUBLIC_MAX_REQUESTS) {
+    say('plan', { kind: 'declined', text: `This demo runs jobs of up to ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')} requests; this one needs about ${plan.requests.toLocaleString('en-US')}. Narrow the spec (one year, one country) and try again.` });
+    updateJob(dir, { status: 'declined', declined: `Too big for the public demo: about ${plan.requests.toLocaleString('en-US')} requests (the limit is ${PUBLIC_MAX_REQUESTS.toLocaleString('en-US')}).` });
+    process.exit(0);
+  }
   say('plan', { kind: 'plan', text: plan.text, ...plan });
   // The run always waits for the client's Go: it spends their Apify account and acts on
   // someone else's site, and the plan (time, cost, anything worth a look) is the promise
@@ -175,6 +187,17 @@ async function specAndSite(from) {
   } else {
     spec = await specStep();
     holdIfAsked('site');
+  }
+  // The public demo runs only on sources we've reviewed (src/sources.js): a stranger's
+  // spec never points the owner's Apify account at a site nobody has checked.
+  if (PUBLIC && !reviewed(spec.sourceUrl)) {
+    say('site', {
+      kind: 'declined',
+      text: "The public demo runs only on sources we've reviewed.",
+      reasons: [`${spec.sourceUrl ? new URL(spec.sourceUrl).host : 'This spec'} isn't one of them yet. Reviewed: ${REVIEWED.map((s) => s.name).join(', ')}.`, 'Run Dapi yourself to use it on any public site you may collect.'],
+    });
+    updateJob(dir, { status: 'declined', declined: "The public demo runs only on reviewed sources." });
+    process.exit(0);
   }
   const findings = await siteStep(spec);
   return { spec, findings };

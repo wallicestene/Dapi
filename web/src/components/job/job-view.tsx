@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 import { Button } from "@/components/ui/button";
 import { Footer, Mark, TopBar } from "@/components/shell";
@@ -167,11 +167,13 @@ export function JobView({
   initialEvents,
   initialReport,
   readOnly,
+  account,
 }: {
   initialJob: Job;
   initialEvents: JobEvent[];
   initialReport: Report | null;
   readOnly: boolean;
+  account?: ReactNode;
 }) {
   const [job, setJob] = useState(initialJob);
   const alerts = useAlerts(job);
@@ -255,6 +257,7 @@ export function JobView({
                 <Link href="/jobs/new">New job</Link>
               </Button>
             )}
+            {account}
           </>
         }
       />

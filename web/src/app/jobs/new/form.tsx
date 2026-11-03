@@ -16,12 +16,14 @@ const MODES: { key: Mode; label: string }[] = [
   { key: "voice", label: "Speak" },
 ];
 
-export function NewJobForm() {
+// `initialText`: an example spec to start from (the public demo's quick starts), opened
+// in the Paste tab ready to edit.
+export function NewJobForm({ initialText = "" }: { initialText?: string }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<Mode>("file");
+  const [mode, setMode] = useState<Mode>(initialText ? "text" : "file");
   const [file, setFile] = useState<File | null>(null);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

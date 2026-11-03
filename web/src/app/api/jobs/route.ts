@@ -6,12 +6,20 @@ import os from "node:os";
 import path from "node:path";
 import { READ_ONLY, pipeline } from "@/lib/server/dapi";
 import { startRunner } from "@/lib/server/runner";
+import { PUBLIC, currentUser } from "@/lib/server/session";
+import { mayStart } from "@/lib/server/quota";
 
 const ALLOWED = new Set([".pdf", ".md", ".txt"]);
 const MAX_BYTES = 15 * 1024 * 1024;
 
 export async function POST(request: Request) {
   if (READ_ONLY) return Response.json({ error: "This copy of Dapi is for exploring finished jobs; new jobs run locally." }, { status: 403 });
+  // The public demo: signed in, with a turn left (see lib/server/quota.ts).
+  const user = PUBLIC ? await currentUser() : null;
+  if (PUBLIC) {
+    const may = mayStart(user);
+    if (!may.ok) return Response.json({ error: may.reason }, { status: user ? 429 : 401 });
+  }
   const form = await request.formData();
   const file = form.get("spec");
   const text = String(form.get("text") ?? "").trim();
@@ -36,6 +44,6 @@ export async function POST(request: Request) {
   const { createJob } = await pipeline<{ createJob: (p: string) => { id: string; dir: string } }>("src/jobs/store.js");
   const { id } = createJob(upload);
   fs.rmSync(tmp, { recursive: true, force: true });
-  startRunner(id);
+  startRunner(id, [], user ? { owner: { id: user.id, login: user.login } } : {});
   return Response.json({ id });
 }

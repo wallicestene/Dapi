@@ -4,9 +4,13 @@
 import fs from "node:fs";
 import { READ_ONLY, getJob, jobPath, pipeline, validId } from "@/lib/server/dapi";
 import { runnerAlive, startRunner } from "@/lib/server/runner";
+import { jobFor } from "@/lib/server/access";
 
 export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/resurrect">) {
   const { id } = await ctx.params;
+  // On the public demo: a job someone may not see doesn't exist for them; only its owner acts on it.
+  const access = await jobFor(id, "act");
+  if (access instanceof Response) return access;
   const job = validId(id) ? getJob(id) : null;
   if (!job?.runId) return Response.json({ error: "This job has no run to resurrect." }, { status: 404 });
   if (READ_ONLY) return Response.json({ error: "Read-only copy." }, { status: 403 });

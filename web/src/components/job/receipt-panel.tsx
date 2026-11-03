@@ -122,7 +122,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom, readOnly =
                 {receipt.request.payload ? <><br />{receipt.request.payload.slice(0, 200)}</> : null}
               </p>
               {receipt.located.map((l) => (
-                <Evidence key={l.path} located={l} evidenceKey={receipt.key} />
+                <Evidence key={l.path} located={l} evidenceKey={receipt.key} jobId={job.id} />
               ))}
               <Seal receipt={receipt} readOnly={readOnly} />
             </>
@@ -174,9 +174,9 @@ function Line({ tick, children }: { tick: Parameters<typeof TickMark>[0]["tick"]
 }
 
 // The place in the evidence a value came from, with that line marked.
-function Evidence({ located, evidenceKey }: { located: Located; evidenceKey: string }) {
+function Evidence({ located, evidenceKey, jobId }: { located: Located; evidenceKey: string; jobId: string }) {
   if (located.kind === "html") {
-    const src = `/api/evidence/page?key=${evidenceKey}&path=${encodeURIComponent(located.path)}`;
+    const src = `/api/evidence/page?key=${evidenceKey}&job=${jobId}&path=${encodeURIComponent(located.path)}`;
     return (
       <figure className="mt-3">
         <iframe title="The captured page, with the element outlined" src={src} sandbox="" className="h-72 w-full rounded-md border bg-white" />
@@ -234,7 +234,13 @@ function Seal({ receipt, readOnly }: { receipt: Receipt; readOnly: boolean }) {
         const { matches } = await (await fetch(`/api/evidence/verify?key=${receipt.key}`)).json();
         return setCheck(matches ? "match" : "mismatch");
       }
-      const body = await (await fetch(`/api/evidence/body?key=${receipt.key}`)).text();
+      const res = await fetch(`/api/evidence/body?key=${receipt.key}`);
+      // A copy that doesn't hand out whole responses checks the seal itself.
+      if (res.status === 403) {
+        const { matches } = await (await fetch(`/api/evidence/verify?key=${receipt.key}`)).json();
+        return setCheck(matches ? "match" : "mismatch");
+      }
+      const body = await res.text();
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
       const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join(""); // taste-skill-ignore: hex bytes
       setCheck(hex === receipt.bodySha256 ? "match" : "mismatch");

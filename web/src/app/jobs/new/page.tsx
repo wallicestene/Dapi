@@ -1,7 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Footer, TopBar } from "@/components/shell";
-import { READ_ONLY } from "@/lib/server/dapi";
+import { Account } from "@/components/account";
+import { READ_ONLY, REPO } from "@/lib/server/dapi";
+import { PUBLIC, currentUser } from "@/lib/server/session";
+import { LIMITS, mayStart } from "@/lib/server/quota";
 import { NewJobForm } from "./form";
+
+// The public demo's quick starts: specs on reviewed sources, ready to edit and run.
+const EXAMPLES = [
+  { key: "fda", label: "FDA warning letters", file: "fda-warning-letters.md" },
+  { key: "norway", label: "Norway's health services register", file: "norway-health-services.md" },
+  { key: "books", label: "Books to Scrape (travel)", file: "books-to-scrape.md" },
+];
+const REVIEWED_NAMES = "FDA warning letters, Norway's Arbeidstilsynet, Better Work's Transparency Portal, Books and Quotes to Scrape, Wikipedia";
 
 export const metadata = { title: "New job · Dapi" };
 // Checked on every request: a read-only copy must send visitors away from this page
@@ -16,18 +30,51 @@ const GOOD_SPEC = [
   { color: "bg-verified", title: "A sample row or two", body: "Filled in as you'd expect. They guide; the site decides." },
 ];
 
-export default function NewJob() {
+export default async function NewJob({ searchParams }: PageProps<"/jobs/new">) {
   if (READ_ONLY) redirect("/");
+  const user = PUBLIC ? await currentUser() : null;
+  const may = PUBLIC ? mayStart(user) : null;
+  const example = String((await searchParams).example ?? "") || undefined;
+  const picked = EXAMPLES.find((e) => e.key === example);
+  const initialText = picked ? fs.readFileSync(path.join(REPO, "specs", picked.file), "utf8") : "";
   return (
     <div className="flex min-h-screen flex-col">
-      <TopBar crumb="New job" />
+      <TopBar crumb="New job" actions={<Account next="/jobs/new" />} />
       <main className="mx-auto grid w-full max-w-[1080px] items-start gap-8 px-5 pt-8 pb-14 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-5">
           <div>
             <h1 className="text-[32px] leading-tight font-bold tracking-[-0.03em]">New job</h1>
             <p className="mt-1 text-[15px] text-ink-2">Send your spec. Dapi shows you the plan, the time and the cost before anything runs.</p>
           </div>
-          <NewJobForm />
+          {/* The public demo: signed in, a turn left, a reviewed source. */}
+          {PUBLIC && (
+            <section className="flex flex-col gap-3 rounded-xl border bg-sheet px-5 py-4 text-[14px]">
+              {!user ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="min-w-0 flex-1">
+                    <span className="font-semibold">Sign in to run a job.</span> <span className="text-ink-2">Everyone gets {LIMITS.perUser} jobs on this demo, on reviewed public sources.</span>
+                  </p>
+                  <Account next={`/jobs/new${example ? `?example=${example}` : ""}`} />
+                </div>
+              ) : !may?.ok ? (
+                <p className="font-medium text-red-ink">{may?.reason}</p>
+              ) : (
+                <p>
+                  <span className="font-semibold">You have {may.left} job{may.left === 1 ? "" : "s"} left on the demo.</span>{" "}
+                  <span className="text-ink-2">It runs on reviewed public sources: {REVIEWED_NAMES}.</span>
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[13px] text-ink-2">Start from an example:</span>
+                {EXAMPLES.map((e) => (
+                  <Link key={e.key} href={`/jobs/new?example=${e.key}`} className="inline-flex h-8 items-center rounded-full border border-border bg-white px-3 text-[13px] font-medium hover:border-ink-3">
+                    {e.label}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+          <NewJobForm key={example ?? "blank"} initialText={initialText} />
         </div>
         <aside className="flex flex-col gap-4 rounded-xl border bg-sheet p-5 lg:mt-[84px]">
           <p className="text-[15px] font-semibold">What a good spec has</p>
