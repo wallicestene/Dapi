@@ -927,6 +927,26 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### Nothing moves, round two; card art from the job's own data (2026-11-03)
+
+- **Export menu shifted the page:** Radix menus are modal by default and lock the
+  page's scroll, taking the scrollbar away and padding the body by its width, which
+  `scrollbar-gutter: stable` had already reserved: 11 px twice. `modal={false}` fixes it.
+- **Filtering moved the sheet:** the Run tab's grid is `flex-1`, so a short sheet left
+  free height that `align-content: stretch` gave to the Apify strip's row, pushing the
+  sheet down the screen. `content-start` stacks the rows from the top; the sheet's
+  height now follows the job's total rows, not the filter; the count bar is as tall
+  as the pager, which only shows past 50 rows. Measured identical at 1440x900 and
+  2540x1400 through All, Exceptions, Missing and an open menu.
+- **Card art:** the blurred boring-avatars art was anonymous and soft. Rendered on four
+  real jobs: today's, the same art sharp, the source page as an X-ray (from the
+  investigation's screenshot), and the job's data. Chosen: the table zoomed out (each
+  row a line, each value a bar as long as the value, a dot for a blank, the mark's
+  colours per column), drawn by `web/src/components/job-art.tsx` from the first 30
+  rows (`web/src/lib/server/shape.ts` reads only the head of rows.jsonl). No library:
+  boring-avatars is gone. Pattern and shader libraries were considered; they make
+  decoration, and WebGL shaders would need ~30 contexts on one page.
+
 ### Export: five formats, built by Dapi (2026-11-03)
 
 - The job page exports CSV, Excel (.xlsx), JSON, XML and an HTML table from Dapi's own

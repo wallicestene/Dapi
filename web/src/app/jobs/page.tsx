@@ -5,6 +5,7 @@ import { Footer, Mark, TopBar } from "@/components/shell";
 import { JobArt } from "@/components/job-art";
 import { GLASS } from "@/lib/glass";
 import { READ_ONLY, listJobs } from "@/lib/server/dapi";
+import { dataShape } from "@/lib/server/shape";
 import { STAGE_TEXT, cost, pausedByYou, stageOf, stoppedItself, took } from "@/lib/stage";
 import { cn } from "@/lib/utils";
 import type { Job } from "@/lib/types";
@@ -154,7 +155,7 @@ function JobCard({ job }: { job: Job }) {
   const meta = [took(job.apify?.seconds), cost(job.apify?.usd), new Date(job.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })].filter(Boolean);
   return (
     <Link href={`/jobs/${job.id}`} className="group relative block h-[268px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
-      <JobArt seed={host ?? job.id} muted={bad} className="absolute inset-0" />
+      <JobArt shape={dataShape(job.id)} muted={bad} className="absolute inset-0" />
       <span className="absolute top-3.5 left-3.5 inline-flex items-center gap-1.5 rounded-full bg-sheet/95 py-1 pr-2.5 pl-1.5 text-[12px] font-medium text-ink shadow-sm">
         <Mark className="size-4" lit={stage} now={live ? stage : undefined} label={STAGE_TEXT[stage - 1]} />
         <span className={bad ? "text-pencil-red" : undefined}>{statusOf(job)}</span>

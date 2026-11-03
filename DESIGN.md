@@ -262,11 +262,15 @@ captured and through which proxy, the SHA-256, and the response's own lines with
 value's line in lime. Data: `web/src/lib/showcase.json`, built from the real capture.
 
 ### Job Cards (signature)
-The jobs list and the home page's proof: each card is its job's art across the whole card
-(the source host's Bauhaus composition from boring-avatars, in the mark's colours,
-blurred into a field of colour), with the text on dark glass at the bottom (night at 45%,
-a 1px white edge at 15%, backdrop blur, white text). Same site, same art. A job that
-didn't deliver goes grey. The status sits top left in a white pill with the progress
+The jobs list and the home page's proof: each card's art is its own data, the table
+zoomed out, on night. Each line is a row, each column a slot sized to its longest value,
+each value a bar as long as the value (the mark's four colours in turn), a dot where the
+site left it blank; the rows fade out before the glass. No two jobs match, and a job with
+no rows yet shows its empty table, dots in the spec's columns. Everything to read sits on
+dark glass at the bottom (night at 45%, a 1px white edge at 15%, white text): title,
+site, the count, time and cost. A job that didn't deliver goes grey. (Chosen
+2026-11-03 over the blurred Bauhaus art, the same art sharp, and the source page as an
+X-ray: the only one that's true to the job.) The status sits top left in a white pill with the progress
 mark. The class lives in `web/src/lib/glass.ts`.
 
 ### The Step Strip (signature)

@@ -121,3 +121,10 @@ export interface Receipt {
   bodyBytes: number;
   located: Located[];
 }
+
+// A job's data at a glance, for its card: the first rows' values as lengths (0 for a
+// blank), column by column. No rows yet: an empty table in the spec's columns.
+export interface DataShape {
+  columns: number;
+  rows: number[][];
+}

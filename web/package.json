@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "boring-avatars": "^2.0.4",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.1",
     "fflate": "^0.8.3",

@@ -10,6 +10,7 @@ import { GLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { READ_ONLY, getJob } from "@/lib/server/dapi";
+import { dataShape } from "@/lib/server/shape";
 import { cost, took } from "@/lib/stage";
 
 export const dynamic = "force-dynamic";
@@ -115,17 +116,20 @@ export default async function Home() {
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {proof.map(({ id, label, note, job }) => (
                 <Link key={id} href={`/jobs/${id}`} className="group relative block h-[320px] overflow-hidden rounded-2xl bg-night shadow-[0_10px_30px_-16px_rgb(15_26_36/0.5)] transition-transform duration-300 hover:-translate-y-1">
-                  <JobArt seed={job!.sourceUrl ? new URL(job!.sourceUrl).host.replace(/^www\./, "") : id} className="absolute inset-0" />
-                  <span className="absolute top-5 left-5 text-[34px] leading-none font-bold tracking-[-0.03em] text-white tabular-nums drop-shadow-[0_1px_8px_rgb(15_26_36/0.35)]">
-                    <NumberTicker value={job!.rows ?? 0} />
-                    <span className="block pt-1.5 text-[14px] font-medium tracking-normal text-white/85">of {(job!.expected ?? job!.records ?? job!.rows ?? 0).toLocaleString("en-US")} the source lists</span>
-                  </span>
+                  <JobArt shape={dataShape(id)} ratio={290 / 320} className="absolute inset-0" />
+                  {/* As on the jobs list: the art above, everything to read on the glass. */}
                   <div className={cn(GLASS, "absolute inset-x-3 bottom-3 flex flex-col gap-1.5 px-4 pt-3.5 pb-4")}>
                     <span className="text-[15.5px] leading-snug font-semibold">{label}</span>
                     <span className="text-[13.5px] leading-snug text-white/75">{note}</span>
-                    <span className="mt-2 flex items-center gap-2 text-[12.5px] text-white/75">
-                      {[took(job!.apify?.seconds), job!.apify?.usd ? `${cost(job!.apify.usd)} on Apify` : null].filter(Boolean).join(" · ")}
-                      <ArrowRight className="ml-auto size-4 text-white/70 transition-transform group-hover:translate-x-0.5" />
+                    <span className="mt-2.5 flex items-end gap-2">
+                      <span className="inline-flex items-baseline gap-1.5 text-[24px] leading-none font-bold tracking-[-0.02em] whitespace-nowrap tabular-nums">
+                        <NumberTicker value={job!.rows ?? 0} />
+                        <span className="text-[13px] font-medium tracking-normal text-white/60">/ {(job!.expected ?? job!.records ?? job!.rows ?? 0).toLocaleString("en-US")}</span>
+                      </span>
+                      <span className="ml-auto flex items-center gap-2 text-[12.5px] whitespace-nowrap text-white/75">
+                        {[took(job!.apify?.seconds), cost(job!.apify?.usd)].filter(Boolean).join(" · ")}
+                        <ArrowRight className="size-4 text-white/70 transition-transform group-hover:translate-x-0.5" />
+                      </span>
                     </span>
                   </div>
                 </Link>
