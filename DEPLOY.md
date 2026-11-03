@@ -32,8 +32,9 @@ one Fly.io machine, with the jobs on a volume.
 
    Register it, copy the **Client ID**, and generate a **Client secret**.
 
-4. **Fly.** Install it, sign in (a browser window opens; Fly may ask for a card), create
-   the app and its volume:
+4. **Fly.** Install it, sign in (a browser window opens), and **add a card at
+   https://fly.io/trial**: a trial machine is stopped every 5 minutes, which kills any
+   job running at the time. Then create the app and its volume:
 
    ```sh
    brew install flyctl
