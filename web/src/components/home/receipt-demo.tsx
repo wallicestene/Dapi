@@ -58,7 +58,7 @@ export function ReceiptDemo() {
                         onClick={() => setAt({ row: i, column: c })}
                         className={cn(
                           "block w-full truncate rounded-md px-1.5 py-1.5 text-left transition-colors",
-                          on ? "bg-verified font-semibold text-ink shadow-[inset_0_0_0_1.5px_var(--ink)]" : "hover:bg-active"
+                          on ? "bg-verified text-ink shadow-[inset_0_0_0_1.5px_var(--ink)]" : "hover:bg-active"
                         )}
                       >
                         {row[c].value}
@@ -71,10 +71,11 @@ export function ReceiptDemo() {
           </tbody>
         </table>
       </div>
+      {/* One height for every cell, so picking one never moves the page. */}
       <div className="border-t bg-raised px-4 py-4">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-[15px] font-semibold">{cell.value}</span>
-          <span className="text-[13px] text-ink-2">traced to the server&apos;s own response</span>
+        <div className="flex min-w-0 items-baseline gap-x-2">
+          <span className="truncate text-[15px] font-semibold">{cell.value}</span>
+          <span className="shrink-0 text-[13px] text-ink-2">traced to the server&apos;s own response</span>
         </div>
         <dl className="mt-2.5 grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px]">
           <dt className="text-ink-2">Request</dt>
@@ -86,7 +87,7 @@ export function ReceiptDemo() {
           <dt className="text-ink-2">SHA-256</dt>
           <dd className="font-mono text-[11.5px] [overflow-wrap:anywhere]">{showcase.sha256}</dd>
         </dl>
-        <pre className="mt-3 overflow-x-auto rounded-lg border bg-sheet px-3 py-2.5 font-mono text-[12px] leading-[1.7]">
+        <pre className="mt-3 h-[calc(7lh+22px)] overflow-x-auto rounded-lg border bg-sheet px-3 py-2.5 font-mono text-[12px] leading-[1.7]">
           <span className="text-ink-2">{`${cell.path.split(".").slice(0, -1).join(".")} {`}</span>
           {"\n"}
           {cell.lines.map((l) => (

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mark, Wordmark } from "@/components/shell";
 import { ReceiptDemo } from "@/components/home/receipt-demo";
+import { Intro } from "@/components/home/intro";
 import { JobArt } from "@/components/job-art";
 import { GLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
@@ -36,27 +38,14 @@ const WHY = [
   { title: "Your samples guide, the site decides", body: "When a sample disagrees with the site, you see both, and Dapi delivers what the site shows." },
 ];
 
-// The first visit opens on the mark drawing itself in the middle of the screen, then
-// the page. Once per visit (sessionStorage), never for reduced motion, and pure CSS, so
-// it clears itself even before the page's scripts run. The inline script, ahead of the
-// overlay, marks a repeat visit before anything paints.
-function Intro() {
-  return (
-    <>
-      <script dangerouslySetInnerHTML={{ __html: "try{if(sessionStorage.getItem('dapi-intro'))document.documentElement.dataset.seen='1';sessionStorage.setItem('dapi-intro','1')}catch(e){}" }} />
-      <div aria-hidden className="dapi-intro">
-        <Mark draw className="size-28" />
-      </div>
-    </>
-  );
-}
-
-export default function Home() {
+export default async function Home() {
+  // The intro plays once per visit; its cookie lasts the browser session.
+  const seen = (await cookies()).has("dapi-intro");
   const proof = PROOF.map((p) => ({ ...p, job: getJob(p.id) })).filter((p) => p.job?.status === "done");
   const start = READ_ONLY ? { href: "/jobs", label: "Explore finished jobs" } : { href: "/jobs/new", label: "Start a job" };
   return (
     <div className="flex min-h-screen flex-col">
-      <Intro />
+      {!seen && <Intro />}
       <header className="flex h-16 shrink-0 items-center gap-6 px-5 sm:px-8">
         <Wordmark />
         <nav aria-label="Main" className="hidden items-center gap-6 text-[14px] font-medium text-ink-2 sm:flex">

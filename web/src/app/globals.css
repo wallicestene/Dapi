@@ -119,6 +119,9 @@
   html {
     @apply font-sans;
     font-variant-numeric: tabular-nums;
+    /* The scrollbar's room is always kept, so a step or receipt that makes the page
+       longer or shorter never shifts the page sideways. */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground;
