@@ -15,8 +15,6 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
   const run = await apify.run(job.runId).resurrect();
   // A paused run resumes: the pause marker goes.
   fs.rmSync(jobPath(id, "pause.json"), { force: true });
-  const { updateJob } = await pipeline<{ updateJob: (dir: string, changes: object) => void }>("src/jobs/store.js");
-  updateJob(jobPath(id), { status: "running", step: "run", runStatus: run.status, paused: false });
-  startRunner(id, ["--follow"]);
+  startRunner(id, ["--follow"], { status: "running", step: "run", runStatus: run.status, paused: false });
   return Response.json({ status: run.status });
 }

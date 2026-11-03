@@ -21,7 +21,10 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
   // A job that says it's under way but whose runner is gone before any run started
   // (a crash in the investigation): say so, rather than "running" forever.
   if (!job.runId) {
-    if (["running", "waiting"].includes(job.status) && job.runnerPid) {
+    // A job written in the last 20 s has just been started or resumed: its runner may not
+    // have taken over yet, so it isn't called dead.
+    const fresh = Date.now() - Date.parse(job.updatedAt ?? "1970-01-01") < 20_000;
+    if (["running", "waiting"].includes(job.status) && job.runnerPid && !fresh) {
       const { updateJob, emit } = await pipeline<{ updateJob: (dir: string, changes: object) => void; emit: (dir: string, e: object) => void }>("src/jobs/store.js");
       emit(jobPath(id), { step: job.step, kind: "error", text: "Dapi's runner for this job stopped unexpectedly. Start the job again." });
       updateJob(jobPath(id), { status: "failed", failed: "The runner stopped unexpectedly." });

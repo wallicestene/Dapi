@@ -168,7 +168,8 @@ function nearLine(samples: SampleCheck[]) {
 // The tab to show when nobody has picked one: the step under way, or the data once
 // the job is done.
 export function defaultTab(job: Job, events: JobEvent[]): Tab {
-  if (job.status === "done" || job.status === "stopped") return "run";
+  // The plan (waiting for Go, or paused with "Not now") is on the Run tab: always open there.
+  if (["done", "stopped", "waiting", "cancelled"].includes(job.status)) return "run";
   const now = stepStates(job, events, null).find((s) => s.state === "now" || s.state === "stopped");
   return now?.tab ?? "run";
 }

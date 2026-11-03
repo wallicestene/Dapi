@@ -909,6 +909,16 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   `web/src/lib/stage.ts`). A job paused at the plan comes back with ▶ on the Run card
   (`run-job.js --from plan`): the plan is worked out fresh from the tested extraction,
   nothing redone. Tested on job 0032.
+- **Restart race (found by the owner, Nov 3):** ▶ Back to the plan marked the job
+  failed. The route started a new runner but the job still named the runner that had
+  just exited; the page reloaded, its liveness check saw "running, runner gone" and
+  called it dead, then stopped listening, though the plan came back a second later.
+  Fixed for every route that starts a runner: `startRunner` writes the new runner's id
+  and the job's new state at once; the liveness check gives a job written in the last
+  20 s a grace; a job carrying on clears an old failure note; a waiting or paused-at-
+  plan job always opens on its plan. Checked by driving the real buttons in a browser,
+  with reloads: Not now / Back to the plan, Resume run / Pause run (rows matching the
+  dataset), Pause after this step twice and Resume, Try the extraction again. All pass.
 - **Alerts** when a job needs you (Ready to run) or finishes (delivered, stopped): a
   soft chime (rising / falling), the tab title flashing until you look, a desktop
   notification when the tab is in the background; a bell in the job's top bar turns

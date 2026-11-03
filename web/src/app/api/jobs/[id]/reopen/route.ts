@@ -2,7 +2,7 @@
 // fresh from the extraction that passed its test; nothing before it is redone.
 
 import fs from "node:fs";
-import { READ_ONLY, getJob, jobPath, pipeline, validId } from "@/lib/server/dapi";
+import { READ_ONLY, getJob, jobPath, validId } from "@/lib/server/dapi";
 import { runnerAlive, startRunner } from "@/lib/server/runner";
 
 export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/reopen">) {
@@ -13,8 +13,6 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
   if (runnerAlive(job.runnerPid)) return Response.json({ error: "This job is already running." }, { status: 409 });
   // The earlier "Not now" would answer the plan at once: it goes.
   fs.rmSync(jobPath(id, "approve.json"), { force: true });
-  startRunner(id, ["--from", "plan"]);
-  const { updateJob } = await pipeline<{ updateJob: (dir: string, changes: object) => void }>("src/jobs/store.js");
-  updateJob(jobPath(id), { status: "running", step: "plan" });
+  startRunner(id, ["--from", "plan"], { status: "running", step: "plan" });
   return Response.json({ ok: true });
 }
