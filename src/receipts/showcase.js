@@ -20,13 +20,17 @@ const columns = picked.map((p) => p.split('='));
 const job = JSON.parse(fs.readFileSync(`${root}jobs/${id}/job.json`, 'utf8'));
 const items = fs.readFileSync(`${root}jobs/${id}/rows.jsonl`, 'utf8').split('\n').filter(Boolean).slice(0, 4).map((l) => JSON.parse(l));
 
+// Only fields the job delivers are shown beside the value; anything else the site sent
+// (notes, internal ids, other people's details) stays out of the page.
+const delivered = new Set(items.flatMap((it) => Object.values(it['#receipt'] ?? {}).flatMap((r) => (r.paths ?? []).map((p) => p.split('.').at(-1)))));
+
 // The object holding the value, as the response has it, its keys in order.
 function around(body, path) {
   const keys = path.split('.');
   let parent = JSON.parse(body);
   for (const k of keys.slice(0, -1)) parent = parent[k];
   const field = keys.at(-1);
-  const entries = Object.entries(parent).filter(([, v]) => v === null || typeof v !== 'object');
+  const entries = Object.entries(parent).filter(([k, v]) => (v === null || typeof v !== 'object') && (k === keys.at(-1) || delivered.has(k)));
   const at = entries.findIndex(([k]) => k === field);
   const shown = entries.slice(Math.max(0, at - 2), Math.max(0, at - 2) + 5);
   return { field, parent: keys.slice(-3, -1).filter((k) => !/^\d+$/.test(k)).join('.'), lines: shown.map(([k, v]) => ({ key: k, value: JSON.stringify(v), hit: k === field })) };

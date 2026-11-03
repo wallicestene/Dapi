@@ -179,7 +179,8 @@ export function JobView({
             <Button variant="ghost" size="icon" onClick={alerts.toggle} aria-pressed={alerts.on} title={alerts.on ? "Alerts on: a chime, the tab title and a notification when this job needs you or finishes" : "Alerts off"} aria-label={alerts.on ? "Turn alerts off" : "Turn alerts on"} className="text-ink-2">
               {alerts.on ? <Bell /> : <BellOff />}
             </Button>
-            {job.runUrl && (
+            {/* Apify's console is the owner's: the public copy doesn't link into it. */}
+            {job.runUrl && !readOnly && (
               <Button variant="outline" asChild className="hidden h-8 border-control bg-sheet sm:inline-flex">
                 <a href={job.runUrl} target="_blank" rel="noreferrer">
                   Open run on Apify
@@ -298,7 +299,7 @@ export function JobView({
             <RunPanel job={job} events={events} readOnly={readOnly} />
           </TabsPrimitive.Content>
           <TabsPrimitive.Content value="footed" className="outline-none">
-            <FootedPanel job={job} events={events} report={report} />
+            <FootedPanel job={job} events={events} report={report} readOnly={readOnly} />
           </TabsPrimitive.Content>
         </TabsPrimitive.Root>
       </main>

@@ -7,7 +7,7 @@ import { TICK_TEXT, TickMark } from "@/components/tick";
 import type { Job, JobEvent, Located, Receipt } from "@/lib/types";
 import type { Selection } from "./data-sheet";
 
-export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: Job; events: JobEvent[]; selected: Selection | null; translatedFrom?: string | null }) {
+export function ReceiptPanel({ job, events, selected, translatedFrom, readOnly = false }: { job: Job; events: JobEvent[]; selected: Selection | null; translatedFrom?: string | null; readOnly?: boolean }) {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const cell = selected?.cell;
@@ -16,7 +16,8 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
     setReceipt(null);
     if (!cell?.evidence) return setState("idle");
     setState("loading");
-    const params = new URLSearchParams({ key: cell.evidence });
+    // The job tells the server which fields this receipt may show.
+    const params = new URLSearchParams({ key: cell.evidence, job: job.id });
     for (const p of cell.paths ?? []) params.append("path", p);
     let alive = true;
     fetch(`/api/evidence?${params}`)
@@ -26,7 +27,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
     return () => {
       alive = false;
     };
-  }, [cell]);
+  }, [cell, job.id]);
 
   if (!selected || !cell) {
     // Before a value is picked: what stands behind the whole dataset.
@@ -123,7 +124,7 @@ export function ReceiptPanel({ job, events, selected, translatedFrom }: { job: J
               {receipt.located.map((l) => (
                 <Evidence key={l.path} located={l} evidenceKey={receipt.key} />
               ))}
-              <Seal receipt={receipt} />
+              <Seal receipt={receipt} readOnly={readOnly} />
             </>
           )}
         </section>
@@ -193,7 +194,8 @@ function Evidence({ located, evidenceKey }: { located: Located; evidenceKey: str
       {located.kind === "embedded" && located.context && (
         <figcaption className="mb-1.5 text-[12px] text-ink-2">A row of the table embedded in the page after …{located.context.slice(-48)}</figcaption>
       )}
-      {/* The response as the server sent it, the value's line lit in lime. */}
+      {/* The record as the server sent it, cut to the fields this job delivers, the
+          value's line lit in lime. */}
       <pre className="max-h-72 overflow-auto rounded-lg bg-night px-3.5 py-3 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-[#c3cbc6]">
         {lines.map((line, i) => {
           const [, indent, key, rest] = line.match(/^(\s*)("[^"]*":)?(.*)$/) ?? [null, "", "", line];
@@ -211,16 +213,27 @@ function Evidence({ located, evidenceKey }: { located: Located; evidenceKey: str
           );
         })}
       </pre>
+      {(located.hidden ?? 0) > 0 && (
+        <figcaption className="mt-1.5 text-[12px] text-ink-2">
+          {located.hidden} other field{located.hidden === 1 ? "" : "s"} the site sent {located.hidden === 1 ? "isn't" : "aren't"} shown: a receipt shows only what the job delivers.
+        </figcaption>
+      )}
     </figure>
   );
 }
 
-// The SHA-256 recorded at capture, re-computed here from the body as the server sent it.
-function Seal({ receipt }: { receipt: Receipt }) {
+// The SHA-256 recorded at capture, re-computed from the body as the server sent it: by
+// your browser where you run Dapi, by the server on the public copy, which never hands
+// out a whole response (it holds fields the job doesn't deliver).
+function Seal({ receipt, readOnly }: { receipt: Receipt; readOnly: boolean }) {
   const [check, setCheck] = useState<"idle" | "checking" | "match" | "mismatch" | "error">("idle");
   const recheck = async () => {
     setCheck("checking");
     try {
+      if (readOnly) {
+        const { matches } = await (await fetch(`/api/evidence/verify?key=${receipt.key}`)).json();
+        return setCheck(matches ? "match" : "mismatch");
+      }
       const body = await (await fetch(`/api/evidence/body?key=${receipt.key}`)).text();
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
       const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join(""); // taste-skill-ignore: hex bytes
@@ -242,7 +255,7 @@ function Seal({ receipt }: { receipt: Receipt }) {
           <p className="flex items-start gap-2 rounded-lg bg-verified/25 px-3 py-2 text-green-ink">
             <ShieldCheck aria-hidden className="mt-px size-4 shrink-0" />
             <span>
-              <b className="font-semibold">Seal verified.</b> Your browser re-hashed the response: byte for byte what was captured.
+              <b className="font-semibold">Seal verified.</b> {readOnly ? "The stored response, hashed again" : "Your browser re-hashed the response"}: byte for byte what was captured.
             </span>
           </p>
         ) : check === "mismatch" ? (

@@ -9,6 +9,15 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const cache = new Map();
 let store = null;
 
+async function evidenceStore(fresh = false) {
+  if (!store || fresh) {
+    const { apify } = await import('../apify/client.js');
+    const { id } = await apify.keyValueStores().getOrCreate('dapi-evidence');
+    store = apify.keyValueStore(id);
+  }
+  return store;
+}
+
 export async function loadEvidence(key) {
   if (!/^ev-[0-9a-f]{64}$/.test(key)) throw new Error('bad evidence key');
   if (cache.has(key)) return cache.get(key);
@@ -17,12 +26,10 @@ export async function loadEvidence(key) {
   if (fs.existsSync(local)) {
     evidence = JSON.parse(fs.readFileSync(local, 'utf8'));
   } else {
-    if (!store) {
-      const { apify } = await import('../apify/client.js');
-      const { id } = await apify.keyValueStores().getOrCreate('dapi-evidence');
-      store = apify.keyValueStore(id);
-    }
-    evidence = (await store.getRecord(key))?.value;
+    evidence = (await (await evidenceStore()).getRecord(key).catch(() => null))?.value;
+    // The store may have been rebuilt under the same name since it was looked up: look
+    // it up again before saying the evidence is gone.
+    if (!evidence) evidence = (await (await evidenceStore(true)).getRecord(key))?.value;
     if (!evidence) throw new Error(`no evidence ${key}`);
   }
   if (cache.size > 500) cache.delete(cache.keys().next().value);

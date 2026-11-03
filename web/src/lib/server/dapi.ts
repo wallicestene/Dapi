@@ -15,7 +15,12 @@ export const JOBS_DIR = path.resolve(process.env.DAPI_JOBS_DIR ?? path.join(REPO
 export const READ_ONLY = process.env.DAPI_READ_ONLY === "1";
 
 export function pipeline<T>(relative: string): Promise<T> {
-  return import(/* turbopackIgnore: true */ /* webpackIgnore: true */ pathToFileURL(path.join(REPO, relative)).href);
+  // In development a module whose file changed is loaded afresh (Node keeps the first
+  // copy forever otherwise, so a fix in ../src needed a server restart); in production
+  // each loads once.
+  const file = path.join(REPO, relative);
+  const fresh = process.env.NODE_ENV === "production" ? "" : `?v=${fs.statSync(file).mtimeMs}`;
+  return import(/* turbopackIgnore: true */ /* webpackIgnore: true */ `${pathToFileURL(file).href}${fresh}`);
 }
 
 export const validId = (id: string) => /^\d{4}$/.test(id);

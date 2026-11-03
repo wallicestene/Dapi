@@ -60,7 +60,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
         </div>
       )}
       <DataSheet job={job} selected={selected} onSelect={setSelected} />
-      <ReceiptPanel job={job} events={events} selected={selected} translatedFrom={(plan?.translate as { from: string } | null)?.from ?? null} />
+      <ReceiptPanel job={job} events={events} selected={selected} translatedFrom={(plan?.translate as { from: string } | null)?.from ?? null} readOnly={readOnly} />
     </div>
   );
 }

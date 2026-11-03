@@ -109,6 +109,8 @@ export interface Located {
   selector?: string;
   all?: boolean;
   matches?: number;
+  // Fields of the record the site sent that the job doesn't deliver: counted, not shown.
+  hidden?: number;
 }
 
 export interface Receipt {

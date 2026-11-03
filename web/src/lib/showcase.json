@@ -33,11 +33,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "1421",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": false
@@ -55,6 +50,11 @@
      {
       "key": "CycleNumber",
       "value": "10",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -70,11 +70,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "1421",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": true
@@ -92,6 +87,11 @@
      {
       "key": "CycleNumber",
       "value": "10",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -159,13 +159,13 @@
       "hit": true
      },
      {
-      "key": "LastAssessmentId",
-      "value": "60405",
+      "key": "NumberOfResponse",
+      "value": "0",
       "hit": false
      },
      {
-      "key": "NumberOfResponse",
-      "value": "0",
+      "key": "FactoryType",
+      "value": "\"Manufacture of wearing apparel\"",
       "hit": false
      }
     ],
@@ -183,11 +183,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "3116",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": false
@@ -205,6 +200,11 @@
      {
       "key": "CycleNumber",
       "value": "6",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -220,11 +220,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "3116",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": true
@@ -242,6 +237,11 @@
      {
       "key": "CycleNumber",
       "value": "6",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -309,13 +309,13 @@
       "hit": true
      },
      {
-      "key": "LastAssessmentId",
-      "value": "60602",
+      "key": "NumberOfResponse",
+      "value": "0",
       "hit": false
      },
      {
-      "key": "NumberOfResponse",
-      "value": "0",
+      "key": "FactoryType",
+      "value": "\"Manufacture of wearing apparel\"",
       "hit": false
      }
     ],
@@ -333,11 +333,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "2807",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": false
@@ -355,6 +350,11 @@
      {
       "key": "CycleNumber",
       "value": "7",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -370,11 +370,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "2807",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": true
@@ -392,6 +387,11 @@
      {
       "key": "CycleNumber",
       "value": "7",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -459,13 +459,13 @@
       "hit": true
      },
      {
-      "key": "LastAssessmentId",
-      "value": "60556",
+      "key": "NumberOfResponse",
+      "value": "0",
       "hit": false
      },
      {
-      "key": "NumberOfResponse",
-      "value": "0",
+      "key": "FactoryType",
+      "value": "\"Manufacture of wearing apparel\"",
       "hit": false
      }
     ],
@@ -483,11 +483,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "4225",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": false
@@ -505,6 +500,11 @@
      {
       "key": "CycleNumber",
       "value": "4",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -520,11 +520,6 @@
     "parent": "Data",
     "lines": [
      {
-      "key": "OrganizationId",
-      "value": "4225",
-      "hit": false
-     },
-     {
       "key": "Country",
       "value": "\"Vietnam\"",
       "hit": true
@@ -542,6 +537,11 @@
      {
       "key": "CycleNumber",
       "value": "4",
+      "hit": false
+     },
+     {
+      "key": "NumberOfNonCompliances",
+      "value": "0",
       "hit": false
      }
     ],
@@ -609,13 +609,13 @@
       "hit": true
      },
      {
-      "key": "LastAssessmentId",
-      "value": "64272",
+      "key": "NumberOfResponse",
+      "value": "0",
       "hit": false
      },
      {
-      "key": "NumberOfResponse",
-      "value": "0",
+      "key": "FactoryType",
+      "value": "\"Manufacture of wearing apparel\"",
       "hit": false
      }
     ],

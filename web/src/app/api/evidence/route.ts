@@ -2,6 +2,7 @@
 // hash) and, for each path the value came from, that place in the evidence.
 
 import { pipeline } from "@/lib/server/dapi";
+import { deliveredKeys, onlyDelivered } from "@/lib/server/delivered";
 import type { Located, Receipt } from "@/lib/types";
 
 interface Evidence {
@@ -28,7 +29,20 @@ export async function GET(request: Request) {
       response: e.response,
       bodySha256: e.bodySha256,
       bodyBytes: Buffer.byteLength(e.body),
-      located: p.getAll("path").map((path) => ({ path, ...locate(e, path) })),
+      // Only the fields the job delivers leave the server; the rest are counted.
+      located: p.getAll("path").map((path) => {
+        const l = { path, ...locate(e, path) };
+        const keep = deliveredKeys(p.get("job"));
+        if (l.kind === "json") {
+          const { shown, hidden } = onlyDelivered(l.record, keep, l.key);
+          return { ...l, record: shown, hidden };
+        }
+        if (l.kind === "embedded") {
+          const { shown, hidden } = onlyDelivered(l.row, keep, l.cell);
+          return { ...l, row: shown, hidden };
+        }
+        return l;
+      }),
     };
     return Response.json(receipt, { headers: { "cache-control": "private, max-age=86400, immutable" } });
   } catch (err) {

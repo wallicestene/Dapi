@@ -6,7 +6,7 @@ import type { Job, JobEvent } from "@/lib/types";
 import { Panel, Waiting } from "./panel";
 
 // The count: the delivered rows against the source's own total, and every gap named.
-export function FootedPanel({ job, report }: { job: Job; events: JobEvent[]; report: Report | null }) {
+export function FootedPanel({ job, report, readOnly = false }: { job: Job; events: JobEvent[]; report: Report | null; readOnly?: boolean }) {
   if (!report) return <Waiting>When the run ends, Dapi counts the rows against what the source itself says exists, and names anything missing.</Waiting>;
   const counted = report.completeness.filter((c) => c.expected !== null);
   const expected = counted.reduce((t, c) => t + (c.expected ?? 0), 0);
@@ -106,7 +106,7 @@ export function FootedPanel({ job, report }: { job: Job; events: JobEvent[]; rep
             </div>
           ))}
         </dl>
-        {job.datasetUrl && (
+        {job.datasetUrl && !readOnly && (
           <p className="border-t px-5 py-3 text-[13px]">
             <a href={job.datasetUrl} target="_blank" rel="noreferrer" className="font-medium underline">
               The dataset on Apify
