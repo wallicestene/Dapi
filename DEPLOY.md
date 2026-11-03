@@ -1,35 +1,54 @@
-# Deploying the public copy
+# Deploying the public demo
 
-The public copy is **read-only**: anyone can open the finished jobs in `jobs/`, their
-data and their receipts, and nobody can start a job, so nothing runs on your Apify
-account or your Meta credits. It's the `Dockerfile` in this folder with
-`DAPI_READ_ONLY=1`, hosted on Fly.io (its deploy sends this folder, including the job
-folders git leaves out).
+Anyone can open Dapi's finished example jobs and their receipts. Signed in with GitHub,
+anyone can run jobs of their own, on your Meta and Apify accounts, inside limits:
 
-What the copy shows is whatever finished jobs are in `jobs/` when you deploy. Remove a
-job's folder first if it shouldn't be public. Receipts show only the fields a job
-delivers, and the server checks seals itself; whole responses never leave it.
+- 3 jobs per person, one at a time; 2 running at once on the server; 30 a day.
+- New jobs stop once Meta's charges this month (recorded per call in
+  `jobs/usage.jsonl`) reach $60. Meta's own spend limit is the hard stop behind it.
+- Only reviewed public sources (`src/sources.js`), up to 1,000 requests a job. A spec
+  on any other site is declined right after it's read and doesn't use a turn.
+- Each person sees the example jobs and their own; only they can act on theirs.
+  Receipts show only the fields a job delivers.
+
+It's the `Dockerfile` here (Playwright's image, so the investigation has Chromium) on
+one Fly.io machine, with the jobs on a volume.
 
 ## Once
 
-1. Install Fly's tool and sign in (a browser window opens). Fly may ask for a card,
-   even for a small app.
+1. **Cap Meta spend.** On the Meta Model API's Billing page, set the spend limit
+   (around $70).
+
+2. **Pick the app's name**, for example `dapi-demo`. The address will be
+   `https://dapi-demo.fly.dev`. Put the name in `fly.toml` (`app = "..."`).
+
+3. **A GitHub sign-in app.** github.com > Settings > Developer settings > OAuth Apps >
+   New OAuth App:
+   - Homepage URL: `https://dapi-demo.fly.dev`
+   - Authorization callback URL: `https://dapi-demo.fly.dev/api/auth/callback`
+
+   Register it, copy the **Client ID**, and generate a **Client secret**.
+
+4. **Fly.** Install it, sign in (a browser window opens; Fly may ask for a card), create
+   the app and its volume:
 
    ```sh
    brew install flyctl
    fly auth login
+   fly launch --no-deploy --copy-config --name dapi-demo
+   fly volumes create dapi_jobs --size 1 --region ams
    ```
 
-2. Make an Apify token that can only read the evidence store. In Apify Console:
-   **Settings > API & Integrations > Create new token**, turn on **Limit token
-   permissions**, and give it **Read** on the key-value store `dapi-evidence` only.
-
-3. Create the app from `fly.toml` (if the name `dapi` is taken, pick another), then
-   give it the token and the store's ID:
+5. **Secrets** (never in a file):
 
    ```sh
-   fly launch --no-deploy --copy-config
-   fly secrets set APIFY_TOKEN=<the read-only token> DAPI_EVIDENCE_STORE=PasHMggEysnjfaBhS
+   fly secrets set \
+     MODEL_API_KEY=<your Meta key> \
+     APIFY_TOKEN=<your Apify token> \
+     GITHUB_CLIENT_ID=<client id> \
+     GITHUB_CLIENT_SECRET=<client secret> \
+     SESSION_SECRET=$(openssl rand -hex 32) \
+     DAPI_PUBLIC_URL=https://dapi-demo.fly.dev
    ```
 
 ## Each time
@@ -38,8 +57,15 @@ delivers, and the server checks seals itself; whole responses never leave it.
 fly deploy
 ```
 
-Then open `https://<app name>.fly.dev`. The machine stops when nobody is using it and
-starts on the next visit (a few seconds, while the loading mark draws).
+Then open `https://dapi-demo.fly.dev`, sign in, and run an example ("FDA warning
+letters" is quick). The machine stays on (a job runs for minutes with no web traffic),
+about $10-15 a month.
 
-New jobs run on your own machine (`cd web && npm run dev`); deploy again to publish
-them.
+## Changing things
+
+- Limits: `fly secrets set DAPI_JOBS_PER_USER=5 DAPI_BUDGET_USD=50`.
+- Which jobs everyone sees: `DAPI_FEATURED` (default `0001,0002,0003`). A new example
+  job: add its folder to `jobs/` here and deploy; the volume gets folders it doesn't
+  have yet.
+- A copy where nothing runs at all: in `fly.toml`, replace `DAPI_PUBLIC = "1"` with
+  `DAPI_READ_ONLY = "1"`.

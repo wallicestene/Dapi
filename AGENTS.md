@@ -305,6 +305,12 @@ Account: use the project owner's own Apify account for the hackathon. Do not bui
 a bring-your-own-token flow — a signup wall in the demo costs more than it proves.
 Note BYO-account as the production path in the README.
 
+**The public demo (owner's call, Nov 3):** browsing the example jobs needs no sign-in;
+running a job needs GitHub sign-in, with limits so the owner's Meta and Apify accounts
+hold (3 jobs each, one at a time, 2 at once, 30 a day, a $60 monthly Meta budget from
+recorded spend, reviewed sources only, 1,000 requests a job). `DAPI_PUBLIC=1`; see
+DEPLOY.md.
+
 ### How Dapi uses Crawlee and Apify
 
 Checked against the Crawlee 3.x and Apify docs on Oct 27. Re-verify before writing

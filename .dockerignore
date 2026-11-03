@@ -8,5 +8,6 @@ spike
 .impeccable
 .taste-skill
 .git
-# Only finished jobs are shown; a runner's log and lock files aren't needed.
+# Only finished jobs seed the volume; their logs and the local spend ledger stay here.
 jobs/*/runner.log
+jobs/usage.jsonl

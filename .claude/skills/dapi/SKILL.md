@@ -927,6 +927,32 @@ Owner asked for restarting a step with its context, pausing, and alerts. Decided
   orange #F86606, from apify.com) on the Run step card and the run strip, blended
   while the run is live, with Apify's blue-green beam.
 
+### The public demo: people run jobs, inside limits (owner's call, Nov 3)
+
+- **Why limits:** a full job costs about $0.50-1.50 of Meta, nearly all Muse Wonder's
+  investigation (Better Work's agent read 283k input tokens, FDA's 121k at $4/M). With
+  ~$70 a month, 5 jobs a person would let ~15 people spend it all. So: GitHub sign-in
+  (a real identity, so turns can't be dodged by clearing cookies), 3 jobs each, one at
+  a time, 2 running at once, 30 a day, and no new jobs once recorded Meta charges reach
+  $60 (`src/meta.js` appends each call's tokens and cost to `jobs/usage.jsonl`), with
+  Meta's own spend limit as the hard stop. A spec on an unreviewed source is declined
+  after the spec read and doesn't use a turn.
+- **Reviewed sources only** (`src/sources.js`): keeps strangers from pointing the owner's
+  Apify account at any site, and the server's network out of reach. Up to 1,000
+  requests a job. Quick-start examples: FDA, Norway, Books to Scrape.
+- **Privacy:** each visitor sees the featured jobs (`DAPI_FEATURED`) and their own; only
+  the owner acts (`web/src/lib/server/access.ts`, on every job route, receipts tied to
+  a visible job). Caught in testing: the tab title came from `generateMetadata`, which
+  skipped the check, and leaked another user's job title. Fixed and re-tested.
+- **Sign-in** is two routes and an HMAC-signed cookie (`web/src/lib/server/session.ts`):
+  only GitHub id, login and picture are kept, never a token. `/api/auth/dev` signs in a
+  test user locally (never in production).
+- **Hosting:** Playwright's image (`mcr.microsoft.com/playwright:v1.64.1-noble`, same
+  version as the repo), one always-on Fly machine (a job runs for minutes with no
+  traffic, so auto-stop is off), jobs on a volume seeded with the demo jobs by
+  `deploy/start.sh`. Tested locally in production mode: anonymous, two signed-in users,
+  an unreviewed source, one-at-a-time, receipts.
+
 ### Run history and alerts (owner's call, Nov 3)
 
 - **Run history, not just the last run:** the Run tab lists every run, one line each,

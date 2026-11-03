@@ -1,14 +1,16 @@
-# The public, read-only copy of Dapi: the finished jobs in jobs/ and their receipts.
-# Nothing can start a job here (DAPI_READ_ONLY=1), so no Meta key is needed, and the
-# Apify token it's given only has to read the dapi-evidence store.
-FROM node:22-slim
+# Dapi's public demo: anyone signed in with GitHub can run a few jobs on reviewed public
+# sources (DAPI_PUBLIC=1; limits in web/src/lib/server/quota.ts). Built on Playwright's
+# own image, which carries Chromium for the investigation. Jobs live on a volume at
+# /data/jobs; the finished demo jobs in this folder seed it on first start.
+# Set DAPI_READ_ONLY=1 instead for a copy where nothing runs.
+FROM mcr.microsoft.com/playwright:v1.64.1-noble
 ENV NODE_ENV=production \
-    DAPI_READ_ONLY=1 \
     NEXT_TELEMETRY_DISABLED=1 \
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    DAPI_JOBS_DIR=/data/jobs
 WORKDIR /app
 
-# The pipeline's packages (the receipts and rows are read with its own code), then the web app's.
+# The pipeline's packages (it runs the jobs), then the web app's.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY web/package.json web/package-lock.json web/
@@ -18,4 +20,4 @@ COPY . .
 RUN cd web && npx next build
 
 EXPOSE 3000
-CMD ["sh", "-c", "cd web && exec npx next start -p ${PORT:-3000}"]
+CMD ["sh", "deploy/start.sh"]
