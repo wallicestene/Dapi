@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BorderBeam } from "@/components/ui/border-beam";
 import { ROUTE_WORD } from "@/lib/stage";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { TickMark } from "@/components/tick";
@@ -32,7 +31,6 @@ function Working({ events, attempts }: { events: JobEvent[]; attempts: JobEvent[
   const seconds = since ? Math.max(0, Math.round((now - Date.parse(since)) / 1000)) : 0;
   return (
     <section className="relative overflow-hidden rounded-xl border bg-sheet lg:col-span-2">
-      <BorderBeam size={110} duration={5} borderWidth={2} colorFrom="var(--extract)" colorTo="#ffb0a8" />
       <div className="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-3">
           <p className="flex flex-wrap items-center gap-2 text-[15px] font-semibold">

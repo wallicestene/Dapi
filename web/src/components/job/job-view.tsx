@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { STAGE_TEXT, stageOf } from "@/lib/stage";
 import { useAlerts } from "@/lib/alerts";
 import { Bell, BellOff, Pause, Play } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
@@ -31,58 +32,82 @@ import { SamplesPanel } from "./samples-panel";
 import { RunPanel } from "./run-panel";
 import { FootedPanel } from "./footed-panel";
 
-// Pause after this step: while the spec or the site step runs, ask the job to stop at
-// the next step boundary. The step finishes; the next one waits for Resume.
-function HoldControl({ job }: { job: Job }) {
+// A step's own control, in its card's corner, with a tooltip saying what it does: pause
+// after the step under way (spec, site), resume the step a job paused before, and pause
+// or resume the run on Apify. One place for each action.
+type Control = { icon: "pause" | "play"; label: string; tip: string; pending?: boolean; run: () => Promise<void> };
+
+const post = async (url: string, body?: object) => {
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Couldn't do that. Try again.");
+};
+
+function controlFor(job: Job, s: { tab: Tab; state: string }): Control | null {
+  const reload = () => window.location.reload();
+  if ((s.tab === "spec" || s.tab === "site") && s.state === "now" && job.status === "running") {
+    return job.holdRequested
+      ? { icon: "pause", pending: true, label: "Pausing after this step. Click to keep going", tip: "Pausing after this step: it finishes and saves, then the job waits. Click to keep going instead.", run: () => post(`/api/jobs/${job.id}/hold`, { on: false }) }
+      : { icon: "pause", label: "Pause after this step", tip: "Pause after this step. It finishes and saves everything, then the job waits before the next step until you resume.", run: () => post(`/api/jobs/${job.id}/hold`, { on: true }) };
+  }
+  if (job.status === "held" && s.tab === (job.heldBefore === "site" ? "site" : "code")) {
+    return { icon: "play", label: "Resume from this step", tip: "Resume. This step starts from what was saved; nothing before it is redone.", run: () => post(`/api/jobs/${job.id}/continue`).then(reload) };
+  }
+  if (s.tab === "run" && job.runId && job.status === "running" && job.step === "run") {
+    return { icon: "pause", label: "Pause the run on Apify", tip: "Pause the run on Apify. It stops cleanly and keeps the dataset, queue and saved state; Resume carries on from there.", run: () => post(`/api/jobs/${job.id}/pause`).then(reload) };
+  }
+  if (s.tab === "run" && job.runId && job.status === "stopped") {
+    return { icon: "play", label: job.paused ? "Resume the run on Apify" : "Resurrect the run on Apify", tip: "Resume the run on Apify where it stopped: the same dataset, queue and saved state.", run: () => post(`/api/jobs/${job.id}/resurrect`).then(reload) };
+  }
+  return null;
+}
+
+function StepControl({ control }: { control: Control }) {
   const [busy, setBusy] = useState(false);
-  if (job.status !== "running" || !["spec", "site"].includes(job.step)) return null;
-  const ask = async (on: boolean) => {
-    setBusy(true);
-    await fetch(`/api/jobs/${job.id}/hold`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ on }) }).catch(() => {});
-    setBusy(false);
-  };
-  return job.holdRequested ? (
-    <Button variant="outline" disabled={busy} onClick={() => ask(false)} className="hidden h-8 gap-1.5 px-3 sm:inline-flex" title="This step finishes, then the job waits. Click to keep going instead.">
-      <span aria-hidden className="size-2 animate-pulse rounded-full bg-source" /> Pausing after this step · Cancel
-    </Button>
-  ) : (
-    <Button variant="outline" disabled={busy} onClick={() => ask(true)} className="hidden h-8 gap-1.5 px-3 sm:inline-flex" title="Let this step finish, then wait before the next one">
-      <Pause aria-hidden className="size-3.5" /> Pause after this step
-    </Button>
+  const [error, setError] = useState<string | null>(null);
+  const Icon = control.icon === "pause" ? Pause : Play;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={control.label}
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              await control.run();
+            } catch (err) {
+              setError((err as Error).message);
+            }
+            setBusy(false);
+          }}
+          className={cn(
+            "absolute right-2.5 bottom-2.5 z-10 grid size-7 place-items-center rounded-full border transition-[transform,background-color,border-color] hover:scale-105 active:scale-95 disabled:opacity-60",
+            control.icon === "play" ? "border-ink bg-ink text-sheet" : control.pending ? "border-source/50 bg-[#f1eeff] text-source" : "border-border bg-white text-ink hover:border-ink-3"
+          )}
+        >
+          {control.pending && <span aria-hidden className="absolute inset-0 animate-ping rounded-full border border-source/40" />}
+          <Icon aria-hidden className={cn("size-3.5", control.icon === "play" && "translate-x-px fill-current")} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6} className="max-w-[260px] px-3 py-2 text-[12.5px] leading-snug">
+        {error ?? control.tip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-// A job paused between steps: what's saved, and Resume.
-function HeldBanner({ job, readOnly }: { job: Job; readOnly: boolean }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// A job paused between steps: what's saved, and where to resume (the step's own ▶).
+function HeldBanner({ job }: { job: Job }) {
   const next = job.heldBefore === "site" ? "investigating the site" : "writing the extraction";
   const saved = job.heldBefore === "site" ? "Your spec is saved." : "Your spec, the investigation and Muse Wonder's strategy are saved.";
   return (
-    <section className="flex flex-wrap items-center gap-4 rounded-xl border border-source/30 bg-[#f4f2ff] px-5 py-3.5">
+    <section className="flex flex-wrap items-center gap-3 rounded-xl border border-source/30 bg-[#f4f2ff] px-5 py-3">
       <Pause aria-hidden className="size-4 text-source" />
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold">Paused before {next}</p>
-        <p className="text-[13.5px] text-ink-2">{saved} Resume carries on from there.</p>
-      </div>
-      {error && <p className="text-[13px] text-pencil-red">{error}</p>}
-      {!readOnly && (
-        <Button
-          disabled={busy}
-          className="h-9 gap-1.5 px-4"
-          onClick={async () => {
-            setBusy(true);
-            const res = await fetch(`/api/jobs/${job.id}/continue`, { method: "POST" });
-            if (res.ok) window.location.reload();
-            else {
-              setError((await res.json().catch(() => ({}))).error ?? "Couldn't resume. Try again.");
-              setBusy(false);
-            }
-          }}
-        >
-          <Play aria-hidden className="size-3.5 fill-current" /> {busy ? "Resuming…" : "Resume"}
-        </Button>
-      )}
+      <p className="text-[14px]">
+        <span className="font-semibold">Paused before {next}.</span> <span className="text-ink-2">{saved} Press ▶ on the step to resume.</span>
+      </p>
     </section>
   );
 }
@@ -157,7 +182,6 @@ export function JobView({
         crumb={job.title ?? `Job ${job.id}`}
         actions={
           <>
-            {!readOnly && <HoldControl job={job} />}
             <Button variant="ghost" size="icon" onClick={alerts.toggle} aria-pressed={alerts.on} title={alerts.on ? "Alerts on: a chime, the tab title and a notification when this job needs you or finishes" : "Alerts off"} aria-label={alerts.on ? "Turn alerts off" : "Turn alerts on"} className="text-ink-2">
               {alerts.on ? <Bell /> : <BellOff />}
             </Button>
@@ -215,36 +239,46 @@ export function JobView({
           </div>
         </div>
 
-        {job.status === "held" && <HeldBanner job={job} readOnly={readOnly} />}
+        {job.status === "held" && <HeldBanner job={job} />}
         <TabsPrimitive.Root value={tab} onValueChange={(v) => setPicked(v as Tab)} className="flex flex-1 flex-col gap-4">
-          {/* Each step carries the mark lit to its stage; the one under way has a beam running round it. */}
-          <TabsPrimitive.List aria-label="Steps" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-            {steps.map((s) => (
-              <TabsPrimitive.Trigger
-                key={s.tab}
-                value={s.tab}
-                className={cn(
-                  "group relative overflow-hidden rounded-xl border bg-sheet px-3.5 pt-3 pb-3.5 text-left outline-none transition-[background-color,box-shadow,border-color] hover:border-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
-                  "data-[state=active]:border-ink data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_24px_-12px_rgb(15_26_36/0.3)]",
-                  s.state === "todo" && "bg-transparent",
-                  s.state === "stopped" && "border-pencil-red/50",
-                  s.state === "now" && job.status === "waiting" && "border-deliver ring-3 ring-deliver/20",
-                  // The run is Apify's: its colours, blended, while it runs.
-                  s.tab === "run" && s.state === "now" && job.status === "running" && "bg-[linear-gradient(115deg,rgb(36_109_255/0.12),rgb(32_163_78/0.08)_50%,rgb(248_102_6/0.10))]"
-                )}
-              >
-                {s.state === "now" && job.status === "running" && (s.tab === "run" ? <BorderBeam size={80} duration={4} borderWidth={2} colorFrom="#246DFF" colorTo="#20A34E" /> : <BorderBeam size={80} duration={4} borderWidth={2} colorFrom={BEAM[STEP_STAGE[s.tab]][0]} colorTo={BEAM[STEP_STAGE[s.tab]][1]} />)}
-                <span className="flex items-center gap-2">
-                  <Mark className="size-5 shrink-0" lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
-                  <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {s.tab === "run" && <img src="/brand/apify-logomark.svg" alt="on Apify" className={cn("ml-auto size-3.5", s.state === "todo" && "opacity-40 grayscale")} />}
-                  {s.tick && <TickMark tick={s.tick} className={s.tab === "run" ? undefined : "ml-auto"} />}
-                </span>
-                <span className="mt-1 block truncate pl-7 text-[12px] text-ink-2">{s.line}</span>
-              </TabsPrimitive.Trigger>
-            ))}
-          </TabsPrimitive.List>
+          {/* Each step carries the mark lit to its stage; the one under way has a quiet beam
+              in that stage's colour, and the step's own control (pause, resume) in its corner. */}
+          <TooltipProvider delayDuration={150}>
+            <TabsPrimitive.List aria-label="Steps" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              {steps.map((s) => {
+                const control = readOnly ? null : controlFor(job, s);
+                return (
+                  <div key={s.tab} className="relative">
+                    <TabsPrimitive.Trigger
+                      value={s.tab}
+                      className={cn(
+                        "group relative h-full w-full overflow-hidden rounded-xl border bg-sheet px-3.5 pt-3 pb-3.5 text-left outline-none transition-[background-color,box-shadow,border-color] hover:border-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+                        "data-[state=active]:border-ink data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_24px_-12px_rgb(15_26_36/0.3)]",
+                        s.state === "todo" && "bg-transparent",
+                        s.state === "stopped" && "border-pencil-red/50",
+                        s.state === "now" && job.status === "waiting" && "border-deliver ring-3 ring-deliver/20",
+                        // The run is Apify's: its colours, blended, while it runs.
+                        s.tab === "run" && s.state === "now" && job.status === "running" && "bg-[linear-gradient(115deg,rgb(36_109_255/0.12),rgb(32_163_78/0.08)_50%,rgb(248_102_6/0.10))]"
+                      )}
+                    >
+                      {s.state === "now" && job.status === "running" && (
+                        <BorderBeam size={60} duration={6} borderWidth={1.5} colorFrom={s.tab === "run" ? "#246DFF" : BEAM[STEP_STAGE[s.tab]][0]} colorTo={s.tab === "run" ? "#20A34E" : BEAM[STEP_STAGE[s.tab]][1]} />
+                      )}
+                      <span className="flex items-center gap-2">
+                        <Mark className="size-5 shrink-0" lit={s.state === "todo" ? 0 : STEP_STAGE[s.tab]} now={s.state === "now" && job.status === "running" ? STEP_STAGE[s.tab] : undefined} />
+                        <span className={cn("truncate text-[13.5px] font-semibold", s.state === "todo" ? "text-ink-3" : s.state === "stopped" ? "text-pencil-red" : "text-ink")}>{s.label}</span>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {s.tab === "run" && <img src="/brand/apify-logomark.svg" alt="on Apify" className={cn("ml-auto size-3.5", s.state === "todo" && "opacity-40 grayscale")} />}
+                        {s.tick && <TickMark tick={s.tick} className={s.tab === "run" ? undefined : "ml-auto"} />}
+                      </span>
+                      <span className={cn("mt-1 block truncate pl-7 text-[12px] text-ink-2", control && "pr-8")}>{s.line}</span>
+                    </TabsPrimitive.Trigger>
+                    {control && <StepControl control={control} />}
+                  </div>
+                );
+              })}
+            </TabsPrimitive.List>
+          </TooltipProvider>
 
           <TabsPrimitive.Content value="spec" className="outline-none">
             <SpecPanel job={job} events={events} />

@@ -253,9 +253,18 @@ mark. The class lives in `web/src/lib/glass.ts`.
 ### The Step Strip (signature)
 Six steps as cards: Spec, Site, Extraction, Samples, Run on Apify, Footed. Each carries
 the mark lit to its stage (Spec and Site: source; Extraction and Samples: extract; Run:
-deliver; Footed: verified), its tick, and a one-line result. The step under way has
-Magic UI's border beam running round it, violet to teal; the selected step sits on white
-with an ink edge; a stopped step's name turns pencil red.
+deliver; Footed: verified), its tick, and a one-line result. The selected step sits on
+white with an ink edge; a stopped step's name turns pencil red; the Run card carries
+Apify's logomark, and Apify's colours blended while it runs.
+
+**One moving border on the page:** the step under way has a thin, slow beam in its
+stage's colour (Apify's blue to green on the Run card). Nothing else gets a beam; the
+plan's quiet teal ring, the code card's shimmer and the run strip's live dot do the rest.
+
+**Each step's control lives in its card's corner**, a 28px round icon button with a
+tooltip that says what it does: ⏸ "Pause after this step" on Spec or Site while they
+run (pending: a violet ring, click to keep going), ▶ "Resume" on the step a job paused
+before, and ⏸ / ▶ for the run itself on the Run card.
 
 ### The Agent Timeline (signature)
 The Site tab's "What Dapi did": a vertical rule, an icon per action (web search, looked

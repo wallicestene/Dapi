@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BorderBeam } from "@/components/ui/border-beam";
 import { Mark } from "@/components/shell";
 import { n } from "@/lib/steps";
 import { cn } from "@/lib/utils";
@@ -48,7 +47,7 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   const finished = [...events].reverse().find((e) => e.kind === "apify-finished");
   return (
     <div className="grid flex-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <ApifyStrip job={job} finished={finished} readOnly={readOnly} />
+      <ApifyStrip job={job} finished={finished} />
       {notes.length > 0 && (
         <div className="rounded-xl border bg-sheet px-5 py-2 lg:col-span-2">
           <ul className="text-[13px]" aria-label="During the run">
@@ -66,26 +65,13 @@ export function RunPanel({ job, events, readOnly }: { job: Job; events: JobEvent
   );
 }
 
-// The run on Apify, credited: Apify's mark and name, the run's state and figures, and
-// the one control that fits it (Pause while it runs, Resume when it stopped). Pause stops
-// the run gracefully; Resume resurrects it on Apify with its dataset, queue and state.
+// The run on Apify, credited: Apify's mark, the run's state and its figures. Pause and
+// Resume live on the Run step's card.
 const APIFY_BLEND = "bg-[linear-gradient(115deg,rgb(36_109_255/0.12),rgb(32_163_78/0.08)_50%,rgb(248_102_6/0.10))]";
 
-function ApifyStrip({ job, finished, readOnly }: { job: Job; finished?: JobEvent; readOnly: boolean }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function ApifyStrip({ job, finished }: { job: Job; finished?: JobEvent }) {
   const running = job.status === "running" && job.step === "run";
   const stopped = job.status === "stopped";
-  const act = async (what: "pause" | "resurrect") => {
-    setBusy(true);
-    setError(null);
-    const res = await fetch(`/api/jobs/${job.id}/${what}`, { method: "POST" });
-    if (res.ok) window.location.reload();
-    else {
-      setError((await res.json().catch(() => ({}))).error ?? "Couldn't reach Apify. Try again.");
-      setBusy(false);
-    }
-  };
   const seconds = finished?.seconds as number | null | undefined;
   const facts = running
     ? ([["Rows so far", n(job.rows ?? 0)]] as [string, string][])
@@ -102,7 +88,6 @@ function ApifyStrip({ job, finished, readOnly }: { job: Job; finished?: JobEvent
   const label = running ? "Running on Apify" : stopped ? (job.paused ? "Paused on Apify" : "Run stopped on Apify") : finished ? `Apify run ${String(finished.status).toLowerCase().replace("-", " ")}` : "On Apify";
   return (
     <div className={cn("relative flex flex-wrap items-center gap-x-6 gap-y-2 overflow-hidden rounded-xl border px-5 py-3 lg:col-span-2", running || stopped ? APIFY_BLEND : "bg-sheet")}>
-      {running && <BorderBeam size={120} duration={6} borderWidth={1.5} colorFrom="#246DFF" colorTo="#20A34E" />}
       <span className="inline-flex items-center gap-2.5 text-[13.5px] font-semibold">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/apify-logomark.svg" alt="Apify" className="size-5" />
@@ -119,20 +104,6 @@ function ApifyStrip({ job, finished, readOnly }: { job: Job; finished?: JobEvent
           {k} <b className="font-semibold text-ink tabular-nums">{v}</b>
         </span>
       ))}
-      {!readOnly && (running || stopped) && (
-        <span className="ml-auto flex items-center gap-2">
-          {error && <span className="text-[13px] text-pencil-red">{error}</span>}
-          {running ? (
-            <Button variant="outline" disabled={busy} onClick={() => act("pause")} className="h-8 gap-1.5 px-3">
-              <Pause aria-hidden className="size-3.5" /> {busy ? "Pausing…" : "Pause"}
-            </Button>
-          ) : (
-            <Button disabled={busy} onClick={() => act("resurrect")} className="h-8 gap-1.5 px-3">
-              <Play aria-hidden className="size-3.5 fill-current" /> {busy ? "Resuming…" : job.paused ? "Resume" : "Resurrect the run"}
-            </Button>
-          )}
-        </span>
-      )}
     </div>
   );
 }
@@ -191,7 +162,6 @@ function PlanCard({ job, plan, readOnly }: { job: Job; plan: JobEvent; readOnly:
   return (
     // The one moment Dapi hands over: a beam runs round the plan until you answer.
     <section className="relative overflow-hidden rounded-2xl border bg-white shadow-[0_12px_32px_-18px_rgb(15_26_36/0.35)]">
-      {!readOnly && !busy && <BorderBeam size={120} duration={7} borderWidth={1.5} colorFrom="var(--deliver)" colorTo="var(--verified)" />}
       <div className="flex items-start gap-4 px-6 pt-5 pb-4">
         <Mark className="mt-0.5 size-10 shrink-0" lit={2} />
         <div>
