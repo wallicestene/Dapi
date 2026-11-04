@@ -57,9 +57,10 @@ export function markedPage(evidence, locator, nonce = null) {
   $('head').append('<style>[data-dapi-hit]{outline:3px solid #2f7d4f!important;outline-offset:3px;background:rgba(47,125,79,.14)!important}</style>');
   // The only script the page may run (its own were removed; the frame's policy admits
   // just this nonce): bring the value into view. A sandboxed frame ignores #anchors.
-  // Again once the page's styles have loaded, which moves things. Only the frame's own
-  // view moves: scrollIntoView carried up into the job page around it, which jumped
-  // whenever a value was picked.
-  if (nonce) $('body').append(`<script nonce="${nonce}">const go = () => { const el = document.getElementById('dapi-hit'); if (!el) return; const r = el.getBoundingClientRect(); scrollTo(scrollX + r.left - (innerWidth - r.width) / 2, scrollY + r.top - (innerHeight - r.height) / 2); }; go(); addEventListener('load', go);</script>`);
+  // Again once the page's styles have loaded, which moves things. Only the frame moves:
+  // scrollIntoView carried up into the job page around it, which jumped whenever a value
+  // was picked. So each box holding the value is scrolled to it (Wikipedia keeps a wide
+  // table in its own scrolling box), then the frame's own view.
+  if (nonce) $('body').append(`<script nonce="${nonce}">const go = () => { const el = document.getElementById('dapi-hit'); if (!el) return; for (let box = el.parentElement; box && box !== document.body; box = box.parentElement) { if (box.scrollWidth > box.clientWidth || box.scrollHeight > box.clientHeight) { const r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); box.scrollLeft += r.left - b.left - (box.clientWidth - r.width) / 2; box.scrollTop += r.top - b.top - (box.clientHeight - r.height) / 2; } } const r = el.getBoundingClientRect(); scrollTo(scrollX + r.left - (innerWidth - r.width) / 2, scrollY + r.top - (innerHeight - r.height) / 2); }; go(); addEventListener('load', go);</script>`);
   return $.html();
 }
