@@ -64,6 +64,9 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
   const declined = site.find((e) => e.kind === "declined");
   const reach = site.find((e) => e.kind === "reach");
   const strategy = [...site].reverse().find((e) => e.kind === "strategy");
+  // Muse Wonder may find a feed the first look didn't (FDA: the first look read the page's
+  // table, the plan reads the feed behind it); then the first look's card says it was one.
+  const feedBeyond = ((strategy?.columns as { route?: string }[] | undefined) ?? []).some((c) => c.route === "feed" || c.route === "register");
   const live = job.status === "running" && job.step === "site";
 
   return (
@@ -85,11 +88,19 @@ export function SitePanel({ job, events }: { job: Job; events: JobEvent[] }) {
         )}
         {source && (
           <Finding
-            title={source.route === "embedded" || source.route === "html" ? "The records are in the page itself" : "Don't scrape the page: use its data feed"}
+            title={
+              source.route === "embedded" || source.route === "html"
+                ? feedBeyond
+                  ? "First look: the records are in the page"
+                  : "The records are in the page itself"
+                : "Don't scrape the page: use its data feed"
+            }
             req={source.route === "embedded" ? undefined : (source.request as Req)}
             lines={[
               source.route === "html"
-                ? `${n(source.recordCount as number)} records in the page's own HTML. Dapi reads them from the page, checked against your sample.`
+                ? feedBeyond
+                  ? `The page shows ${n(source.recordCount as number)} in its HTML. Muse Wonder found the feed behind it, and the plan above reads that instead.`
+                  : `${n(source.recordCount as number)} records in the page's own HTML. Dapi reads them from the page, checked against your sample.`
                 : source.route === "embedded"
                 ? `${n((source.recordCount as number) + (source.siblings as { recordCount: number }[]).reduce((t, s) => t + s.recordCount, 0))} rows are in data the page carries with it${(source.siblings as unknown[]).length ? `, across ${(source.siblings as unknown[]).length + 1} tables` : ""}. Dapi reads that data directly.`
                 : `The same records the page shows, ${n(source.recordCount as number)} per request, straight from the site. Dapi reads this feed instead of the page.`,
