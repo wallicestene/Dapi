@@ -4,7 +4,7 @@
 two) by typing it, uploading it or saying it, and Dapi delivers the dataset, with a
 receipt for every value and every row counted against the source's own total.
 
-**Live:** [dapi.fly.dev](https://dapi.fly.dev)
+**Live:** [dapi.fly.dev](https://dapi.fly.dev) · **Demo video (3 min):** [youtu.be/2pqyYwJvAuI](https://youtu.be/2pqyYwJvAuI)
 
 ![Dapi's home page: "Web data you can prove", beside a live receipt for an FDA warning letter, its value marked in the response FDA's own site sent](docs/images/home.png)
 
