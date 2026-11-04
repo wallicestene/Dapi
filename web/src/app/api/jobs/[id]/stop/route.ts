@@ -19,16 +19,27 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/jobs/[id]/
   const underWay = ["running", "waiting", "held"].includes(job.status) || (job.status === "failed" && job.failed === LOST);
   if (!underWay) return Response.json({ error: "This job isn't running." }, { status: 409 });
 
-  // The runner was started detached, so it leads its own process group: ending the group
-  // ends the browser it drives too.
+  // The runner was started detached, so it leads its own process group. SIGTERM first, so
+  // Playwright closes the browser it drives; but Playwright's handler catches SIGTERM and
+  // the runner carries on (job 0005, Nov 4: stopped mid-investigation, it went on to the
+  // plan), so whatever is still alive a second later is killed outright.
   const pid = job.runnerPid;
-  if (pid && runnerAlive(pid)) {
+  const signal = (s: NodeJS.Signals) => {
     try {
-      process.kill(-pid, "SIGTERM");
+      process.kill(-pid!, s);
     } catch {
-      process.kill(pid, "SIGTERM");
+      try {
+        process.kill(pid!, s);
+      } catch {
+        // already gone
+      }
     }
-    await new Promise((r) => setTimeout(r, 300));
+  };
+  if (pid && runnerAlive(pid)) {
+    signal("SIGTERM");
+    await new Promise((r) => setTimeout(r, 1000));
+    if (runnerAlive(pid)) signal("SIGKILL");
+    await new Promise((r) => setTimeout(r, 200));
   }
   if (job.runId && !FINAL.includes(job.runStatus ?? "")) {
     const { apify } = await pipeline<{ apify: { run: (id: string) => { abort: (o: { gracefully: boolean }) => Promise<unknown> } } }>("src/apify/client.js");
