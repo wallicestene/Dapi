@@ -5,7 +5,7 @@ import type { Job } from "@/lib/types";
 // Who may see a job and who may act on it. Run by its owner (neither public nor
 // read-only), Dapi shows everything. On the public demo, the featured jobs are open to
 // everyone and every other job only to the account that started it.
-export const FEATURED = (process.env.DAPI_FEATURED ?? "0001,0002,0003").split(",").map((s) => s.trim());
+export const FEATURED = (process.env.DAPI_FEATURED ?? "0003").split(",").map((s) => s.trim());
 
 export function canSee(job: Job, user: User | null) {
   if (!PUBLIC) return true;

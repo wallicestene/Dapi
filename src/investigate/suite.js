@@ -52,16 +52,24 @@ async function main() {
   const only = process.argv.slice(2);
   const results = [];
   for (const c of CASES.filter((x) => !only.length || only.includes(x.name))) {
+    // A spec kept out of the repo (specs/*.spec.json) skips its case on a fresh clone.
+    let input;
+    try {
+      input = c.spec();
+    } catch {
+      console.log(`${c.name}: skipped, no spec in specs/`);
+      continue;
+    }
     const started = Date.now();
     let f = null;
     let crash = null;
     try {
-      f = await investigate(c.spec(), { checkReach: false });
+      f = await investigate(input, { checkReach: false });
     } catch (err) {
       crash = String(err?.message ?? err).split('\n')[0];
     }
     const route = f ? routeOf(f) : 'crash';
-    const mapped = f ? f.spec && (c.spec().columns.length - (f.unmapped?.length ?? 0)) : 0;
+    const mapped = f ? f.spec && (input.columns.length - (f.unmapped?.length ?? 0)) : 0;
     const r = {
       name: c.name,
       kind: c.kind,
@@ -69,7 +77,7 @@ async function main() {
       route,
       ok: !crash && route === c.expect,
       records: f?.list?.recordCount ?? null,
-      mapped: `${mapped}/${c.spec().columns.length}`,
+      mapped: `${mapped}/${input.columns.length}`,
       handover: f?.stoppedShort ?? null,
       seconds: Math.round((Date.now() - started) / 1000),
       crash,

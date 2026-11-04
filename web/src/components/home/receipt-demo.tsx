@@ -26,6 +26,15 @@ const site = showcase.host.replace(/^www\./, "");
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC" });
 // The seal, short: enough to recognise it; the whole fingerprint is on hover and in the job.
 const short = (sha: string) => `${sha.slice(0, 8)}…${sha.slice(-6)}`;
+// A long line shows its start; the marked line shows the value itself, wherever it sits
+// (a feed's cell can hold a link before the name).
+function clip(raw: string, value: string, hit: boolean) {
+  if (raw.length <= 46) return raw;
+  const at = hit ? raw.indexOf(value) : -1;
+  if (at < 0 || at + value.length <= 44) return `${raw.slice(0, 44)}…"`;
+  const end = Math.min(at - 1 + 42, raw.length - 1);
+  return `"…${raw.slice(at - 1, end)}${end < raw.length - 1 ? "…" : ""}"`;
+}
 
 export function ReceiptDemo() {
   const [at, setAt] = useState({ row: 1, column: COLUMNS[0][0] });
@@ -106,7 +115,7 @@ export function ReceiptDemo() {
           {"\n"}
           {cell.lines.map((l) => (
             <span key={l.key} className={cn("block", l.hit && "-mx-1.5 rounded bg-verified px-1.5")}>
-              {`  "${l.key}": ${l.value.length > 46 ? `${l.value.slice(0, 44)}…"` : l.value},`}
+              {`  "${l.key}": ${clip(l.value, cell.value, l.hit)},`}
             </span>
           ))}
           <span className="text-ink-2">{"}"}</span>

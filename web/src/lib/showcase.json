@@ -1,627 +1,567 @@
 {
- "job": "0002",
- "title": "Better Work factory compliance",
- "host": "portal.betterwork.org",
+ "job": "0003",
+ "title": "FDA warning letters, 2026",
+ "host": "www.fda.gov",
  "columns": [
   [
-   "Factory",
-   "Factory"
+   "Company name",
+   "Company"
   ],
   [
-   "Country",
-   "Country"
+   "Letter issue date",
+   "Issued"
   ],
   [
-   "Assessment Date",
-   "Assessed"
+   "Issuing office",
+   "Office"
   ],
   [
-   "Issues",
-   "Issues"
+   "Subject",
+   "Subject"
   ]
  ],
- "total": 433,
- "rows": 433,
- "credit": null,
+ "total": 503,
+ "rows": 503,
+ "credit": "Source: U.S. Food and Drug Administration, public domain",
  "rowsShown": [
   {
-   "Factory": {
-    "value": "28.1 Joint Stock Company",
+   "Company name": {
+    "value": "Pritam International Private Limited",
     "original": null,
-    "path": "Data.0.Name",
-    "field": "Name",
-    "parent": "Data",
+    "path": "data.0.2",
+    "field": "2",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"28.1 Joint Stock Company\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-27T04:00:00Z\\\">10/27/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/pritam-international-private-limited-738079-10272026\\\">Pritam International Private Limited</a>\"",
       "hit": true
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1731456000000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "10",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Country": {
-    "value": "Vietnam",
+   "Letter issue date": {
+    "value": "10/27/2026",
     "original": null,
-    "path": "Data.0.Country",
-    "field": "Country",
-    "parent": "Data",
+    "path": "data.0.1",
+    "field": "1",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-27T04:00:00Z\\\">10/27/2026</time>\\n\"",
       "hit": true
      },
      {
-      "key": "Name",
-      "value": "\"28.1 Joint Stock Company\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/pritam-international-private-limited-738079-10272026\\\">Pritam International Private Limited</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1731456000000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "10",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Assessment Date": {
-    "value": "13 Nov 2024",
+   "Issuing office": {
+    "value": "Center for Drug Evaluation and Research (CDER)",
     "original": null,
-    "path": "Data.0.AssessmentDate",
-    "field": "AssessmentDate",
-    "parent": "Data",
+    "path": "data.0.3",
+    "field": "3",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-27T04:00:00Z\\\">10/27/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"28.1 Joint Stock Company\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/pritam-international-private-limited-738079-10272026\\\">Pritam International Private Limited</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1731456000000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": true
      },
      {
-      "key": "CycleNumber",
-      "value": "10",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Issues": {
-    "value": "0",
+   "Subject": {
+    "value": "CGMP/Finished Pharmaceuticals/Adulterated",
     "original": null,
-    "path": "Data.0.NumberOfNonCompliances",
-    "field": "NumberOfNonCompliances",
-    "parent": "Data",
+    "path": "data.0.4",
+    "field": "4",
+    "parent": "data",
     "lines": [
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1731456000000)/\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/pritam-international-private-limited-738079-10272026\\\">Pritam International Private Limited</a>\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "10",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": true
-     },
-     {
-      "key": "NumberOfResponse",
-      "value": "0",
-      "hit": false
-     },
-     {
-      "key": "FactoryType",
-      "value": "\"Manufacture of wearing apparel\"",
-      "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    }
   },
   {
-   "Factory": {
-    "value": "Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory",
+   "Company name": {
+    "value": "La Cabana Food Distributing, Inc.",
     "original": null,
-    "path": "Data.4.Name",
-    "field": "Name",
-    "parent": "Data",
+    "path": "data.1.2",
+    "field": "2",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-07-29T04:00:00Z\\\">07/29/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/la-cabana-food-distributing-inc-724211-07292026\\\">La Cabana Food Distributing, Inc.</a>\"",
       "hit": true
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "3",
+      "value": "\"Human Foods Program\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "6",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Country": {
-    "value": "Vietnam",
+   "Letter issue date": {
+    "value": "07/29/2026",
     "original": null,
-    "path": "Data.4.Country",
-    "field": "Country",
-    "parent": "Data",
+    "path": "data.1.1",
+    "field": "1",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-07-29T04:00:00Z\\\">07/29/2026</time>\\n\"",
       "hit": true
      },
      {
-      "key": "Name",
-      "value": "\"Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/la-cabana-food-distributing-inc-724211-07292026\\\">La Cabana Food Distributing, Inc.</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "3",
+      "value": "\"Human Foods Program\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "6",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Assessment Date": {
-    "value": "11 Dec 2024",
+   "Issuing office": {
+    "value": "Human Foods Program",
     "original": null,
-    "path": "Data.4.AssessmentDate",
-    "field": "AssessmentDate",
-    "parent": "Data",
+    "path": "data.1.3",
+    "field": "3",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-07-29T04:00:00Z\\\">07/29/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"Branch of Dap Cau Garment Corp. JSC - Kinh Bac Garment Factory\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/la-cabana-food-distributing-inc-724211-07292026\\\">La Cabana Food Distributing, Inc.</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "3",
+      "value": "\"Human Foods Program\"",
       "hit": true
      },
      {
-      "key": "CycleNumber",
-      "value": "6",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Issues": {
-    "value": "0",
+   "Subject": {
+    "value": "CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated",
     "original": null,
-    "path": "Data.4.NumberOfNonCompliances",
-    "field": "NumberOfNonCompliances",
-    "parent": "Data",
+    "path": "data.1.4",
+    "field": "4",
+    "parent": "data",
     "lines": [
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/la-cabana-food-distributing-inc-724211-07292026\\\">La Cabana Food Distributing, Inc.</a>\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "6",
+      "key": "3",
+      "value": "\"Human Foods Program\"",
       "hit": false
      },
      {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Hazard Analysis/Risk-Based Preventive Controls for Food/Adulterated\"",
       "hit": true
-     },
-     {
-      "key": "NumberOfResponse",
-      "value": "0",
-      "hit": false
-     },
-     {
-      "key": "FactoryType",
-      "value": "\"Manufacture of wearing apparel\"",
-      "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    }
   },
   {
-   "Factory": {
-    "value": "Chinh Tuc MTV Co., Ltd.",
+   "Company name": {
+    "value": "Conroe Welding Supply, Inc.",
     "original": null,
-    "path": "Data.12.Name",
-    "field": "Name",
-    "parent": "Data",
+    "path": "data.2.2",
+    "field": "2",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"Chinh Tuc MTV Co., Ltd.\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-29T04:00:00Z\\\">10/29/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/conroe-welding-supply-inc-731507-10292026\\\">Conroe Welding Supply, Inc.</a>\"",
       "hit": true
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "7",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Medical Gases/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Country": {
-    "value": "Vietnam",
+   "Letter issue date": {
+    "value": "10/29/2026",
     "original": null,
-    "path": "Data.12.Country",
-    "field": "Country",
-    "parent": "Data",
+    "path": "data.2.1",
+    "field": "1",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-29T04:00:00Z\\\">10/29/2026</time>\\n\"",
       "hit": true
      },
      {
-      "key": "Name",
-      "value": "\"Chinh Tuc MTV Co., Ltd.\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/conroe-welding-supply-inc-731507-10292026\\\">Conroe Welding Supply, Inc.</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "7",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Medical Gases/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Assessment Date": {
-    "value": "11 Dec 2024",
+   "Issuing office": {
+    "value": "Center for Drug Evaluation and Research (CDER)",
     "original": null,
-    "path": "Data.12.AssessmentDate",
-    "field": "AssessmentDate",
-    "parent": "Data",
+    "path": "data.2.3",
+    "field": "3",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-29T04:00:00Z\\\">10/29/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"Chinh Tuc MTV Co., Ltd.\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/conroe-welding-supply-inc-731507-10292026\\\">Conroe Welding Supply, Inc.</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": true
      },
      {
-      "key": "CycleNumber",
-      "value": "7",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Medical Gases/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Issues": {
-    "value": "0",
+   "Subject": {
+    "value": "CGMP/Medical Gases/Adulterated",
     "original": null,
-    "path": "Data.12.NumberOfNonCompliances",
-    "field": "NumberOfNonCompliances",
-    "parent": "Data",
+    "path": "data.2.4",
+    "field": "4",
+    "parent": "data",
     "lines": [
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1733875200000)/\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/conroe-welding-supply-inc-731507-10292026\\\">Conroe Welding Supply, Inc.</a>\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "7",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Medical Gases/Adulterated\"",
       "hit": true
-     },
-     {
-      "key": "NumberOfResponse",
-      "value": "0",
-      "hit": false
-     },
-     {
-      "key": "FactoryType",
-      "value": "\"Manufacture of wearing apparel\"",
-      "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    }
   },
   {
-   "Factory": {
-    "value": "CSQ S.OK Garment (Vietnam) Co., Ltd. ",
+   "Company name": {
+    "value": "Guangzhou Jiugong Research And Development Biotechnology Co., Ltd.",
     "original": null,
-    "path": "Data.16.Name",
-    "field": "Name",
-    "parent": "Data",
+    "path": "data.3.2",
+    "field": "2",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"CSQ S.OK Garment (Vietnam) Co., Ltd. \"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-27T04:00:00Z\\\">10/27/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/guangzhou-jiugong-research-and-development-biotechnology-co-ltd-737769-10272026\\\">Guangzhou Jiugong Research And Development Biotechnology Co., Ltd.</a>\"",
       "hit": true
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1755561600000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "4",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Country": {
-    "value": "Vietnam",
+   "Letter issue date": {
+    "value": "10/27/2026",
     "original": null,
-    "path": "Data.16.Country",
-    "field": "Country",
-    "parent": "Data",
+    "path": "data.3.1",
+    "field": "1",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "0",
+      "value": "\"<time datetime=\\\"2026-11-03T05:00:00Z\\\">11/03/2026</time>\\n\"",
+      "hit": false
+     },
+     {
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-27T04:00:00Z\\\">10/27/2026</time>\\n\"",
       "hit": true
      },
      {
-      "key": "Name",
-      "value": "\"CSQ S.OK Garment (Vietnam) Co., Ltd. \"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/guangzhou-jiugong-research-and-development-biotechnology-co-ltd-737769-10272026\\\">Guangzhou Jiugong Research And Development Biotechnology Co., Ltd.</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1755561600000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "4",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Assessment Date": {
-    "value": "19 Aug 2025",
+   "Issuing office": {
+    "value": "Center for Drug Evaluation and Research (CDER)",
     "original": null,
-    "path": "Data.16.AssessmentDate",
-    "field": "AssessmentDate",
-    "parent": "Data",
+    "path": "data.3.3",
+    "field": "3",
+    "parent": "data",
     "lines": [
      {
-      "key": "Country",
-      "value": "\"Vietnam\"",
+      "key": "1",
+      "value": "\"<time datetime=\\\"2026-10-27T04:00:00Z\\\">10/27/2026</time>\\n\"",
       "hit": false
      },
      {
-      "key": "Name",
-      "value": "\"CSQ S.OK Garment (Vietnam) Co., Ltd. \"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/guangzhou-jiugong-research-and-development-biotechnology-co-ltd-737769-10272026\\\">Guangzhou Jiugong Research And Development Biotechnology Co., Ltd.</a>\"",
       "hit": false
      },
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1755561600000)/\"",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": true
      },
      {
-      "key": "CycleNumber",
-      "value": "4",
-      "hit": false
-     },
-     {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    },
-   "Issues": {
-    "value": "0",
+   "Subject": {
+    "value": "CGMP/Finished Pharmaceuticals/Adulterated",
     "original": null,
-    "path": "Data.16.NumberOfNonCompliances",
-    "field": "NumberOfNonCompliances",
-    "parent": "Data",
+    "path": "data.3.4",
+    "field": "4",
+    "parent": "data",
     "lines": [
      {
-      "key": "AssessmentDate",
-      "value": "\"/Date(1755561600000)/\"",
+      "key": "2",
+      "value": "\"<a href=\\\"/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/guangzhou-jiugong-research-and-development-biotechnology-co-ltd-737769-10272026\\\">Guangzhou Jiugong Research And Development Biotechnology Co., Ltd.</a>\"",
       "hit": false
      },
      {
-      "key": "CycleNumber",
-      "value": "4",
+      "key": "3",
+      "value": "\"Center for Drug Evaluation and Research (CDER)\"",
       "hit": false
      },
      {
-      "key": "NumberOfNonCompliances",
-      "value": "0",
+      "key": "4",
+      "value": "\"CGMP/Finished Pharmaceuticals/Adulterated\"",
       "hit": true
-     },
-     {
-      "key": "NumberOfResponse",
-      "value": "0",
-      "hit": false
-     },
-     {
-      "key": "FactoryType",
-      "value": "\"Manufacture of wearing apparel\"",
-      "hit": false
      }
     ],
-    "request": "POST https://portal.betterwork.org/Transparency/GetSuppliersComplianceData",
-    "capturedAt": "2026-11-03T13:06:45.496Z",
-    "sha256": "9032020213eabcd3bcc6a3d7d2e0201741a73dd0586c204036586d9714c97568"
+    "request": "GET https://www.fda.gov/datatables/views/ajax?field_letter_issue_datetime_2=2026&draw=1&start=0&length=1000&_drupal_ajax=1&_wrapper_format=drupal_ajax&pager_element=0&view_args=&view_base_path=inspections-compliance-enforcement-and-criminal-investigations%5C%2Fcompliance-actions-and-activities%5C%2Fwarning-letters%5C%2Fdatatables-data&view_display_id=warning_letter_solr_block&view_dom_id=8549da591848ec76626635731d813ac3601e70472ac62c178bc2eae299481645&view_name=warning_letter_solr_index&view_path=%2Finspections-compliance-enforcement-and-criminal-investigations%2Fcompliance-actions-and-activities%2Fwarning-letters&search_api_fulltext=&search_api_fulltext_issuing_office=&field_letter_issue_datetime=All&field_change_date_closeout_letter=&field_change_date_response_letter=&field_change_date_2=All&search%5Bvalue%5D=&search%5Bregex%5D=false",
+    "capturedAt": "2026-11-03T15:26:00.529Z",
+    "sha256": "389f779252f5529da803d723a62bfca4683727a0f759075fad1283c0a653ea14"
    }
   }
  ]
