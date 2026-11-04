@@ -10,8 +10,8 @@ primary_region = "ams"
 [env]
   DAPI_PUBLIC = "1"
   DAPI_JOBS_DIR = "/data/jobs"
-  # The jobs everyone sees: Books (run on this server) and FDA.
-  DAPI_FEATURED = "0004,0003"
+  # The jobs everyone sees: Books and the national parks (run on this server) and FDA.
+  DAPI_FEATURED = "0004,0006,0003"
 
 # Jobs and their rows live here, across restarts and deploys.
 [[mounts]]
