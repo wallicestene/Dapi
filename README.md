@@ -6,6 +6,8 @@ receipt for every value and every row counted against the source's own total.
 
 **Live:** [dapi.fly.dev](https://dapi.fly.dev)
 
+![Dapi's home page: "Web data you can prove", beside a live receipt for an FDA warning letter, its value marked in the response FDA's own site sent](docs/images/home.png)
+
 Dapi is for people who need web data they can stand behind and don't write scrapers: a
 compliance officer checking a public register, an analyst tracking competitors, a
 researcher, a data engineer who'd rather not babysit scrapers, a team gathering training
@@ -21,24 +23,30 @@ paste or upload a spec, or press the mic and say what you need.
 
 ## How it works
 
-1. **Read the spec.** A PDF, pasted text, or a spoken brief.
-2. **Investigate the site.** Dapi opens the page and watches its network traffic before
-   reading any HTML. Many sites load their data from a feed of their own; Dapi finds it
-   and reads that instead of scraping the page: faster, steadier, in the site's own
-   words. Muse Wonder then works through whatever is still open as an agent, and plans
-   the extraction column by column.
-3. **Write and test the extraction.** Muse Spark writes the code and Dapi tests it
-   against the spec's sample rows. Small differences (spacing, a typo in the spec) are
-   handled; where the site shows something else, Dapi delivers what the site shows and
-   says so.
-4. **Show the plan.** The records the source lists, the requests, the time, anything
-   worth a look. Nothing runs until you press Go.
-5. **Run on Apify.** Rows stream into your dataset. A run that breaks is stopped, its log
-   goes to Muse Spark for a fix, and a fresh run starts.
-6. **Prove it.** Every captured response is sealed with SHA-256 the moment it arrives.
-   Click any value to see the response it came from, with its line marked, and re-check
-   the seal. The rows are counted against the source's own total, and anything missing
-   is named.
+Six steps, from what you ask for to a dataset you can check.
+
+| Step | What happens | Done by |
+| --- | --- | --- |
+| **1. Ask** | You type, upload or say what you need: the site, the columns, a sample row, any rules. | Muse Voice Transcribe hears it; Muse Spark writes it up and reads it into columns, samples and rules |
+| **2. Investigate** | Dapi opens the site and watches what it loads before reading any HTML. Many sites load their data from a feed of their own: Dapi reads that instead of scraping the page. Then an agent settles where every column lives and plans the run. | Muse Wonder, as an agent with tools |
+| **3. Write and test** | The extraction is written and tested against your sample rows; a failed test goes back for a fix. Where the site shows something other than your sample, Dapi delivers what the site shows and says so. | Muse Spark |
+| **4. Plan** | The records, the requests, the time and the cost, and anything worth a look. Nothing runs until you press Go. | Dapi |
+| **5. Run** | It runs on Apify and rows arrive as they're found. A run that breaks is stopped, its log goes back for a fix, and a fresh run starts. | Apify, Muse Spark |
+| **6. Prove** | Every response is sealed with SHA-256 the moment it arrives. Click any value to see the page or response it came from, with the value marked. Rows are counted against the source's own total, and anything missing is named. | Dapi |
+
+**Ask by saying it.** Upload a PDF, paste text, or press the mic.
+
+![The New job page: Upload, Paste and Speak, with the mic and "Say what you need"](docs/images/new-job.png)
+
+**The investigation.** FDA's list page shows its letters a few at a time; Muse Wonder
+found the feed behind it and reads all 503 from there.
+
+![The FDA job's Site step: "Don't scrape the page: use its data feed", with Muse Wonder's plan for each column](docs/images/investigation.png)
+
+**A receipt for every value.** Click a number and see the page it came from, as Dapi
+captured it, with that number outlined, when it was captured, and its seal.
+
+![The national parks job: a visitors count selected, with its receipt and the captured Wikipedia page beside the table](docs/images/receipt.png)
 
 ## Meta's models in Dapi
 
@@ -102,6 +110,7 @@ jobs, data and costs stay in their account.
 | `test/` | Tests (`npm test`). |
 | `scripts/` | `spec-to-pdf.js`: turns a written spec into a PDF, the way clients send them. |
 | `deploy/`, `Dockerfile`, `fly.toml` | The public demo's container and host. |
+| `docs/images/` | The screenshots in this README. |
 
 ## Built for the Meta Global AI Developer Hackathon
 
