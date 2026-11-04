@@ -35,7 +35,6 @@ const PROOF = [
   { host: "books.toscrape.com", label: "Books to Scrape: travel books", note: "A site made for practice, read from its own pages" },
   { host: "en.wikipedia.org", label: "US national parks", note: "Wikipedia's list (CC BY-SA), read from the page's own table" },
   { host: "www.fda.gov", label: "FDA warning letters, 2026", note: "A public-domain list, read at the 30 s pace its robots.txt asks for" },
-  { host: "www.arbeidstilsynet.no", label: "Occupational health services, Norway", note: "A Norwegian register, delivered in English" },
 ];
 
 const WHY = [

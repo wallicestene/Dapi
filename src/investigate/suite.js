@@ -1,9 +1,9 @@
 // The investigation's test suite: sites built in different ways, each run through the
 // first pass, so a change is checked against every kind of site rather than the last
-// spec. Only sources we may use: two public registers whose data is published for
-// anyone (Better Work's Transparency Portal; Arbeidstilsynet's register, released as
-// NLOD open data), sites made for practising extraction (toscrape.com) and a Wikipedia
-// table (CC BY-SA). Pass = the first pass never crashes, and finds
+// spec: sites made for practising extraction (toscrape.com) and a Wikipedia table (CC
+// BY-SA). Two public registers (a JSON feed behind a click, a register behind a search
+// page) run only where their specs are kept, outside this repo; without them they're
+// skipped. Pass = the first pass never crashes, and finds
 // the list where one of its routes can (a site it can't read must hand over to the agent,
 // not fail).
 //

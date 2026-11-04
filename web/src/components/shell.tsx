@@ -59,6 +59,9 @@ export function Footer({ readOnly = false, fluid = false }: { readOnly?: boolean
               {label}
             </Link>
           ))}
+          <a href="https://github.com/wallicestene/Dapi" target="_blank" rel="noreferrer" className="hover:text-white">
+            Source code
+          </a>
         </nav>
         <div className="flex flex-col gap-2.5 text-[14px]">
           <p className="mb-1 text-[12px] font-semibold tracking-[0.04em] text-white uppercase">Built with</p>

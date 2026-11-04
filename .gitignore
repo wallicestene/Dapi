@@ -27,3 +27,5 @@ specs/*.findings.json
 # Better Work: its owners (ILO, IFC) ask to be consulted before their material is
 # reproduced, and the specs quote factory rows. Kept here until they answer.
 specs/betterwork-*
+# Example specs not shown on the live platform, kept here to build with.
+specs/norway-health-services.md

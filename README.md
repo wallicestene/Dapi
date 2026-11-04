@@ -98,7 +98,9 @@ jobs, data and costs stay in their account.
 | `src/frame/` | The frame each extraction runs inside on Apify: it keeps the evidence and does the counting. |
 | `runner/` | The `dapi-runner` Actor's definition. |
 | `web/` | The Next.js app: home page, jobs, receipts. |
-| `specs/` | Example specs. |
+| `specs/` | The example specs: Books to Scrape, US national parks, FDA warning letters. |
+| `test/` | Tests (`npm test`). |
+| `scripts/` | `spec-to-pdf.js`: turns a written spec into a PDF, the way clients send them. |
 | `deploy/`, `Dockerfile`, `fly.toml` | The public demo's container and host. |
 
 ## Built for the Meta Global AI Developer Hackathon
@@ -109,10 +111,9 @@ Crawlee and the Apify SDK and client, Playwright, Next.js, shadcn/ui on Radix, M
 components, fflate and Lucide icons.
 
 Apify and the Apify logo are trademarks of Apify Technologies; they're used to credit the
-platform Dapi runs on. Example data: FDA warning letters, public domain; Books to Scrape,
-a site made for practising extraction; Wikipedia's list of US national parks, CC BY-SA
-4.0; Arbeidstilsynet's register of approved occupational health services, published
-under the Norwegian licence for Open Government data (NLOD).
+platform Dapi runs on. Example data: Books to Scrape, a site made for practising
+extraction; Wikipedia's list of US national parks, CC BY-SA 4.0; FDA warning letters,
+public domain.
 
 ## Licence
 

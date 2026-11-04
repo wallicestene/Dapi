@@ -70,8 +70,9 @@ about $10-15 a month.
 - Limits: `fly secrets set DAPI_JOBS_PER_USER=5 DAPI_BUDGET_USD=50 DAPI_MAX_REQUESTS=0`.
 - See the public demo on your own machine first: `cd web && npm run dev:public`, then
   "Sign in (local test)".
-- Which jobs everyone sees: `DAPI_FEATURED` (default `0003`; `fly.toml` sets it). A new example
-  job: add its folder to `jobs/` here and deploy; the volume gets folders it doesn't
-  have yet.
+- Which jobs everyone sees: `DAPI_FEATURED` in `fly.toml` (the live one shows 0004 Books,
+  0006 US national parks and 0003 FDA). A job run on the server: add its number and
+  deploy. A job run on your machine: add its folder to `jobs/` here too; the volume gets
+  folders it doesn't have yet.
 - A copy where nothing runs at all: in `fly.toml`, replace `DAPI_PUBLIC = "1"` with
   `DAPI_READ_ONLY = "1"`.
