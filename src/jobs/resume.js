@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const LOST = 'The runner stopped unexpectedly.';
+// A job its owner stopped: nothing picks it up again (not boot, not the page's check).
+export const STOPPED = 'You stopped this job.';
 
 export function resumeArgs(dir, job) {
   const has = (f) => fs.existsSync(path.join(dir, f));

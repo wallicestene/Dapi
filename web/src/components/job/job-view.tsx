@@ -8,7 +8,7 @@ import { Footer, Mark, TopBar } from "@/components/shell";
 import { TickMark } from "@/components/tick";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/lib/alerts";
-import { ArrowRight, Bell, BellOff, CircleAlert, Hand, Pause, Play } from "lucide-react";
+import { ArrowRight, Bell, BellOff, CircleAlert, Hand, Pause, Play, Square } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -105,6 +105,44 @@ function HeldBanner({ job }: { job: Job }) {
         <span className="font-semibold">Paused before {next}.</span> <span className="text-ink-2">{saved} Press ▶ on the step to resume.</span>
       </p>
     </section>
+  );
+}
+
+// Stop the job now, at any step: pause waits for a step to finish, and a step that keeps
+// starting over never does. Two clicks, so a stray one doesn't end a job; one width for
+// every label, so the bar doesn't move.
+function StopJob({ id }: { id: string }) {
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!asking) return;
+    const t = setTimeout(() => setAsking(false), 4000);
+    return () => clearTimeout(t);
+  }, [asking]);
+  const stop = async () => {
+    if (!asking) return setAsking(true);
+    setBusy(true);
+    try {
+      await post(`/api/jobs/${id}/stop`);
+      window.location.reload();
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+      setAsking(false);
+    }
+  };
+  return (
+    <Button
+      variant="outline"
+      onClick={stop}
+      disabled={busy}
+      title={error ?? "Stop this job now, at any step. Rows delivered so far stay; it won't start again."}
+      className={cn("h-8 w-28 justify-center gap-1.5 border-control bg-sheet", asking && "border-pencil-red text-pencil-red hover:text-pencil-red")}
+    >
+      <Square aria-hidden className="size-3 fill-current" />
+      {busy ? "Stopping…" : asking ? "Stop now?" : "Stop job"}
+    </Button>
   );
 }
 
@@ -268,6 +306,7 @@ export function JobView({
               {alerts.on ? <Bell /> : <BellOff />}
               {alerts.needsPermission && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-deliver ring-2 ring-sheet" />}
             </Button>
+            {!readOnly && (["running", "waiting", "held"].includes(job.status) || (job.status === "failed" && job.failed === LOST)) && <StopJob id={job.id} />}
             {/* Apify's console is the owner's: the public copy doesn't link into it. */}
             {job.runUrl && !readOnly && (
               <Button variant="outline" asChild className="hidden h-8 border-control bg-sheet sm:inline-flex">
