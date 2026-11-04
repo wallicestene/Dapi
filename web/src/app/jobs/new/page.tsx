@@ -10,11 +10,11 @@ import { LIMITS, mayStart, turnsLeft } from "@/lib/server/quota";
 import { NewJobForm } from "./form";
 
 // The public demo's quick starts: specs on reviewed sources, ready to edit and run.
-// Quickest first: Books in seconds, Norway's register in one request, FDA at the 30 s
-// between requests its robots.txt asks for.
+// Quickest first: Books in seconds, the parks in one request, FDA at the 30 s between
+// requests its robots.txt asks for.
 const EXAMPLES = [
   { key: "books", label: "Books to Scrape", site: "books.toscrape.com", note: "The quickest: a site made for practice", file: "books-to-scrape.md" },
-  { key: "norway", label: "Norway's health services", site: "arbeidstilsynet.no", note: "A government register, delivered in English", file: "norway-health-services.md" },
+  { key: "parks", label: "US national parks", site: "wikipedia.org", note: "Every park, from Wikipedia's list", file: "us-national-parks.md" },
   { key: "fda", label: "FDA warning letters", site: "fda.gov", note: "Every 2026 letter; a few minutes, as FDA asks for a pause between requests", file: "fda-warning-letters.md" },
 ];
 

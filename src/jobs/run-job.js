@@ -485,7 +485,14 @@ function needsYou(plan, f) {
 
 // What the run will do, from the findings and the extraction's own settings.
 function makePlan(f, config, notes, spec, tested = null) {
-  const records = f.list ? Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)) : null;
+  // A test that read the whole list (nothing held back, no request failed, every count
+  // met) counted it the way the run will, so its total is the plan's. The first look
+  // can take in a second table on the page (Wikipedia, Nov 4: 98 items seen, 64 parks).
+  const mode = tested?.testMode;
+  const whole = mode && mode.skippedRequests === 0 && mode.sampleRequests === null && !tested.failed?.length && tested.completeness?.length > 0 && tested.completeness.every((c) => c.expected !== null && c.got === c.expected);
+  const records = whole
+    ? tested.completeness.reduce((n, c) => n + c.expected, 0)
+    : f.list ? Number(f.list.total?.value ?? f.list.recordCount + (f.list.siblings ?? []).reduce((n, s) => n + s.recordCount, 0)) : null;
   // An HTML list may show only its first items, with more behind a next page or a
   // "Load more": the plan says so instead of passing the first page off as the total.
   const more = f.list?.html && (f.list.paging?.next || f.list.paging?.loadMore);

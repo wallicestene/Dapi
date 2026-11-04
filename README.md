@@ -99,6 +99,7 @@ components, fflate and Lucide icons.
 
 Apify and the Apify logo are trademarks of Apify Technologies; they're used to credit the
 platform Dapi runs on. Example data: FDA warning letters, public domain; Books to Scrape,
-a site made for practising extraction; Arbeidstilsynet's register of approved
+a site made for practising extraction; Wikipedia's list of US national parks, CC BY-SA
+4.0; Arbeidstilsynet's register of approved
 occupational health services, published under the Norwegian licence for Open Government
 data (NLOD).
