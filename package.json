@@ -2,6 +2,7 @@
   "name": "dapi",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Give it an extraction spec; it finds how the data is really served, extracts it on Apify, and proves every value.",
   "type": "module",
   "engines": {

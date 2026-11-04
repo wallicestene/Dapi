@@ -1,18 +1,29 @@
 # Dapi
 
 **Web data you can prove.** Send a spec (the site, the columns you need, a sample row or
-two) and Dapi delivers the dataset, with a receipt for every value and every row counted
-against the source's own total.
+two) by typing it, uploading it or saying it, and Dapi delivers the dataset, with a
+receipt for every value and every row counted against the source's own total.
 
-Dapi is for people who need web data they can stand behind and don't write scrapers:
-a compliance officer pulling registry records, a procurement analyst, a journalist
-checking a public database. Nobody sees code unless they want to.
+**Live:** [dapi.fly.dev](https://dapi.fly.dev)
+
+Dapi is for people who need web data they can stand behind and don't write scrapers: a
+compliance officer checking a public register, an analyst tracking competitors, a
+researcher, a data engineer who'd rather not babysit scrapers, a team gathering training
+data for AI that has to show where every value came from. Nobody sees code unless they
+want to.
+
+## Try it
+
+Open [dapi.fly.dev](https://dapi.fly.dev). The finished example jobs (Books to Scrape, US
+national parks, FDA warning letters) are open to everyone: click any value to see its
+receipt. Sign in with GitHub to run up to three jobs of your own: start from an example,
+paste or upload a spec, or press the mic and say what you need.
 
 ## How it works
 
 1. **Read the spec.** A PDF, pasted text, or a spoken brief.
 2. **Investigate the site.** Dapi opens the page and watches its network traffic before
-   reading any HTML. Most sites load their data from a feed of their own; Dapi finds it
+   reading any HTML. Many sites load their data from a feed of their own; Dapi finds it
    and reads that instead of scraping the page: faster, steadier, in the site's own
    words. Muse Wonder then works through whatever is still open as an agent, and plans
    the extraction column by column.
@@ -100,6 +111,9 @@ components, fflate and Lucide icons.
 Apify and the Apify logo are trademarks of Apify Technologies; they're used to credit the
 platform Dapi runs on. Example data: FDA warning letters, public domain; Books to Scrape,
 a site made for practising extraction; Wikipedia's list of US national parks, CC BY-SA
-4.0; Arbeidstilsynet's register of approved
-occupational health services, published under the Norwegian licence for Open Government
-data (NLOD).
+4.0; Arbeidstilsynet's register of approved occupational health services, published
+under the Norwegian licence for Open Government data (NLOD).
+
+## Licence
+
+[MIT](LICENSE). Copyright (c) 2026 Waweru Wallicestene.
