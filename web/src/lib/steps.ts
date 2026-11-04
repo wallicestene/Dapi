@@ -75,6 +75,17 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
 
   const read = last(events, "read");
   const source = last(events, "source");
+  // How the run reads the site: Muse Wonder's strategy when there is one (FDA: the first
+  // look read the HTML table, the strategy its feed), else the first look's route.
+  const strategy = last(events, "strategy");
+  const routes = ((strategy?.columns as { route?: string }[] | undefined) ?? []).map((c) => c.route);
+  const way = routes.some((r) => r === "feed" || r === "register")
+    ? "its own data feed"
+    : source?.route === "embedded"
+      ? "data embedded in the page"
+      : source?.route === "html" || routes.includes("page")
+        ? "the page's own HTML"
+        : "its own data feed";
   const declined = last(events, "declined");
   const written = last(events, "written");
   const tested = last(events, "tested");
@@ -99,7 +110,7 @@ export function stepStates(job: Job, events: JobEvent[], report: Report | null):
     {
       tab: "site",
       label: declined ? "Site declined" : label("site", "Site", "Investigating the site", "Site investigated"),
-      line: declined ? "can't be extracted" : source ? (source.route === "embedded" ? "data embedded in the page" : "its own data feed") : "how it serves its data",
+      line: declined ? "can't be extracted" : source ? way : "how it serves its data",
       tick: declined ? "missing" : source && state("site") === "done" ? "traced" : null,
       state: state("site"),
     },
