@@ -34,11 +34,11 @@ export async function transcribe(wav, { keywords = [] } = {}) {
 
 const PROMPT = `A client described a data extraction job out loud; you get the transcript. Write it up as the spec a freelance data extractor would work from, in plain text:
 
-Source: the public site or URL they named (complete a spoken address like "arbeidstilsynet dot no" to https://www.arbeidstilsynet.no).
+Source: the URL of the public page they named (complete a spoken address like "arbeidstilsynet dot no" to https://www.arbeidstilsynet.no, and a Wikipedia article they name, like "List of national parks of the United States", to https://en.wikipedia.org/wiki/List_of_national_parks_of_the_United_States).
 One row per: what one row of the table is.
-Columns: one per line as "- Name: what it holds". The name is short, one to three words (the client's own name for the column when they gave one), since it becomes the column's header; the note after the colon is in the client's words where they gave them.
-Sample rows: when they spoke an example row, a Markdown table with a column for each column above and the values exactly as the transcript has them (its commas, decimals and dates).
-Rules: anything they said about the whole table (language, format, which records).
+Columns: one per line as "- Name: what it holds". The name is short, one to three words in title case (the client's own name for the column when they gave one), since it becomes the column's header; the note after the colon is in the client's words where they gave them.
+Sample rows: when they spoke an example row, a Markdown table with a column for each column above. A transcript spells spoken numbers and dates its own way ("4 million 79,318", "February 26 1919"); write them as a page would print them (4,079,318; February 26, 1919), since that spelling is the transcriber's, not the client's.
+Rules: one per line, everything they said about the whole table (which records, how many, formats), as close to their words as you can. Keep their reasons: "the page says how many there are, I want every one" tells the extractor where to count from.
 Questions: anything they left open that would change the output.
 
 Keep only what they said or clearly meant; don't invent columns or sample values. No sample rows unless they spoke some.`;
