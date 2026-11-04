@@ -10,11 +10,10 @@ import { LIMITS, mayStart, turnsLeft } from "@/lib/server/quota";
 import { NewJobForm } from "./form";
 
 // The public demo's quick starts: specs on reviewed sources, ready to edit and run.
-// Quickest first: Books in seconds, the parks in one request, FDA at the 30 s between
-// requests its robots.txt asks for.
+// Quickest first: Books in seconds, FDA at the 30 s between requests its robots.txt asks
+// for. (The parks job is on the home page; its spec is in specs/ to speak or paste.)
 const EXAMPLES = [
   { key: "books", label: "Books to Scrape", site: "books.toscrape.com", note: "The quickest: a site made for practice", file: "books-to-scrape.md" },
-  { key: "parks", label: "US national parks", site: "wikipedia.org", note: "Every park, from Wikipedia's list", file: "us-national-parks.md" },
   { key: "fda", label: "FDA warning letters", site: "fda.gov", note: "Every 2026 letter; a few minutes, as FDA asks for a pause between requests", file: "fda-warning-letters.md" },
 ];
 
@@ -49,7 +48,7 @@ export default async function NewJob({ searchParams }: PageProps<"/jobs/new">) {
             <p className="mt-1 text-[15px] text-ink-2">Send your spec. Dapi shows you the plan, the time and the cost before anything runs.</p>
           </div>
           {/* Jobs left and the examples (when Dapi is shared publicly): a meter that empties
-              as jobs are used, the one line on what Dapi reads, three examples to start from. */}
+              as jobs are used, the one line on what Dapi reads, examples to start from. */}
           {PUBLIC && (
             <section className="overflow-hidden rounded-xl border bg-sheet">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
@@ -68,7 +67,7 @@ export default async function NewJob({ searchParams }: PageProps<"/jobs/new">) {
               </div>
               <div className="border-t bg-raised px-5 pt-3 pb-4">
                 <p className="mb-2.5 text-[13px] font-medium text-ink-2">Start from an example</p>
-                <ul className="grid gap-2 sm:grid-cols-3">
+                <ul className="grid gap-2 sm:grid-cols-2">
                   {EXAMPLES.map((e) => (
                     <li key={e.key}>
                       <Link

@@ -36,7 +36,8 @@ const PROMPT = `A client described a data extraction job out loud; you get the t
 
 Source: the public site or URL they named (complete a spoken address like "arbeidstilsynet dot no" to https://www.arbeidstilsynet.no).
 One row per: what one row of the table is.
-Columns: one per line, each with a short note on what it holds, in the client's words where they gave them.
+Columns: one per line as "- Name: what it holds". The name is short, one to three words (the client's own name for the column when they gave one), since it becomes the column's header; the note after the colon is in the client's words where they gave them.
+Sample rows: when they spoke an example row, a Markdown table with a column for each column above and the values exactly as the transcript has them (its commas, decimals and dates).
 Rules: anything they said about the whole table (language, format, which records).
 Questions: anything they left open that would change the output.
 
